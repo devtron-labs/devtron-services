@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine3.18  AS build-env
+FROM golang:1.21-alpine3.19  AS build-env
 
 RUN echo $GOPATH
 
@@ -8,7 +8,7 @@ WORKDIR /go/src/github.com/devtron-labs/kubewatch
 ADD . /go/src/github.com/devtron-labs/kubewatch
 RUN GOOS=linux make
 
-FROM alpine:3.18
+FROM alpine:3.19
 
 RUN apk add --update ca-certificates
 
