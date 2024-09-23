@@ -7,6 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/argoproj/argo-cd/v2 v2.9.21
 	github.com/argoproj/argo-workflows/v3 v3.4.7
+	github.com/argoproj/gitops-engine v0.7.1-0.20240718175351-6b2984ebc470 // indirect
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/go-resty/resty/v2 v2.7.0
@@ -20,7 +21,6 @@ require (
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.7
-	//k8s.io/apimachinery v0.29.7
 	k8s.io/client-go v0.29.7
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 )
@@ -52,11 +52,6 @@ require (
 	mellium.im/sasl v0.3.1 // indirect
 )
 
-//require (
-//	github.com/argoproj/argo v2.5.2+incompatible
-//	github.com/argoproj/argo-cd v1.8.7
-//)
-
 require k8s.io/apimachinery v0.29.7
 
 require (
@@ -69,7 +64,6 @@ require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
 	github.com/antonmedv/expr v1.15.2 // indirect
-	github.com/argoproj/gitops-engine v0.7.1-0.20240715141028-c68bce0f979c // indirect
 	github.com/argoproj/pkg v0.13.7-0.20230626144333-d56162821bd1 // indirect
 	github.com/arl/statsviz v0.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -110,7 +104,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/gnostic v0.6.9 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-github/v53 v53.2.0 // indirect
@@ -205,15 +198,15 @@ require (
 	gopkg.in/jcmturner/rpc.v0 v0.0.2 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.4 // indirect
+	k8s.io/apiextensions-apiserver v0.29.6 // indirect
 	k8s.io/apiserver v0.29.7 // indirect
 	k8s.io/cli-runtime v0.29.7 // indirect
 	k8s.io/component-base v0.29.7 // indirect
 	k8s.io/component-helpers v0.29.7 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
-	k8s.io/kube-aggregator v0.26.4 // indirect
+	k8s.io/kube-aggregator v0.29.6 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
-	k8s.io/kubectl v0.29.0 // indirect
+	k8s.io/kubectl v0.29.6 // indirect
 	k8s.io/kubernetes v1.29.6 // indirect
 	k8s.io/metrics v0.29.7 // indirect
 	oras.land/oras-go/v2 v2.3.0 // indirect
@@ -228,7 +221,6 @@ require (
 replace (
 	k8s.io/api => k8s.io/api v0.29.7
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.7
-	//k8s.io/apimachinery => k8s.io/apimachinery v0.29.7
 	k8s.io/apiserver => k8s.io/apiserver v0.29.7
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.29.7
 	k8s.io/client-go => k8s.io/client-go v0.29.7
@@ -242,7 +234,6 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.7
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.7
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.7
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.7
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.7
 	k8s.io/kubectl => k8s.io/kubectl v0.29.7
@@ -253,8 +244,4 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.29.7
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.7
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
-	sigs.k8s.io/json => sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
-	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.12.1 // indirect
-	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 )
