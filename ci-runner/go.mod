@@ -8,7 +8,7 @@ require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/aws/aws-sdk-go v1.44.116
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.19.0
+	github.com/devtron-labs/common-lib v0.0.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/joho/godotenv v1.4.0
 	github.com/otiai10/copy v1.7.0
@@ -125,4 +125,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => ../common-lib
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241005145056-257889bba5cf
