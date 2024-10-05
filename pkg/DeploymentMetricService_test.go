@@ -1,0 +1,661 @@
+/*
+ * Copyright (c) 2024. Devtron Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package pkg
+
+import (
+	"github.com/devtron-labs/lens/internal/sql"
+	"go.uber.org/zap"
+	"reflect"
+	"testing"
+	"time"
+)
+
+func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
+	type fields struct {
+		logger                     *zap.SugaredLogger
+		appReleaseRepository       sql.AppReleaseRepository
+		pipelineMaterialRepository sql.PipelineMaterialRepository
+		leadTimeRepository         sql.LeadTimeRepository
+	}
+	type args struct {
+		appReleases []sql.AppRelease
+		leadTimes   []sql.LeadTime
+		lastRelease *sql.AppRelease
+	}
+	currentTime := time.Now()
+	appReleases := []sql.AppRelease{
+		{
+			Id:                    12,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   10,
+			ChangeSizeLineDeleted: 10,
+			TriggerTime:           currentTime.AddDate(0, 0, -1),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    11,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   11,
+			ChangeSizeLineDeleted: 11,
+			TriggerTime:           currentTime.AddDate(0, 0, -2),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    10,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   12,
+			ChangeSizeLineDeleted: 12,
+			TriggerTime:           currentTime.AddDate(0, 0, -3),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+	}
+	//lastRelease := sql.AppRelease {
+	//	Id:                    10,
+	//	AppId:                 0,
+	//	EnvironmentId:         0,
+	//	CiArtifactId:          0,
+	//	ReleaseId:             0,
+	//	PipelineOverrideId:    0,
+	//	ChangeSizeLineAdded:   12,
+	//	ChangeSizeLineDeleted: 12,
+	//	TriggerTime:           currentTime.AddDate(0,0, -4),
+	//	ReleaseType:           sql.RollForward,
+	//	ReleaseStatus:         sql.Success,
+	//	ProcessStage:          0,
+	//	CreatedTime:           time.Time{},
+	//	UpdatedTime:           time.Time{},
+	//	LeadTime:              nil,
+	//}
+	appReleasesF := []sql.AppRelease{
+		{
+			Id:                    12,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   10,
+			ChangeSizeLineDeleted: 10,
+			TriggerTime:           currentTime.AddDate(0, 0, -1),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    11,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   11,
+			ChangeSizeLineDeleted: 11,
+			TriggerTime:           currentTime.AddDate(0, 0, -2),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    10,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   12,
+			ChangeSizeLineDeleted: 12,
+			TriggerTime:           currentTime.AddDate(0, 0, -3),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+	}
+	lastReleaseF := sql.AppRelease{
+		Id:                    10,
+		AppId:                 0,
+		EnvironmentId:         0,
+		CiArtifactId:          0,
+		ReleaseId:             0,
+		PipelineOverrideId:    0,
+		ChangeSizeLineAdded:   12,
+		ChangeSizeLineDeleted: 12,
+		TriggerTime:           currentTime.AddDate(0, 0, -4),
+		ReleaseType:           sql.RollForward,
+		ReleaseStatus:         sql.Success,
+		ProcessStage:          0,
+		CreatedTime:           time.Time{},
+		UpdatedTime:           time.Time{},
+		LeadTime:              nil,
+	}
+	appReleasesF1 := []sql.AppRelease{
+		{
+			Id:                    12,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   10,
+			ChangeSizeLineDeleted: 10,
+			TriggerTime:           currentTime.AddDate(0, 0, -1),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    11,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   11,
+			ChangeSizeLineDeleted: 11,
+			TriggerTime:           currentTime.AddDate(0, 0, -2),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    10,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   12,
+			ChangeSizeLineDeleted: 12,
+			TriggerTime:           currentTime.AddDate(0, 0, -3),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+	}
+	lastReleaseF1 := sql.AppRelease{
+		Id:                    10,
+		AppId:                 0,
+		EnvironmentId:         0,
+		CiArtifactId:          0,
+		ReleaseId:             0,
+		PipelineOverrideId:    0,
+		ChangeSizeLineAdded:   12,
+		ChangeSizeLineDeleted: 12,
+		TriggerTime:           currentTime.AddDate(0, 0, -4),
+		ReleaseType:           sql.RollForward,
+		ReleaseStatus:         sql.Success,
+		ProcessStage:          0,
+		CreatedTime:           time.Time{},
+		UpdatedTime:           time.Time{},
+		LeadTime:              nil,
+	}
+	appReleasesF2 := []sql.AppRelease{
+		{
+			Id:                    12,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   10,
+			ChangeSizeLineDeleted: 10,
+			TriggerTime:           currentTime.AddDate(0, 0, -1),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    11,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   11,
+			ChangeSizeLineDeleted: 11,
+			TriggerTime:           currentTime.AddDate(0, 0, -2),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    10,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   12,
+			ChangeSizeLineDeleted: 12,
+			TriggerTime:           currentTime.AddDate(0, 0, -3),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+	}
+	lastReleaseF2 := sql.AppRelease{
+		Id:                    10,
+		AppId:                 0,
+		EnvironmentId:         0,
+		CiArtifactId:          0,
+		ReleaseId:             0,
+		PipelineOverrideId:    0,
+		ChangeSizeLineAdded:   12,
+		ChangeSizeLineDeleted: 12,
+		TriggerTime:           currentTime.AddDate(0, 0, -4),
+		ReleaseType:           sql.RollForward,
+		ReleaseStatus:         sql.Success,
+		ProcessStage:          0,
+		CreatedTime:           time.Time{},
+		UpdatedTime:           time.Time{},
+		LeadTime:              nil,
+	}
+	appReleasesF3 := []sql.AppRelease{
+		{
+			Id:                    12,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   10,
+			ChangeSizeLineDeleted: 10,
+			TriggerTime:           currentTime.AddDate(0, 0, -1),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    11,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   11,
+			ChangeSizeLineDeleted: 11,
+			TriggerTime:           currentTime.AddDate(0, 0, -2),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Failure,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    10,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   12,
+			ChangeSizeLineDeleted: 12,
+			TriggerTime:           currentTime.AddDate(0, 0, -3),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+	}
+	lastReleaseF3 := sql.AppRelease{
+		Id:                    10,
+		AppId:                 0,
+		EnvironmentId:         0,
+		CiArtifactId:          0,
+		ReleaseId:             0,
+		PipelineOverrideId:    0,
+		ChangeSizeLineAdded:   12,
+		ChangeSizeLineDeleted: 12,
+		TriggerTime:           currentTime.AddDate(0, 0, -4),
+		ReleaseType:           sql.RollForward,
+		ReleaseStatus:         sql.Success,
+		ProcessStage:          0,
+		CreatedTime:           time.Time{},
+		UpdatedTime:           time.Time{},
+		LeadTime:              nil,
+	}
+	appReleasesS := []sql.AppRelease{
+		{
+			Id:                    12,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   10,
+			ChangeSizeLineDeleted: 10,
+			TriggerTime:           currentTime.AddDate(0, 0, -1),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    11,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   11,
+			ChangeSizeLineDeleted: 11,
+			TriggerTime:           currentTime.AddDate(0, 0, -2),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+		{
+			Id:                    10,
+			AppId:                 0,
+			EnvironmentId:         0,
+			CiArtifactId:          0,
+			ReleaseId:             0,
+			PipelineOverrideId:    0,
+			ChangeSizeLineAdded:   12,
+			ChangeSizeLineDeleted: 12,
+			TriggerTime:           currentTime.AddDate(0, 0, -3),
+			ReleaseType:           sql.RollForward,
+			ReleaseStatus:         sql.Success,
+			ProcessStage:          0,
+			CreatedTime:           time.Time{},
+			UpdatedTime:           time.Time{},
+			LeadTime:              nil,
+		},
+	}
+	lastReleaseS := sql.AppRelease{
+		Id:                    10,
+		AppId:                 0,
+		EnvironmentId:         0,
+		CiArtifactId:          0,
+		ReleaseId:             0,
+		PipelineOverrideId:    0,
+		ChangeSizeLineAdded:   12,
+		ChangeSizeLineDeleted: 12,
+		TriggerTime:           currentTime.AddDate(0, 0, -4),
+		ReleaseType:           sql.RollForward,
+		ReleaseStatus:         sql.Success,
+		ProcessStage:          0,
+		CreatedTime:           time.Time{},
+		UpdatedTime:           time.Time{},
+		LeadTime:              nil,
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *Metrics
+		wantErr bool
+	}{
+		{
+			name: "all empty test",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: []sql.AppRelease{},
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: nil,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      0,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     0,
+				AverageRecoveryTime:   0,
+				AverageDeploymentSize: 0,
+				AverageLineAdded:      0,
+				AverageLineDeleted:    0,
+			},
+		},
+		{
+			name: "complete data with lastRelease nil",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: appReleases,
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: nil,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      24,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     33.333332,
+				AverageRecoveryTime:   24,
+				AverageDeploymentSize: 22,
+				AverageLineAdded:      11,
+				AverageLineDeleted:    11,
+			},
+		},
+		{
+			name: "complete data",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: appReleasesS,
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: &lastReleaseS,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      24,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     0,
+				AverageRecoveryTime:   0,
+				AverageDeploymentSize: 22,
+				AverageLineAdded:      11,
+				AverageLineDeleted:    11,
+			},
+		},
+		{
+			name: "All Failed F-F-F",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: appReleasesF,
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: &lastReleaseF,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      24,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     100,
+				AverageRecoveryTime:   0,
+				AverageDeploymentSize: 22,
+				AverageLineAdded:      11,
+				AverageLineDeleted:    11,
+			},
+		},
+		{
+			name: "failed - S-F-F",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: appReleasesF1,
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: &lastReleaseF1,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      24,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     66.666664,
+				AverageRecoveryTime:   0,
+				AverageDeploymentSize: 22,
+				AverageLineAdded:      11,
+				AverageLineDeleted:    11,
+			},
+		},
+		{
+			name: "Failed - F-F-S",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: appReleasesF2,
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: &lastReleaseF2,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      24,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     66.666664,
+				AverageRecoveryTime:   48,
+				AverageDeploymentSize: 22,
+				AverageLineAdded:      11,
+				AverageLineDeleted:    11,
+			},
+		},
+		{
+			name: "Failed - S-F-S",
+			fields: fields{
+				logger:                     nil,
+				appReleaseRepository:       nil,
+				pipelineMaterialRepository: nil,
+				leadTimeRepository:         nil,
+			},
+			wantErr: false,
+			args: args{
+				appReleases: appReleasesF3,
+				leadTimes:   []sql.LeadTime{},
+				lastRelease: &lastReleaseF3,
+			},
+			want: &Metrics{
+				Series:                nil,
+				AverageCycleTime:      24,
+				AverageLeadTime:       0,
+				ChangeFailureRate:     33.333332,
+				AverageRecoveryTime:   24,
+				AverageDeploymentSize: 22,
+				AverageLineAdded:      11,
+				AverageLineDeleted:    11,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			impl := DeploymentMetricServiceImpl{
+				logger:                     tt.fields.logger,
+				appReleaseRepository:       tt.fields.appReleaseRepository,
+				pipelineMaterialRepository: tt.fields.pipelineMaterialRepository,
+				leadTimeRepository:         tt.fields.leadTimeRepository,
+			}
+			got, err := impl.populateMetrics(tt.args.appReleases, tt.args.leadTimes, tt.args.lastRelease)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("populateMetrics() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("populateMetrics() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
