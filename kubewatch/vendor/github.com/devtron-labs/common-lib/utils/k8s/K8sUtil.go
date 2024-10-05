@@ -113,9 +113,8 @@ type K8sService interface {
 	CreateConfigMap(namespace string, cm *v1.ConfigMap, client *v12.CoreV1Client) (*v1.ConfigMap, error)
 	GetConfigMap(namespace string, name string, client *v12.CoreV1Client) (*v1.ConfigMap, error)
 	GetConfigMapWithCtx(ctx context.Context, namespace string, name string, client *v12.CoreV1Client) (*v1.ConfigMap, error)
-	GetNsIfExists(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, exists bool, err error)
-	CreateNsIfNotExists(namespace string, clusterConfig *ClusterConfig) (ns *v1.Namespace, nsCreated bool, err error)
-	UpdateNSLabels(namespace *v1.Namespace, labels map[string]string, clusterConfig *ClusterConfig) (ns *v1.Namespace, err error)
+	CheckIfNsExists(namespace string, client *v12.CoreV1Client) (exists bool, err error)
+	CreateNsIfNotExists(namespace string, clusterConfig *ClusterConfig) (err error)
 	GetK8sDiscoveryClientInCluster() (*discovery.DiscoveryClient, error)
 	GetK8sDiscoveryClient(clusterConfig *ClusterConfig) (*discovery.DiscoveryClient, error)
 	GetClientForInCluster() (*v12.CoreV1Client, error)
@@ -291,58 +290,37 @@ func (impl *K8sServiceImpl) GetK8sDiscoveryClientInCluster() (*discovery.Discove
 	return discoveryClient, err
 }
 
-func (impl *K8sServiceImpl) CreateNsIfNotExists(namespace string, clusterConfig *ClusterConfig) (ns *v1.Namespace, nsCreated bool, err error) {
+func (impl *K8sServiceImpl) CreateNsIfNotExists(namespace string, clusterConfig *ClusterConfig) (err error) {
 	v12Client, err := impl.GetCoreV1Client(clusterConfig)
 	if err != nil {
 		impl.logger.Errorw("error", "error", err, "clusterConfig", clusterConfig)
-		return nil, false, err
+		return err
 	}
-	ns, exists, err := impl.GetNsIfExists(namespace, v12Client)
+	exists, err := impl.CheckIfNsExists(namespace, v12Client)
 	if err != nil {
 		impl.logger.Errorw("error", "error", err, "clusterConfig", clusterConfig)
-		return ns, false, err
+		return err
 	}
 	if exists {
-		nsCreated = false
 		impl.logger.Infow("namesapce already exist")
-		return ns, nsCreated, nil
+		return nil
 	}
 	impl.logger.Infow("ns not exists creating", "ns", namespace)
-	ns, err = impl.CreateNs(namespace, v12Client)
-	if err != nil {
-		impl.logger.Errorw("error in creating ns", "namespace", namespace, "err", err)
-		return nil, false, err
-	}
-	nsCreated = true
-	return ns, nsCreated, err
+	_, err = impl.CreateNs(namespace, v12Client)
+	return err
 }
 
-func (impl *K8sServiceImpl) UpdateNSLabels(namespace *v1.Namespace, labels map[string]string, clusterConfig *ClusterConfig) (ns *v1.Namespace, err error) {
-	v12Client, err := impl.GetCoreV1Client(clusterConfig)
-	if err != nil {
-		impl.logger.Errorw("error", "error", err, "clusterConfig", clusterConfig)
-		return nil, err
-	}
-	namespace.Labels = labels
-	ns, err = v12Client.Namespaces().Update(context.Background(), namespace, metav1.UpdateOptions{})
-	if err != nil {
-		impl.logger.Errorw("error in updating ns", "namespace", namespace, "err", err)
-		return nil, err
-	}
-	return ns, nil
-}
-
-func (impl *K8sServiceImpl) GetNsIfExists(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, exists bool, err error) {
-	ns, err = client.Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+func (impl *K8sServiceImpl) CheckIfNsExists(namespace string, client *v12.CoreV1Client) (exists bool, err error) {
+	ns, err := client.Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 	//ns, err := impl.k8sClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 	impl.logger.Debugw("ns fetch", "name", namespace, "res", ns)
 	if errors.IsNotFound(err) {
-		return nil, false, nil
+		return false, nil
 	} else if err != nil {
 		impl.logger.Errorw("error in checking if ns exist", "err", err)
-		return nil, false, err
+		return false, err
 	} else {
-		return ns, true, nil
+		return true, nil
 	}
 
 }

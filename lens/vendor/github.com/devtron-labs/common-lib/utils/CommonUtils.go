@@ -22,7 +22,6 @@ import (
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"log"
 	"math/rand"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -31,11 +30,7 @@ import (
 
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
-const (
-	DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
-	DEVTRON_SELF_POD_UID           = "DEVTRON_SELF_POD_UID"
-	DEVTRON_SELF_POD_NAME          = "DEVTRON_SELF_POD_NAME"
-)
+const DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
 
 // Generates random string
 func Generate(size int) string {
@@ -86,12 +81,4 @@ func BuildDockerImagePath(dockerInfo bean.DockerRegistryInfo) (string, error) {
 		dest = dockerRegistryURL + ":" + dockerInfo.DockerImageTag
 	}
 	return dest, nil
-}
-
-func GetSelfK8sUID() string {
-	return os.Getenv(DEVTRON_SELF_POD_UID)
-}
-
-func GetSelfK8sPodName() string {
-	return os.Getenv(DEVTRON_SELF_POD_NAME)
 }
