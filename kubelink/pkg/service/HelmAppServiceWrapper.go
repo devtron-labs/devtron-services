@@ -19,6 +19,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/kubelink/bean"
 	client "github.com/devtron-labs/kubelink/grpc"
 	"github.com/devtron-labs/kubelink/internals/lock"
@@ -94,6 +95,17 @@ func (impl *ApplicationServiceServerImpl) ListApplications(req *client.AppListRe
 	}
 	impl.Logger.Info("List Application Request served")
 	return nil
+}
+
+func (impl *ApplicationServiceServerImpl) GetHelmReleaseDetailWithDesiredManifest(ctx context.Context, req *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
+	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
+		"namespace", req.Namespace)
+	resp, err := impl.HelmAppService.GetHelmReleaseDetailWithDesiredManifest(req)
+	if err != nil {
+		impl.Logger.Errorw("Error in GetHelmReleaseDetailWithDesiredManifest request", "payload", req, "err", err)
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (impl *ApplicationServiceServerImpl) GetAppDetail(ctxt context.Context, req *client.AppDetailRequest) (*client.AppDetail, error) {
@@ -377,7 +389,7 @@ func (impl *ApplicationServiceServerImpl) TemplateChart(ctx context.Context, in 
 	return res, err
 }
 
-func resourceRefResult(resourceRefs []*bean.ResourceRef) (resourceRefResults []*client.ResourceRef) {
+func resourceRefResult(resourceRefs []*commonBean.ResourceRef) (resourceRefResults []*client.ResourceRef) {
 	for _, resourceRef := range resourceRefs {
 		resourceRefResult := &client.ResourceRef{
 			Group:     resourceRef.Group,
@@ -461,16 +473,14 @@ func (impl *ApplicationServiceServerImpl) AppDetailAdaptor(req *bean.AppDetail) 
 			}
 		}
 		resourceNode := &client.ResourceNode{
-			Group:      node.Group,
-			Version:    node.Version,
-			Kind:       node.Kind,
-			Namespace:  node.Namespace,
-			Name:       node.Name,
-			Uid:        node.UID,
-			ParentRefs: resourceRefResult(node.ParentRefs),
-			NetworkingInfo: &client.ResourceNetworkingInfo{
-				Labels: node.NetworkingInfo.Labels,
-			},
+			Group:           node.Group,
+			Version:         node.Version,
+			Kind:            node.Kind,
+			Namespace:       node.Namespace,
+			Name:            node.Name,
+			Uid:             node.UID,
+			ParentRefs:      resourceRefResult(node.ParentRefs),
+			NetworkingInfo:  getNetworkingInfoFromNode(node.NetworkingInfo),
 			ResourceVersion: node.ResourceVersion,
 			Health:          healthStatus,
 			IsHibernated:    node.IsHibernated,
@@ -529,7 +539,16 @@ func (impl *ApplicationServiceServerImpl) AppDetailAdaptor(req *bean.AppDetail) 
 	return appDetail
 }
 
-func (impl *ApplicationServiceServerImpl) buildInfoItems(infoItemBeans []bean.InfoItem) []*client.InfoItem {
+func getNetworkingInfoFromNode(info *commonBean.ResourceNetworkingInfo) *client.ResourceNetworkingInfo {
+	if info == nil {
+		return &client.ResourceNetworkingInfo{}
+	}
+	return &client.ResourceNetworkingInfo{
+		Labels: info.Labels,
+	}
+}
+
+func (impl *ApplicationServiceServerImpl) buildInfoItems(infoItemBeans []commonBean.InfoItem) []*client.InfoItem {
 	infoItems := make([]*client.InfoItem, 0, len(infoItemBeans))
 	for _, infoItemBean := range infoItemBeans {
 		switch infoItemBean.Value.(type) {
