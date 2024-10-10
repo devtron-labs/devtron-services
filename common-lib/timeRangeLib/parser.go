@@ -54,17 +54,14 @@ func (tr TimeRange) GetTimeRangeWindowForFixedWindow(targetTime time.Time, locat
 
 func (tr TimeRange) getWindowForFixedTargetTimeAndZone(targetTime time.Time, location *time.Location) (time.Time, time.Time, error) {
 	var windowStartOrEnd time.Time
-	offset := 5*time.Hour + 30*time.Minute
 
-	// Correct the TimeFrom and TimeTo by adding the offset
-	correctedTimeFrom := tr.TimeFrom.Add(offset)
-	correctedTimeTo := tr.TimeTo.Add(offset)
-	correctedTimeFromInLocation := correctedTimeFrom.In(location)
-	correctedTimeToInLocation := correctedTimeTo.In(location)
-	if targetTime.After(correctedTimeToInLocation) {
+	TimeFromInLocation := tr.TimeFrom.In(location)
+	TimeToInLocation := tr.TimeTo.In(location)
+
+	if targetTime.After(TimeToInLocation) {
 		return windowStartOrEnd, windowStartOrEnd, nil
 	}
-	return correctedTimeFromInLocation, correctedTimeToInLocation, nil
+	return TimeFromInLocation, TimeToInLocation, nil
 }
 
 func (tr TimeRange) getWindowForTargetTime(targetTime time.Time) (time.Time, time.Time, error) {
