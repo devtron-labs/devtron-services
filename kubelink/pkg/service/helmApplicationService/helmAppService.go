@@ -23,6 +23,8 @@ import (
 	"errors"
 	"fmt"
 	registry2 "github.com/devtron-labs/common-lib/helmLib/registry"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
+	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/kubelink/converter"
 	error2 "github.com/devtron-labs/kubelink/error"
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
@@ -103,6 +105,7 @@ type HelmAppService interface {
 	PushHelmChartToOCIRegistryRepo(ctx context.Context, OCIRegistryRequest *client.OCIRegistryRequest) (*client.OCIRegistryResponse, error)
 	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error)
+	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
 }
 
 type HelmAppServiceImpl struct {
@@ -220,6 +223,10 @@ func (impl *HelmAppServiceImpl) GetApplicationListForCluster(config *client.Clus
 func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
 	return impl.common.GetResourceTreeForExternalResources(req)
 }
+func (impl HelmAppServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
+	return impl.common.GetHelmReleaseDetailWithDesiredManifest(appConfig)
+}
+
 func (impl HelmAppServiceImpl) BuildAppDetail(req *client.AppDetailRequest) (*bean.AppDetail, error) {
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
@@ -241,7 +248,7 @@ func (impl HelmAppServiceImpl) BuildAppDetail(req *client.AppDetailRequest) (*be
 
 	appDetail := &bean.AppDetail{
 		ResourceTreeResponse: resourceTreeResponse,
-		ApplicationStatus:    util.BuildAppHealthStatus(resourceTreeResponse.Nodes),
+		ApplicationStatus:    k8sObjectsUtil.BuildAppHealthStatus(resourceTreeResponse.Nodes),
 		LastDeployed:         helmRelease.Info.LastDeployed.Time,
 		ChartMetadata: &bean.ChartMetadata{
 			ChartName:    helmRelease.Chart.Name(),
@@ -1271,7 +1278,7 @@ func buildReleaseInfoBasicData(helmRelease *release.Release) (*client.ReleaseInf
 	return res, nil
 }
 
-func (impl *HelmAppServiceImpl) getNodes(appDetailRequest *client.AppDetailRequest, release *release.Release) ([]*bean.ResourceNode, []*bean.HealthStatus, error) {
+func (impl *HelmAppServiceImpl) getNodes(appDetailRequest *client.AppDetailRequest, release *release.Release) ([]*commonBean.ResourceNode, []*commonBean.HealthStatus, error) {
 	k8sClusterConfig := impl.converter.GetClusterConfigFromClientBean(appDetailRequest.ClusterConfig)
 	conf, err := impl.k8sUtil.GetRestConfigByCluster(k8sClusterConfig)
 	if err != nil {
@@ -1298,14 +1305,14 @@ func (impl *HelmAppServiceImpl) getNodes(appDetailRequest *client.AppDetailReque
 	return buildNodesResponse.Nodes, buildNodesResponse.HealthStatusArray, nil
 }
 
-func (impl *HelmAppServiceImpl) filterNodes(resourceTreeFilter *client.ResourceTreeFilter, nodes []*bean.ResourceNode) []*bean.ResourceNode {
+func (impl *HelmAppServiceImpl) filterNodes(resourceTreeFilter *client.ResourceTreeFilter, nodes []*commonBean.ResourceNode) []*commonBean.ResourceNode {
 	resourceFilters := resourceTreeFilter.ResourceFilters
 	globalFilter := resourceTreeFilter.GlobalFilter
 	if globalFilter == nil && (resourceFilters == nil || len(resourceFilters) == 0) {
 		return nodes
 	}
 
-	filteredNodes := make([]*bean.ResourceNode, 0, len(nodes))
+	filteredNodes := make([]*commonBean.ResourceNode, 0, len(nodes))
 
 	// handle global
 	if globalFilter != nil && len(globalFilter.Labels) > 0 {
@@ -1399,7 +1406,7 @@ func (impl *HelmAppServiceImpl) getManifestData(restConfig *rest.Config, release
 	return desiredOrLiveManifest
 }
 
-func (impl *HelmAppServiceImpl) getDeploymentCollisionCount(restConfig *rest.Config, deploymentInfo *bean.ResourceRef) (*int32, error) {
+func (impl *HelmAppServiceImpl) getDeploymentCollisionCount(restConfig *rest.Config, deploymentInfo *commonBean.ResourceRef) (*int32, error) {
 	parentGvk := &schema.GroupVersionKind{
 		Group:   deploymentInfo.Group,
 		Version: deploymentInfo.Version,
@@ -1420,7 +1427,7 @@ func (impl *HelmAppServiceImpl) getDeploymentCollisionCount(restConfig *rest.Con
 		deploymentNodeObj = deploymentInfo.Manifest.Object
 	}
 
-	deploymentObj, err := util.ConvertToV1Deployment(deploymentNodeObj)
+	deploymentObj, err := k8sObjectsUtil.ConvertToV1Deployment(deploymentNodeObj)
 	if err != nil {
 		impl.logger.Errorw("error in converting parent deployment unstructured object to replicaSet object", "clusterName", restConfig.ServerName, "deploymentName", deploymentInfo.Name)
 		return nil, err
