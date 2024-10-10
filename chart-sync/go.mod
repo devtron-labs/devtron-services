@@ -5,13 +5,13 @@ go 1.22.4
 toolchain go1.22.6
 
 replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010124815-ef03c0637ef4
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010131105-e2c23f9c80da
 	helm.sh/helm/v3 v3.14.3 => github.com/devtron-labs/helm/v3 v3.14.1-0.20240401080259-90238cf69e42
 )
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.19.0
+	github.com/devtron-labs/common-lib v0.0.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/google/wire v0.6.0

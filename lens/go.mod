@@ -54,9 +54,9 @@ require (
 )
 
 require (
-	github.com/devtron-labs/common-lib v0.19.0
+	github.com/devtron-labs/common-lib v0.0.0
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.18.1 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010124815-ef03c0637ef4
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010131105-e2c23f9c80da
