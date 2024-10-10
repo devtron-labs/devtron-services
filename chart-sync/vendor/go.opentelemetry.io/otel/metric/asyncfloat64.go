@@ -1,5 +1,4 @@
 // Copyright The OpenTelemetry Authors
-<<<<<<<< HEAD:chart-sync/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-========
-// SPDX-License-Identifier: Apache-2.0
->>>>>>>> release-candidate-v0.20.0:ci-runner/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 
 package metric // import "go.opentelemetry.io/otel/metric"
 
@@ -54,11 +50,7 @@ type Float64ObservableCounter interface {
 }
 
 // Float64ObservableCounterConfig contains options for asynchronous counter
-<<<<<<<< HEAD:chart-sync/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 // instruments that record int64 values.
-========
-// instruments that record float64 values.
->>>>>>>> release-candidate-v0.20.0:ci-runner/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 type Float64ObservableCounterConfig struct {
 	description string
 	unit        string
@@ -116,11 +108,7 @@ type Float64ObservableUpDownCounter interface {
 }
 
 // Float64ObservableUpDownCounterConfig contains options for asynchronous
-<<<<<<<< HEAD:chart-sync/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 // counter instruments that record int64 values.
-========
-// counter instruments that record float64 values.
->>>>>>>> release-candidate-v0.20.0:ci-runner/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 type Float64ObservableUpDownCounterConfig struct {
 	description string
 	unit        string
@@ -177,11 +165,7 @@ type Float64ObservableGauge interface {
 }
 
 // Float64ObservableGaugeConfig contains options for asynchronous counter
-<<<<<<<< HEAD:chart-sync/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 // instruments that record int64 values.
-========
-// instruments that record float64 values.
->>>>>>>> release-candidate-v0.20.0:ci-runner/vendor/go.opentelemetry.io/otel/metric/asyncfloat64.go
 type Float64ObservableGaugeConfig struct {
 	description string
 	unit        string
