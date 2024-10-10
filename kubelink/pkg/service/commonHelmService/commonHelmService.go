@@ -1,20 +1,21 @@
 package commonHelmService
 
 import (
+	"errors"
+	"fmt"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
-	k8sObjectUtils "github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
+	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	yamlUtil "github.com/devtron-labs/common-lib/utils/yaml"
 	"github.com/devtron-labs/common-lib/workerPool"
 	"github.com/devtron-labs/kubelink/bean"
 	globalConfig "github.com/devtron-labs/kubelink/config"
 	"github.com/devtron-labs/kubelink/converter"
 	client "github.com/devtron-labs/kubelink/grpc"
-	"github.com/devtron-labs/kubelink/pkg/cache"
 	"github.com/devtron-labs/kubelink/pkg/helmClient"
 	"github.com/devtron-labs/kubelink/pkg/util"
-	"github.com/devtron-labs/kubelink/pkg/util/argo"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"helm.sh/helm/v3/pkg/release"
 	"k8s.io/api/extensions/v1beta1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,7 @@ type CommonHelmService interface {
 	BuildResourceTree(appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error)
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
 	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
+	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
 }
 
 type CommonHelmServiceImpl struct {
@@ -125,10 +127,74 @@ func (impl *CommonHelmServiceImpl) getRestConfigForClusterConfig(clusterConfig *
 	}
 	return conf, nil
 }
-func (impl *CommonHelmServiceImpl) getLiveManifests(config *rest.Config, helmRelease *release.Release) ([]*bean.DesiredOrLiveManifest, error) {
+
+func (impl *CommonHelmServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
+	if appConfig == nil {
+		return nil, errors.New("appConfig is nil")
+	}
+	helmRelease, err := impl.GetHelmRelease(appConfig.ClusterConfig, appConfig.Namespace, appConfig.ReleaseName)
+	if err != nil {
+		impl.logger.Errorw("Error in getting helm release", "appConfig", appConfig, "err", err)
+		return nil, err
+	}
+	if helmRelease == nil {
+		return nil, errors.New(fmt.Sprintf("no helm release found for name=%s", appConfig.ReleaseName))
+	}
+	manifests, err := impl.getManifestsFromHelmRelease(helmRelease)
+	if err != nil {
+		impl.logger.Errorw("Error in getting helm release", "helmRelease", helmRelease, "err", err)
+		return nil, err
+	}
+
+	objectIdentifiers := make([]*client.ObjectIdentifier, 0)
+	for _, manifest := range manifests {
+		objectIdentifier := GetObjectIdentifierFromHelmManifest(manifest, appConfig.Namespace)
+		if objectIdentifier != nil && len(objectIdentifier.Kind) > 0 && len(objectIdentifier.Name) > 0 {
+			objectIdentifiers = append(objectIdentifiers, objectIdentifier)
+		}
+	}
+
+	resp := &client.GetReleaseDetailWithManifestResponse{
+		ParentObjects: objectIdentifiers,
+		ReleaseStatus: &client.ReleaseStatus{
+			Status:      string(helmRelease.Info.Status),
+			Message:     helmRelease.Info.Description,
+			Description: util.GetMessageFromReleaseStatus(helmRelease.Info.Status),
+		},
+		LastDeployed: timestamppb.New(helmRelease.Info.LastDeployed.Time),
+		ChartMetadata: &client.ChartMetadata{
+			ChartName:    helmRelease.Chart.Name(),
+			ChartVersion: helmRelease.Chart.Metadata.Version,
+			Notes:        helmRelease.Info.Notes,
+		},
+		EnvironmentDetails: &client.EnvironmentDetails{
+			ClusterName: appConfig.ClusterConfig.ClusterName,
+			ClusterId:   appConfig.ClusterConfig.ClusterId,
+			Namespace:   helmRelease.Namespace,
+		},
+		ReleaseExist: true,
+	}
+
+	return resp, nil
+}
+
+func (impl *CommonHelmServiceImpl) getManifestsFromHelmRelease(helmRelease *release.Release) ([]unstructured.Unstructured, error) {
 	manifests, err := yamlUtil.SplitYAMLs([]byte(helmRelease.Manifest))
+	if err != nil {
+		return nil, err
+	}
 	manifests = impl.addHookResourcesInManifest(helmRelease, manifests)
+	return manifests, nil
+}
+
+func (impl *CommonHelmServiceImpl) getLiveManifests(config *rest.Config, helmRelease *release.Release) ([]*bean.DesiredOrLiveManifest, error) {
+	manifests, err := impl.getManifestsFromHelmRelease(helmRelease)
+	if err != nil {
+		impl.logger.Errorw("error in parsing manifests", "payload", helmRelease, "error", err)
+		return nil, err
+	}
 	// get live manifests from kubernetes
+	//impl.logger.Infow("manifests added", "manifests", manifests, "helmRelease", helmRelease.Name)
 	desiredOrLiveManifests, err := impl.getDesiredOrLiveManifests(config, manifests, helmRelease.Namespace)
 	if err != nil {
 		impl.logger.Errorw("error in getting desired or live manifest", "host", config.Host, "helmReleaseName", helmRelease.Name, "err", err)
@@ -306,8 +372,8 @@ func (impl *CommonHelmServiceImpl) getNodeFromDesiredOrLiveManifest(request *Get
 	if _namespace == "" {
 		_namespace = request.ReleaseNamespace
 	}
-	ports := util.GetPorts(manifest, gvk)
-	resourceRef := BuildResourceRef(gvk, *manifest, _namespace)
+	ports := k8sObjectsUtil.GetPorts(manifest, gvk)
+	resourceRef := k8sObjectsUtil.BuildResourceRef(gvk, *manifest, _namespace)
 
 	if impl.k8sService.CanHaveChild(gvk) {
 		children, err := impl.k8sService.GetChildObjects(request.RestConfig, _namespace, gvk, manifest.GetName(), manifest.GetAPIVersion())
@@ -329,64 +395,64 @@ func (impl *CommonHelmServiceImpl) getNodeFromDesiredOrLiveManifest(request *Get
 	if found && err == nil {
 		creationTimeStamp = val
 	}
-	node := &bean.ResourceNode{
+	node := &k8sCommonBean.ResourceNode{
 		ResourceRef:     resourceRef,
 		ResourceVersion: manifest.GetResourceVersion(),
-		NetworkingInfo: &bean.ResourceNetworkingInfo{
+		NetworkingInfo: &k8sCommonBean.ResourceNetworkingInfo{
 			Labels: manifest.GetLabels(),
 		},
 		CreatedAt: creationTimeStamp,
 		Port:      ports,
 	}
-	node.IsHook, node.HookType = util.GetHookMetadata(manifest)
+	node.IsHook, node.HookType = k8sObjectsUtil.GetHookMetadata(manifest)
 
 	if request.ParentResourceRef != nil {
-		node.ParentRefs = append(make([]*bean.ResourceRef, 0), request.ParentResourceRef)
+		node.ParentRefs = append(make([]*k8sCommonBean.ResourceRef, 0), request.ParentResourceRef)
 	}
 
 	// set health of Node
 	if request.DesiredOrLiveManifest.IsLiveManifestFetchError {
 		if request.DesiredOrLiveManifest.LiveManifestFetchErrorCode == http.StatusNotFound {
-			node.Health = &bean.HealthStatus{
-				Status:  bean.HealthStatusMissing,
+			node.Health = &k8sCommonBean.HealthStatus{
+				Status:  k8sCommonBean.HealthStatusMissing,
 				Message: "Resource missing as live manifest not found",
 			}
 		} else {
-			node.Health = &bean.HealthStatus{
-				Status:  bean.HealthStatusUnknown,
+			node.Health = &k8sCommonBean.HealthStatus{
+				Status:  k8sCommonBean.HealthStatusUnknown,
 				Message: "Resource state unknown as error while fetching live manifest",
 			}
 		}
 	} else {
-		cache.SetHealthStatusForNode(node, manifest, gvk)
+		k8sObjectsUtil.SetHealthStatusForNode(node, manifest, gvk)
 	}
 
 	// hibernate set starts
 	if request.ParentResourceRef == nil {
 
 		// set CanBeHibernated
-		cache.SetHibernationRules(node, &node.Manifest)
+		k8sObjectsUtil.SetHibernationRules(node, &node.Manifest)
 	}
 	// hibernate set ends
 
-	if k8sUtils.IsPod(gvk) {
-		infoItems, _ := argo.PopulatePodInfo(manifest)
+	if k8sObjectsUtil.IsPod(gvk.Kind, gvk.Group) {
+		infoItems, _ := k8sObjectsUtil.PopulatePodInfo(manifest)
 		node.Info = infoItems
 	}
-	util.AddSelectiveInfoInResourceNode(node, gvk, manifest.Object)
+	k8sObjectsUtil.AddSelectiveInfoInResourceNode(node, gvk, manifest.Object)
 
 	response.WithNode(node).WithHealthStatus(node.Health)
 	return response, nil
 }
 
-func (impl *CommonHelmServiceImpl) filterNodes(resourceTreeFilter *client.ResourceTreeFilter, nodes []*bean.ResourceNode) []*bean.ResourceNode {
+func (impl *CommonHelmServiceImpl) filterNodes(resourceTreeFilter *client.ResourceTreeFilter, nodes []*k8sCommonBean.ResourceNode) []*k8sCommonBean.ResourceNode {
 	resourceFilters := resourceTreeFilter.ResourceFilters
 	globalFilter := resourceTreeFilter.GlobalFilter
 	if globalFilter == nil && (resourceFilters == nil || len(resourceFilters) == 0) {
 		return nodes
 	}
 
-	filteredNodes := make([]*bean.ResourceNode, 0, len(nodes))
+	filteredNodes := make([]*k8sCommonBean.ResourceNode, 0, len(nodes))
 
 	// handle global
 	if globalFilter != nil && len(globalFilter.Labels) > 0 {
@@ -422,80 +488,6 @@ func (impl *CommonHelmServiceImpl) filterNodes(resourceTreeFilter *client.Resour
 	}
 
 	return filteredNodes
-}
-
-func (impl *CommonHelmServiceImpl) buildPodMetadata(nodes []*bean.ResourceNode, restConfig *rest.Config) ([]*bean.PodMetadata, error) {
-	deploymentPodHashMap, rolloutMap, uidVsExtraNodeInfoMap := getExtraNodeInfoMappings(nodes)
-	podsMetadata := make([]*bean.PodMetadata, 0, len(nodes))
-	for _, node := range nodes {
-
-		if node.Kind != k8sCommonBean.PodKind {
-			continue
-		}
-		// check if pod is new
-		var isNew bool
-		var err error
-		if len(node.ParentRefs) > 0 {
-			isNew, err = impl.isPodNew(nodes, node, deploymentPodHashMap, rolloutMap, uidVsExtraNodeInfoMap, restConfig)
-			if err != nil {
-				return podsMetadata, err
-			}
-		}
-
-		// set containers,initContainers and ephemeral container names
-		var containerNames []string
-		var initContainerNames []string
-		var ephemeralContainersInfo []bean.EphemeralContainerInfo
-		var ephemeralContainerStatus []bean.EphemeralContainerStatusesInfo
-
-		for _, nodeInfo := range node.Info {
-			switch nodeInfo.Name {
-			case bean.ContainersNamesType:
-				containerNames = nodeInfo.Value.([]string)
-			case bean.InitContainersNamesType:
-				initContainerNames = nodeInfo.Value.([]string)
-			case bean.EphemeralContainersInfoType:
-				ephemeralContainersInfo = nodeInfo.Value.([]bean.EphemeralContainerInfo)
-			case bean.EphemeralContainersStatusType:
-				ephemeralContainerStatus = nodeInfo.Value.([]bean.EphemeralContainerStatusesInfo)
-			default:
-				continue
-			}
-		}
-
-		ephemeralContainerStatusMap := make(map[string]bool)
-		for _, c := range ephemeralContainerStatus {
-			// c.state contains three states running,waiting and terminated
-			// at any point of time only one state will be there
-			if c.State.Running != nil {
-				ephemeralContainerStatusMap[c.Name] = true
-			}
-		}
-		ephemeralContainers := make([]*bean.EphemeralContainerData, 0, len(ephemeralContainersInfo))
-		// sending only running ephemeral containers in the list
-		for _, ec := range ephemeralContainersInfo {
-			if _, ok := ephemeralContainerStatusMap[ec.Name]; ok {
-				containerData := &bean.EphemeralContainerData{
-					Name:       ec.Name,
-					IsExternal: k8sObjectUtils.IsExternalEphemeralContainer(ec.Command, ec.Name),
-				}
-				ephemeralContainers = append(ephemeralContainers, containerData)
-			}
-		}
-
-		podMetadata := &bean.PodMetadata{
-			Name:                node.Name,
-			UID:                 node.UID,
-			Containers:          containerNames,
-			InitContainers:      initContainerNames,
-			EphemeralContainers: ephemeralContainers,
-			IsNew:               isNew,
-		}
-
-		podsMetadata = append(podsMetadata, podMetadata)
-
-	}
-	return podsMetadata, nil
 }
 
 func (impl *CommonHelmServiceImpl) GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
@@ -565,8 +557,34 @@ func (impl *CommonHelmServiceImpl) getManifestsForExternalResources(restConfig *
 	return manifests
 }
 
-func (impl *CommonHelmServiceImpl) isPodNew(nodes []*bean.ResourceNode, node *bean.ResourceNode, deploymentPodHashMap map[string]string, rolloutMap map[string]*util.ExtraNodeInfo,
-	uidVsExtraNodeInfoMap map[string]*util.ExtraNodeInfo, restConfig *rest.Config) (bool, error) {
+func (impl *CommonHelmServiceImpl) buildPodMetadata(nodes []*k8sCommonBean.ResourceNode, restConfig *rest.Config) ([]*k8sCommonBean.PodMetadata, error) {
+	podMetadatas, err := k8sObjectsUtil.BuildPodMetadata(nodes)
+	if err != nil {
+		impl.logger.Errorw("error in building pod metadata", "err", err)
+		return nil, err
+	}
+	if len(podMetadatas) > 0 {
+		for _, node := range nodes {
+			var isNew bool
+			if len(node.ParentRefs) > 0 {
+				deploymentPodHashMap, rolloutMap, uidVsExtraNodeInfoMap := k8sObjectsUtil.GetExtraNodeInfoMappings(nodes)
+				isNew, err = impl.isPodNew(nodes, node, deploymentPodHashMap, rolloutMap, uidVsExtraNodeInfoMap, restConfig)
+				if err != nil {
+					return podMetadatas, err
+				}
+			}
+			podMetadata := k8sObjectsUtil.GetMatchingPodMetadataForUID(podMetadatas, node.UID)
+			if podMetadata != nil {
+				podMetadata.IsNew = isNew
+			}
+		}
+	}
+	return podMetadatas, nil
+
+}
+
+func (impl *CommonHelmServiceImpl) isPodNew(nodes []*k8sCommonBean.ResourceNode, node *k8sCommonBean.ResourceNode, deploymentPodHashMap map[string]string, rolloutMap map[string]*k8sCommonBean.ExtraNodeInfo,
+	uidVsExtraNodeInfoMap map[string]*k8sCommonBean.ExtraNodeInfo, restConfig *rest.Config) (bool, error) {
 
 	isNew := false
 	parentRef := node.ParentRefs[0]
@@ -585,7 +603,7 @@ func (impl *CommonHelmServiceImpl) isPodNew(nodes []*bean.ResourceNode, node *be
 
 	// if parent kind is replica set then
 	if parentKind == k8sCommonBean.ReplicaSetKind {
-		replicaSetNode := getMatchingNode(nodes, parentKind, parentRef.Name)
+		replicaSetNode := k8sObjectsUtil.GetMatchingNode(nodes, parentKind, parentRef.Name)
 
 		// if parent of replicaset is deployment, compare label pod-template-hash
 		if replicaSetParent := replicaSetNode.ParentRefs[0]; replicaSetNode != nil && len(replicaSetNode.ParentRefs) > 0 && replicaSetParent.Kind == k8sCommonBean.DeploymentKind {
@@ -594,7 +612,7 @@ func (impl *CommonHelmServiceImpl) isPodNew(nodes []*bean.ResourceNode, node *be
 			if err != nil {
 				return isNew, err
 			}
-			deploymentNode := getMatchingNode(nodes, replicaSetParent.Kind, replicaSetParent.Name)
+			deploymentNode := k8sObjectsUtil.GetMatchingNode(nodes, replicaSetParent.Kind, replicaSetParent.Name)
 			// TODO: why do we need deployment object for collisionCount ??
 			var deploymentCollisionCount *int32
 			if deploymentNode != nil && deploymentNode.DeploymentCollisionCount != nil {
@@ -605,13 +623,13 @@ func (impl *CommonHelmServiceImpl) isPodNew(nodes []*bean.ResourceNode, node *be
 					return isNew, err
 				}
 			}
-			replicaSetPodHash := util.GetReplicaSetPodHash(replicaSetObj, deploymentCollisionCount)
+			replicaSetPodHash := k8sObjectsUtil.GetReplicaSetPodHash(replicaSetObj, deploymentCollisionCount)
 			isNew = replicaSetPodHash == deploymentPodHash
 		} else if replicaSetParent.Kind == k8sCommonBean.K8sClusterResourceRolloutKind {
 
 			rolloutExtraInfo := rolloutMap[replicaSetParent.Name]
 			rolloutPodHash := rolloutExtraInfo.RolloutCurrentPodHash
-			replicasetPodHash := util.GetRolloutPodTemplateHash(replicaSetNode)
+			replicasetPodHash := k8sObjectsUtil.GetRolloutPodTemplateHash(replicaSetNode)
 
 			isNew = rolloutPodHash == replicasetPodHash
 
@@ -621,7 +639,7 @@ func (impl *CommonHelmServiceImpl) isPodNew(nodes []*bean.ResourceNode, node *be
 
 	// if parent kind is DaemonSet then compare DaemonSet's Child ControllerRevision's label controller-revision-hash with pod label controller-revision-hash
 	if parentKind == k8sCommonBean.DaemonSetKind {
-		controllerRevisionNodes := getMatchingNodes(nodes, "ControllerRevision")
+		controllerRevisionNodes := k8sObjectsUtil.GetMatchingNodes(nodes, "ControllerRevision")
 		for _, controllerRevisionNode := range controllerRevisionNodes {
 			if len(controllerRevisionNode.ParentRefs) > 0 && controllerRevisionNode.ParentRefs[0].Kind == parentKind &&
 				controllerRevisionNode.ParentRefs[0].Name == parentRef.Name && uidVsExtraNodeInfoMap[parentRef.UID].ResourceNetworkingInfo != nil &&
@@ -634,7 +652,7 @@ func (impl *CommonHelmServiceImpl) isPodNew(nodes []*bean.ResourceNode, node *be
 	return isNew, nil
 }
 
-func (impl *CommonHelmServiceImpl) getReplicaSetObject(restConfig *rest.Config, replicaSetNode *bean.ResourceNode) (*v1beta1.ReplicaSet, error) {
+func (impl *CommonHelmServiceImpl) getReplicaSetObject(restConfig *rest.Config, replicaSetNode *k8sCommonBean.ResourceNode) (*v1beta1.ReplicaSet, error) {
 	gvk := &schema.GroupVersionKind{
 		Group:   replicaSetNode.Group,
 		Version: replicaSetNode.Version,
@@ -655,7 +673,7 @@ func (impl *CommonHelmServiceImpl) getReplicaSetObject(restConfig *rest.Config, 
 		replicaSetNodeObj = replicaSetNode.Manifest.Object
 	}
 
-	replicaSetObj, err := util.ConvertToV1ReplicaSet(replicaSetNodeObj)
+	replicaSetObj, err := k8sObjectsUtil.ConvertToV1ReplicaSet(replicaSetNodeObj)
 	if err != nil {
 		impl.logger.Errorw("error in converting replicaSet unstructured object to replicaSet object", "clusterName", restConfig.ServerName, "replicaSetName", replicaSetNode.Name)
 		return nil, err
@@ -663,7 +681,7 @@ func (impl *CommonHelmServiceImpl) getReplicaSetObject(restConfig *rest.Config, 
 	return replicaSetObj, nil
 }
 
-func (impl *CommonHelmServiceImpl) getDeploymentCollisionCount(restConfig *rest.Config, deploymentInfo *bean.ResourceRef) (*int32, error) {
+func (impl *CommonHelmServiceImpl) getDeploymentCollisionCount(restConfig *rest.Config, deploymentInfo *k8sCommonBean.ResourceRef) (*int32, error) {
 	parentGvk := &schema.GroupVersionKind{
 		Group:   deploymentInfo.Group,
 		Version: deploymentInfo.Version,
@@ -684,7 +702,7 @@ func (impl *CommonHelmServiceImpl) getDeploymentCollisionCount(restConfig *rest.
 		deploymentNodeObj = deploymentInfo.Manifest.Object
 	}
 
-	deploymentObj, err := util.ConvertToV1Deployment(deploymentNodeObj)
+	deploymentObj, err := k8sObjectsUtil.ConvertToV1Deployment(deploymentNodeObj)
 	if err != nil {
 		impl.logger.Errorw("error in converting parent deployment unstructured object to replicaSet object", "clusterName", restConfig.ServerName, "deploymentName", deploymentInfo.Name)
 		return nil, err
@@ -692,7 +710,7 @@ func (impl *CommonHelmServiceImpl) getDeploymentCollisionCount(restConfig *rest.
 	return deploymentObj.Status.CollisionCount, nil
 }
 
-func updateHookInfoForChildNodes(nodes []*bean.ResourceNode) {
+func updateHookInfoForChildNodes(nodes []*k8sCommonBean.ResourceNode) {
 	hookUidToHookTypeMap := make(map[string]string)
 	for _, node := range nodes {
 		if node.IsHook {
@@ -710,52 +728,4 @@ func updateHookInfoForChildNodes(nodes []*bean.ResourceNode) {
 			}
 		}
 	}
-}
-func getExtraNodeInfoMappings(nodes []*bean.ResourceNode) (map[string]string, map[string]*util.ExtraNodeInfo, map[string]*util.ExtraNodeInfo) {
-	deploymentPodHashMap := make(map[string]string)
-	rolloutNameVsExtraNodeInfoMapping := make(map[string]*util.ExtraNodeInfo)
-	uidVsExtraNodeInfoMapping := make(map[string]*util.ExtraNodeInfo)
-	for _, node := range nodes {
-		if node.Kind == k8sCommonBean.DeploymentKind {
-			deploymentPodHashMap[node.Name] = node.DeploymentPodHash
-		} else if node.Kind == k8sCommonBean.K8sClusterResourceRolloutKind {
-			rolloutNameVsExtraNodeInfoMapping[node.Name] = &util.ExtraNodeInfo{
-				RolloutCurrentPodHash: node.RolloutCurrentPodHash,
-			}
-		} else if node.Kind == k8sCommonBean.StatefulSetKind || node.Kind == k8sCommonBean.DaemonSetKind {
-			if _, ok := uidVsExtraNodeInfoMapping[node.UID]; !ok {
-				uidVsExtraNodeInfoMapping[node.UID] = &util.ExtraNodeInfo{UpdateRevision: node.UpdateRevision, ResourceNetworkingInfo: node.NetworkingInfo}
-			}
-		}
-	}
-	return deploymentPodHashMap, rolloutNameVsExtraNodeInfoMapping, uidVsExtraNodeInfoMapping
-}
-func getMatchingNode(nodes []*bean.ResourceNode, kind string, name string) *bean.ResourceNode {
-	for _, node := range nodes {
-		if node.Kind == kind && node.Name == name {
-			return node
-		}
-	}
-	return nil
-}
-func getMatchingNodes(nodes []*bean.ResourceNode, kind string) []*bean.ResourceNode {
-	nodesRes := make([]*bean.ResourceNode, 0, len(nodes))
-	for _, node := range nodes {
-		if node.Kind == kind {
-			nodesRes = append(nodesRes, node)
-		}
-	}
-	return nodesRes
-}
-func BuildResourceRef(gvk schema.GroupVersionKind, manifest unstructured.Unstructured, namespace string) *bean.ResourceRef {
-	resourceRef := &bean.ResourceRef{
-		Group:     gvk.Group,
-		Version:   gvk.Version,
-		Kind:      gvk.Kind,
-		Namespace: namespace,
-		Name:      manifest.GetName(),
-		UID:       string(manifest.GetUID()),
-		Manifest:  manifest,
-	}
-	return resourceRef
 }
