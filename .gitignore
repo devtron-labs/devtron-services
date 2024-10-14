@@ -18,3 +18,13 @@
 .vscode
 .env
 /cmd/external-app/devtron-ea
+
+#binaries
+authenticator/authenticator
+chart-sync/chart-sync
+ci-runner/cirunner
+git-sensor/git-sensor
+kubelink/kubelink
+kubewatch/kubewatch
+lens/lens
+
