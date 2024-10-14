@@ -91,6 +91,11 @@ func (tr TimeRange) currentTimeMinusWindowDuration(targetTime time.Time, duratio
 	return targetTime.Add(-1 * duration)
 }
 
+// getWindowForFixedTime calculates the time window for a fixed frequency.
+// Before comparing times, it is essential to ensure they are in the same time zone.
+// The input targetTime is already converted to the correct time zone,(means the time zone in which they have saved mentioned explicitly)
+// while tr.TimeFrom and tr.TimeTo are in GMT. Therefore, to compare them accurately, (in case of Fixed it happens)
+// we convert the time range to match the time zone of targetTime.
 func (tr TimeRange) getWindowForFixedTime(targetTime time.Time) (time.Time, time.Time) {
 	var windowStartOrEnd time.Time
 	timeFromInLocation := tr.TimeFrom.In(targetTime.Location())
