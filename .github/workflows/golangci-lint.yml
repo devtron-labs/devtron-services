@@ -22,7 +22,7 @@ jobs:
         with:
           args: --timeout=30m
           version: v1.21
-          install-mode: "none"
+          install-mode: "goinstall"
           only-new-issues: true
           working-directory: authenticator
       - name: golangci-lint-chart-sync
