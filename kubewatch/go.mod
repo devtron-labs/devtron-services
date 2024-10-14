@@ -36,7 +36,7 @@ require (
 )
 
 require (
-	github.com/devtron-labs/common-lib v0.16.1-0.20240923063129-ff2dc035435e
+	github.com/devtron-labs/common-lib v0.0.0
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/wire v0.6.0
 	github.com/imdario/mergo v0.3.16 // indirect
@@ -245,3 +245,5 @@ replace (
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.7
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
 )
+
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010131105-e2c23f9c80da

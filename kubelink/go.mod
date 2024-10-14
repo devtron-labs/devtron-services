@@ -6,7 +6,7 @@ toolchain go1.22.6
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/devtron-labs/common-lib v0.18.1-0.20241001061923-eda545dc839e
+	github.com/devtron-labs/common-lib v0.0.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
 	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/golang/protobuf v1.5.4
@@ -177,7 +177,7 @@ require (
 )
 
 replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241007082211-c5886d8a9988
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010131105-e2c23f9c80da
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.18.0
 	// https://github.com/kubernetes/kubernetes/issues/79384#issuecomment-505627280
 	k8s.io/api => k8s.io/api v0.29.0
