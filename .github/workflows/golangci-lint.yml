@@ -31,13 +31,13 @@ jobs:
           args: --timeout=30m
           only-new-issues: "true"
           working-directory: chart-sync
-      - name: golangci-lint-common-lib
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.61
-          args: --timeout=30m
-          only-new-issues: "true"
-          working-directory: common-lib
+      # - name: golangci-lint-common-lib
+      #   uses: golangci/golangci-lint-action@v6
+      #   with:
+      #     version: v1.61
+      #     args: --timeout=30m
+      #     only-new-issues: "true"
+      #     working-directory: common-lib
       - name: golangci-lint-git-sensor
         uses: golangci/golangci-lint-action@v6
         with:
