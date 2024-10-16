@@ -22,3 +22,4 @@ jobs:
         with:
           version: v1.61
           working-directory: authenticator
+          args: --timeout=30m
