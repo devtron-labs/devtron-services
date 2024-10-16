@@ -177,7 +177,6 @@ require (
 )
 
 replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241007082211-c5886d8a9988
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.18.0
 	// https://github.com/kubernetes/kubernetes/issues/79384#issuecomment-505627280
 	k8s.io/api => k8s.io/api v0.29.0
@@ -208,3 +207,11 @@ replace (
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.25.0
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.25.0
 )
+
+//devtron-labs
+//prod
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241007082211-c5886d8a9988
+
+//
+//dev
+// replace github.com/devtron-labs/common-lib => ../common-lib
