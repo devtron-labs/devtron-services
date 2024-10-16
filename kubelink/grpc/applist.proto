@@ -50,6 +50,17 @@ service ApplicationService {
   rpc GetResourceTreeForExternalResources(ExternalResourceTreeRequest) returns(ResourceTreeResponse){}
   rpc GetFluxAppDetail(FluxAppDetailRequest)returns(FluxAppDetail){}
   rpc GetReleaseDetails(ReleaseIdentifier) returns(DeployedAppDetail){}
+  rpc GetResourceTreeUsingCache(GetResourceTreeRequest) returns(ResourceTreeResponse){}
+}
+
+message GetResourceTreeRequest{
+  repeated ObjectIdentifier objectIdentifiers = 1;
+  CacheConfig cacheConfig = 2;
+}
+
+message CacheConfig {
+  string url = 1;
+  string passKey= 2;
 }
 
 message ExternalResourceTreeRequest{
@@ -95,6 +106,7 @@ message FluxAppDetailRequest{
   string namespace = 2;
   string name = 3;
   bool IsKustomizeApp =4;
+  CacheConfig cacheConfig = 5;
 }
 
 message FluxAppDetail{

@@ -106,6 +106,7 @@ type HelmAppService interface {
 	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error)
 	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
+	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
 }
 
 type HelmAppServiceImpl struct {
@@ -1798,4 +1799,113 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 	}
 
 	return release, nil
+}
+
+func (impl *HelmAppServiceImpl) GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+	resp, err := impl.common.GetResourceTreeUsingCache(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	resourceTreeResponse := &client.ResourceTreeResponse{
+		Nodes:       impl.resourceNodeAdapter(resp.Nodes),
+		PodMetadata: podMetadataAdapter(resp.PodMetadata),
+	}
+	return resourceTreeResponse, nil
+}
+func (impl *HelmAppServiceImpl) resourceNodeAdapter(nodes []*commonBean.ResourceNode) []*client.ResourceNode {
+	var resourceNodes []*client.ResourceNode
+	for _, node := range nodes {
+		var healthStatus *client.HealthStatus
+		if node.Health != nil {
+			healthStatus = &client.HealthStatus{
+				Status:  node.Health.Status,
+				Message: node.Health.Message,
+			}
+		}
+		resourceNode := &client.ResourceNode{
+			Group:           node.Group,
+			Version:         node.Version,
+			Kind:            node.Kind,
+			Namespace:       node.Namespace,
+			Name:            node.Name,
+			Uid:             node.UID,
+			ParentRefs:      resourceRefResult(node.ParentRefs),
+			NetworkingInfo:  getNetworkingInfoFromNode(node.NetworkingInfo),
+			ResourceVersion: node.ResourceVersion,
+			Health:          healthStatus,
+			IsHibernated:    node.IsHibernated,
+			CanBeHibernated: node.CanBeHibernated,
+			Info:            impl.buildInfoItems(node.Info),
+			CreatedAt:       node.CreatedAt,
+			Port:            node.Port,
+			IsHook:          node.IsHook,
+			HookType:        node.HookType,
+		}
+		resourceNodes = append(resourceNodes, resourceNode)
+	}
+
+	return resourceNodes
+
+}
+
+func getNetworkingInfoFromNode(info *commonBean.ResourceNetworkingInfo) *client.ResourceNetworkingInfo {
+	if info == nil {
+		return &client.ResourceNetworkingInfo{}
+	}
+	return &client.ResourceNetworkingInfo{
+		Labels: info.Labels,
+	}
+}
+
+func (impl *HelmAppServiceImpl) buildInfoItems(infoItemBeans []commonBean.InfoItem) []*client.InfoItem {
+	infoItems := make([]*client.InfoItem, 0, len(infoItemBeans))
+	for _, infoItemBean := range infoItemBeans {
+		switch infoItemBean.Value.(type) {
+		case string:
+			infoItems = append(infoItems, &client.InfoItem{Name: infoItemBean.Name, Value: infoItemBean.Value.(string)})
+		default:
+			// skip other types
+			impl.logger.Debugw("ignoring other info item value types", "infoItem", infoItemBean.Value)
+		}
+
+	}
+	return infoItems
+}
+
+func resourceRefResult(resourceRefs []*commonBean.ResourceRef) (resourceRefResults []*client.ResourceRef) {
+	for _, resourceRef := range resourceRefs {
+		resourceRefResult := &client.ResourceRef{
+			Group:     resourceRef.Group,
+			Version:   resourceRef.Version,
+			Kind:      resourceRef.Kind,
+			Namespace: resourceRef.Namespace,
+			Name:      resourceRef.Name,
+			Uid:       resourceRef.UID,
+		}
+		resourceRefResults = append(resourceRefResults, resourceRefResult)
+	}
+	return resourceRefResults
+}
+
+func podMetadataAdapter(podmetadatas []*commonBean.PodMetadata) []*client.PodMetadata {
+	podMetadatas := make([]*client.PodMetadata, 0, len(podmetadatas))
+	for _, pm := range podmetadatas {
+		ephemeralContainers := make([]*client.EphemeralContainerData, 0, len(pm.EphemeralContainers))
+		for _, ec := range pm.EphemeralContainers {
+			ephemeralContainers = append(ephemeralContainers, &client.EphemeralContainerData{
+				Name:       ec.Name,
+				IsExternal: ec.IsExternal,
+			})
+		}
+		podMetadata := &client.PodMetadata{
+			Name:                pm.Name,
+			Uid:                 pm.UID,
+			Containers:          pm.Containers,
+			InitContainers:      pm.InitContainers,
+			EphemeralContainers: ephemeralContainers,
+			IsNew:               pm.IsNew,
+		}
+		podMetadatas = append(podMetadatas, podMetadata)
+	}
+	return podMetadatas
 }

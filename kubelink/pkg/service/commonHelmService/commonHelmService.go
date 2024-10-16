@@ -1,6 +1,7 @@
 package commonHelmService
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
@@ -33,6 +34,7 @@ type CommonHelmService interface {
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
 	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
+	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 }
 
 type CommonHelmServiceImpl struct {
@@ -79,6 +81,12 @@ func (impl *CommonHelmServiceImpl) GetHelmRelease(clusterConfig *client.ClusterC
 	}
 	return release, nil
 }
+
+func (impl *CommonHelmServiceImpl) GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
+	return nil, errors.New("Not supported in oss")
+
+}
+
 func (impl *CommonHelmServiceImpl) BuildResourceTree(appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error) {
 	conf, err := impl.getRestConfigForClusterConfig(appDetailRequest.ClusterConfig)
 	if err != nil {
