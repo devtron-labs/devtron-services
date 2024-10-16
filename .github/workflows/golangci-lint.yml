@@ -28,8 +28,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - run: cd common-lib &&  go get oras.land/oras-go/pkg/auth/docker && go mod tidy && go mod download && go mod vendor
-        name: installing oras.land package
+      - if: ${{ matrix.working-directory=='common-lib' }}
+        run: cd common-lib &&  go get oras.land/oras-go/pkg/auth/docker && go mod tidy && go mod download && go mod vendor
+        name: installing oras.land package for common-lib
 
       - name: golangci-lint-${{ matrix.working-directory }}
         uses: golangci/golangci-lint-action@v6
