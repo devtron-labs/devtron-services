@@ -244,7 +244,7 @@ func (impl DeploymentMetricServiceImpl) calculateChangeSize(metrics *Metrics) {
 	metrics.AverageLineDeleted = float32(lineDeleted) / float32(len(releases))
 }
 
-func (impl DeploymentMetricServiceImpl) transform(releases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime) []*Metric {
+func (impl DeploymentMetricServiceImpl) transform( materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime) []*Metric {
 	pm := make(map[int]*sql.PipelineMaterial)
 	for _, v := range materials {
 		pm[v.AppReleaseId] = v
