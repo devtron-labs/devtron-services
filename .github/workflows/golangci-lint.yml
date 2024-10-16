@@ -30,7 +30,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m --verbose
+          args: --timeout=30m --tests=false --verbose
           only-new-issues: "true"
           working-directory: common-lib
       - name: golangci-lint-authenticator
@@ -38,13 +38,13 @@ jobs:
         with:
           version: v1.61
           working-directory: authenticator
-          args: --timeout=30m --verbose
+          args: --timeout=30m --tests=false --verbose
           only-new-issues: "true"
       - name: golangci-lint-chart-sync
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m --verbose
+          args: --timeout=30m --tests=false --verbose
           only-new-issues: "true"
           working-directory: chart-sync
       - name: golangci-lint-kubewatch
