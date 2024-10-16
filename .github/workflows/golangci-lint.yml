@@ -24,6 +24,13 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - name: golangci-lint-common-lib
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61
+          args: --timeout=30m 
+          only-new-issues: "true"
+          working-directory: common-lib
       - name: golangci-lint-authenticator
         uses: golangci/golangci-lint-action@v6
         with:
@@ -66,9 +73,3 @@ jobs:
           args: --timeout=30m --tests=false
           only-new-issues: "true"
           working-directory: lens
-      - name: golangci-lint-common-lib
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.61
-          only-new-issues: true
-          working-directory: common-lib
