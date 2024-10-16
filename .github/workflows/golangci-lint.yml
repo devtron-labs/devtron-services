@@ -24,11 +24,13 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - run: cd common-lib &&  go get oras.land/oras-go/pkg/auth/docker && go mod tidy && go mod download && go mod vendor
+        name: installing oras.land package
       - name: golangci-lint-common-lib
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m 
+          args: --timeout=30m --verbose
           only-new-issues: "true"
           working-directory: common-lib
       - name: golangci-lint-authenticator
@@ -36,40 +38,40 @@ jobs:
         with:
           version: v1.61
           working-directory: authenticator
-          args: --timeout=30m
+          args: --timeout=30m --verbose
           only-new-issues: "true"
       - name: golangci-lint-chart-sync
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m
+          args: --timeout=30m --verbose
           only-new-issues: "true"
           working-directory: chart-sync
       - name: golangci-lint-kubewatch
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m
+          args: --timeout=30m --verbose
           only-new-issues: "true"
           working-directory: kubewatch
       - name: golangci-lint-git-sensor
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m --tests=false
+          args: --timeout=30m --tests=false --verbose
           only-new-issues: "true"
           working-directory: git-sensor
       - name: golangci-lint-kubelink
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m --tests=false
+          args: --timeout=30m --tests=false --verbose
           only-new-issues: "true"
           working-directory: kubelink
       - name: golangci-lint-lens
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.61
-          args: --timeout=30m --tests=false
+          args: --timeout=30m --tests=false --verbose
           only-new-issues: "true"
           working-directory: lens
