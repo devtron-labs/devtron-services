@@ -634,7 +634,7 @@ func (impl *ApplicationServiceServerImpl) ListFluxApplications(req *client.AppLi
 }
 
 func (impl *ApplicationServiceServerImpl) GetFluxAppDetail(ctx context.Context, req *client.FluxAppDetailRequest) (*client.FluxAppDetail, error) {
-	fluxAppDetail, err := impl.FluxAppService.BuildFluxAppDetail(req)
+	fluxAppDetail, err := impl.FluxAppService.BuildFluxAppDetail(ctx, req)
 	if err != nil {
 		impl.Logger.Errorw("error in getting resource tree for external resources", "err", err)
 		return nil, err
