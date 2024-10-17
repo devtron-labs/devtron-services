@@ -322,7 +322,7 @@ func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForHelmReleaseApp(ctx 
 		}
 		resourceTreeResponse, err := impl.common.GetResourceTreeUsingCache(ctx, resourceTreeRequest)
 		if err != nil {
-			impl.logger.Errorw("Error in fetchResourceTree", "clusterId", request.Config.ClusterId, "parentObjects", helmReleaseResponse.ParentObjects, "err", err)
+			impl.logger.Errorw("Error in fetchResourceTree from scoop", "clusterId", request.Config.ClusterId, "parentObjects", helmReleaseResponse.ParentObjects, "err", err)
 			helmRelease, err := impl.common.GetHelmRelease(request.Config, _namespace, releaseName)
 			if err != nil {
 				impl.logger.Errorw("error in getting helm release of flux app ", "releaseName", releaseName, "releaseNamespace", _namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
@@ -422,7 +422,7 @@ func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForKustomizationApp(ct
 			}
 			resourceTreeResponse, err := impl.common.GetResourceTreeUsingCache(ctx, resourceTreeRequest)
 			if err != nil {
-				impl.logger.Errorw("Error in getting the tree response for all resources except HelmReleases in Kustomization ", "clusterId", request.Config.ClusterId, "KsAppName", "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
+				impl.logger.Errorw("Error in getting the tree response for all resources except HelmReleases in Kustomization from scoop ", "clusterId", request.Config.ClusterId, "KsAppName", "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
 				req := &client.ExternalResourceTreeRequest{
 					ClusterConfig:          request.Config,
 					ExternalResourceDetail: fluxK8sResourceList,
@@ -479,7 +479,7 @@ func (impl *FluxApplicationServiceImpl) getResponseTreeForKsChildrenHrList(ctx c
 			}
 			resourceTreeResponse, err := impl.common.GetResourceTreeUsingCache(ctx, resourceTreeRequest)
 			if err != nil {
-				impl.logger.Errorw("Error in fetchResourceTree", "clusterId", request.Config.ClusterId, "parentObjects", helmReleaseResponse.ParentObjects, "err", err)
+				impl.logger.Errorw("Error in fetchResourceTree from scoop", "clusterId", request.Config.ClusterId, "parentObjects", helmReleaseResponse.ParentObjects, "err", err)
 
 				helmRelease, err := impl.common.GetHelmRelease(request.Config, namespace, releaseName)
 				if err != nil {
