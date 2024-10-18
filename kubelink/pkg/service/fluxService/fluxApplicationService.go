@@ -521,7 +521,7 @@ func (impl *FluxApplicationServiceImpl) getResponseTreeForKsChildrenHrList(ctx c
 	return fluxAppTreeResponse, err
 }
 
-// getting list of FluxKustomizationApp k8s Resources List and  FluxHr list that contains the helmReleases found in inventory
+// this is a recursive function in getting list of FluxKustomizationApp k8s Resources List and  FluxHr list that contains the helmReleases found in inventory
 func (impl *FluxApplicationServiceImpl) getKsAppResourceAndFluxHrList(app *FluxAppDetailRequest, inventory map[string]interface{}, isKubeConfigExist bool) ([]*client.ExternalResourceDetail, []*FluxHr, error) {
 	var fluxK8sResourceList []*client.ExternalResourceDetail
 	var fluxHrList []*FluxHr
