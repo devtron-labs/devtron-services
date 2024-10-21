@@ -1798,14 +1798,7 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 }
 
 func (impl *HelmAppServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	appDetailReq := &client.AppDetailRequest{
-		ClusterConfig: req.ClusterConfig,
-		Namespace:     req.Namespace,
-		ReleaseName:   req.GetReleaseName(),
-		PreferCache:   req.PreferCache,
-		UseFallBack:   req.UseFallBack,
-		CacheConfig:   req.CacheConfig,
-	}
+	appDetailReq := GetAppDetailRequestFromGetResourceTreeRequest(req)
 
 	var conf *rest.Config
 	var err error
