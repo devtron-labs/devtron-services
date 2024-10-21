@@ -3,7 +3,6 @@ package commonHelmService
 import (
 	"context"
 	"errors"
-	"fmt"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
@@ -16,7 +15,6 @@ import (
 	"github.com/devtron-labs/kubelink/pkg/helmClient"
 	"github.com/devtron-labs/kubelink/pkg/util"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"helm.sh/helm/v3/pkg/release"
 	"k8s.io/api/extensions/v1beta1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
@@ -32,8 +30,8 @@ type CommonHelmService interface {
 	BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error)
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
-	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
 	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
+	GetRestConfigForClusterConfig(clusterConfig *client.ClusterConfig) (*rest.Config, error)
 }
 
 type CommonHelmServiceImpl struct {
@@ -86,24 +84,20 @@ func (impl *CommonHelmServiceImpl) GetResourceTreeUsingCache(ctx context.Context
 
 }
 
-func (impl *CommonHelmServiceImpl) BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, helmRelease *release.Release) (*bean.ResourceTreeResponse, error) {
+func (impl *CommonHelmServiceImpl) BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error) {
 
-	conf, err := impl.getRestConfigForClusterConfig(appDetailRequest.ClusterConfig)
+	conf, err := impl.GetRestConfigForClusterConfig(appDetailRequest.ClusterConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	desiredManifests, err := impl.GetHelmReleaseDetailWithDesiredManifest(&client.AppConfigRequest{
-		ClusterConfig: appDetailRequest.ClusterConfig,
-		Namespace:     appDetailRequest.Namespace,
-		ReleaseName:   appDetailRequest.ReleaseName,
-	})
+	parentObjects, err := impl.getObjectIdentifiersFromHelmRelease(release, appDetailRequest.Namespace)
 	if err != nil {
-		impl.logger.Errorw("error in getting helm release", "namespace", appDetailRequest.Namespace, "releaseName", appDetailRequest.ReleaseName, "error", err)
+		impl.logger.Errorw("Error in getting helm release", "appDetailRequest", appDetailRequest, "err", err)
 		return nil, err
 	}
 
-	return impl.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, desiredManifests.ParentObjects)
+	return impl.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, parentObjects)
 
 }
 
@@ -132,7 +126,7 @@ func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingParentObjects(ctx conte
 }
 
 func (impl *CommonHelmServiceImpl) buildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
-	liveManifests := impl.getManifestsForGVKList(conf, parentObjects)
+	liveManifests := impl.getLiveManifestsForGVKList(conf, parentObjects)
 
 	// build resource Nodes
 	req := NewBuildNodesRequest(NewBuildNodesConfig(conf).
@@ -165,7 +159,7 @@ func (impl *CommonHelmServiceImpl) buildResourceTreeUsingK8s(ctx context.Context
 	return resourceTreeResponse, nil
 }
 
-func (impl *CommonHelmServiceImpl) getRestConfigForClusterConfig(clusterConfig *client.ClusterConfig) (*rest.Config, error) {
+func (impl *CommonHelmServiceImpl) GetRestConfigForClusterConfig(clusterConfig *client.ClusterConfig) (*rest.Config, error) {
 	k8sClusterConfig := impl.converter.GetClusterConfigFromClientBean(clusterConfig)
 	conf, err := impl.k8sUtil.GetRestConfigByCluster(k8sClusterConfig)
 	if err != nil {
@@ -173,48 +167,6 @@ func (impl *CommonHelmServiceImpl) getRestConfigForClusterConfig(clusterConfig *
 		return nil, err
 	}
 	return conf, nil
-}
-
-func (impl *CommonHelmServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
-	if appConfig == nil {
-		return nil, errors.New("appConfig is nil")
-	}
-	helmRelease, err := impl.GetHelmRelease(appConfig.ClusterConfig, appConfig.Namespace, appConfig.ReleaseName)
-	if err != nil {
-		impl.logger.Errorw("Error in getting helm release", "appConfig", appConfig, "err", err)
-		return nil, err
-	}
-	if helmRelease == nil {
-		return nil, errors.New(fmt.Sprintf("no helm release found for name=%s", appConfig.ReleaseName))
-	}
-	objectIdentifiers, err := impl.getObjectIdentifiersFromHelmRelease(helmRelease, appConfig.Namespace)
-	if err != nil {
-		impl.logger.Errorw("Error in getting helm release", "appConfig", appConfig, "err", err)
-		return nil, err
-	}
-
-	resp := &client.GetReleaseDetailWithManifestResponse{
-		ParentObjects: objectIdentifiers,
-		ReleaseStatus: &client.ReleaseStatus{
-			Status:      string(helmRelease.Info.Status),
-			Message:     helmRelease.Info.Description,
-			Description: util.GetMessageFromReleaseStatus(helmRelease.Info.Status),
-		},
-		LastDeployed: timestamppb.New(helmRelease.Info.LastDeployed.Time),
-		ChartMetadata: &client.ChartMetadata{
-			ChartName:    helmRelease.Chart.Name(),
-			ChartVersion: helmRelease.Chart.Metadata.Version,
-			Notes:        helmRelease.Info.Notes,
-		},
-		EnvironmentDetails: &client.EnvironmentDetails{
-			ClusterName: appConfig.ClusterConfig.ClusterName,
-			ClusterId:   appConfig.ClusterConfig.ClusterId,
-			Namespace:   helmRelease.Namespace,
-		},
-		ReleaseExist: true,
-	}
-
-	return resp, nil
 }
 
 func (impl *CommonHelmServiceImpl) getObjectIdentifiersFromHelmRelease(helmRelease *release.Release, namespace string) ([]*client.ObjectIdentifier, error) {
@@ -494,7 +446,7 @@ func (impl *CommonHelmServiceImpl) GetResourceTreeForExternalResources(ctx conte
 	}, restConfig, GetObjectIdentifierFromExternalResource(req.ExternalResourceDetail))
 }
 
-func (impl *CommonHelmServiceImpl) getManifestsForGVKList(restConfig *rest.Config, gvkList []*client.ObjectIdentifier) []*bean.DesiredOrLiveManifest {
+func (impl *CommonHelmServiceImpl) getLiveManifestsForGVKList(restConfig *rest.Config, gvkList []*client.ObjectIdentifier) []*bean.DesiredOrLiveManifest {
 	var manifests []*bean.DesiredOrLiveManifest
 	for _, resource := range gvkList {
 		gvk := &schema.GroupVersionKind{

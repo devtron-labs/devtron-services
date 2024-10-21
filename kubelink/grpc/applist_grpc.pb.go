@@ -19,35 +19,34 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ApplicationService_ListApplications_FullMethodName                        = "/ApplicationService/ListApplications"
-	ApplicationService_ListFluxApplications_FullMethodName                    = "/ApplicationService/ListFluxApplications"
-	ApplicationService_GetHelmReleaseDetailWithDesiredManifest_FullMethodName = "/ApplicationService/GetHelmReleaseDetailWithDesiredManifest"
-	ApplicationService_GetAppDetail_FullMethodName                            = "/ApplicationService/GetAppDetail"
-	ApplicationService_GetAppStatus_FullMethodName                            = "/ApplicationService/GetAppStatus"
-	ApplicationService_Hibernate_FullMethodName                               = "/ApplicationService/Hibernate"
-	ApplicationService_UnHibernate_FullMethodName                             = "/ApplicationService/UnHibernate"
-	ApplicationService_GetDeploymentHistory_FullMethodName                    = "/ApplicationService/GetDeploymentHistory"
-	ApplicationService_GetValuesYaml_FullMethodName                           = "/ApplicationService/GetValuesYaml"
-	ApplicationService_GetDesiredManifest_FullMethodName                      = "/ApplicationService/GetDesiredManifest"
-	ApplicationService_UninstallRelease_FullMethodName                        = "/ApplicationService/UninstallRelease"
-	ApplicationService_UpgradeRelease_FullMethodName                          = "/ApplicationService/UpgradeRelease"
-	ApplicationService_GetDeploymentDetail_FullMethodName                     = "/ApplicationService/GetDeploymentDetail"
-	ApplicationService_InstallRelease_FullMethodName                          = "/ApplicationService/InstallRelease"
-	ApplicationService_UpgradeReleaseWithChartInfo_FullMethodName             = "/ApplicationService/UpgradeReleaseWithChartInfo"
-	ApplicationService_IsReleaseInstalled_FullMethodName                      = "/ApplicationService/IsReleaseInstalled"
-	ApplicationService_RollbackRelease_FullMethodName                         = "/ApplicationService/RollbackRelease"
-	ApplicationService_TemplateChart_FullMethodName                           = "/ApplicationService/TemplateChart"
-	ApplicationService_TemplateChartBulk_FullMethodName                       = "/ApplicationService/TemplateChartBulk"
-	ApplicationService_TemplateChartAndRetrieveChart_FullMethodName           = "/ApplicationService/TemplateChartAndRetrieveChart"
-	ApplicationService_InstallReleaseWithCustomChart_FullMethodName           = "/ApplicationService/InstallReleaseWithCustomChart"
-	ApplicationService_GetNotes_FullMethodName                                = "/ApplicationService/GetNotes"
-	ApplicationService_UpgradeReleaseWithCustomChart_FullMethodName           = "/ApplicationService/UpgradeReleaseWithCustomChart"
-	ApplicationService_ValidateOCIRegistry_FullMethodName                     = "/ApplicationService/ValidateOCIRegistry"
-	ApplicationService_PushHelmChartToOCIRegistry_FullMethodName              = "/ApplicationService/PushHelmChartToOCIRegistry"
-	ApplicationService_GetResourceTreeForExternalResources_FullMethodName     = "/ApplicationService/GetResourceTreeForExternalResources"
-	ApplicationService_GetFluxAppDetail_FullMethodName                        = "/ApplicationService/GetFluxAppDetail"
-	ApplicationService_GetReleaseDetails_FullMethodName                       = "/ApplicationService/GetReleaseDetails"
-	ApplicationService_GetResourceTreeUsingCacheOnly_FullMethodName           = "/ApplicationService/GetResourceTreeUsingCacheOnly"
+	ApplicationService_ListApplications_FullMethodName                    = "/ApplicationService/ListApplications"
+	ApplicationService_ListFluxApplications_FullMethodName                = "/ApplicationService/ListFluxApplications"
+	ApplicationService_GetAppDetail_FullMethodName                        = "/ApplicationService/GetAppDetail"
+	ApplicationService_GetAppStatus_FullMethodName                        = "/ApplicationService/GetAppStatus"
+	ApplicationService_Hibernate_FullMethodName                           = "/ApplicationService/Hibernate"
+	ApplicationService_UnHibernate_FullMethodName                         = "/ApplicationService/UnHibernate"
+	ApplicationService_GetDeploymentHistory_FullMethodName                = "/ApplicationService/GetDeploymentHistory"
+	ApplicationService_GetValuesYaml_FullMethodName                       = "/ApplicationService/GetValuesYaml"
+	ApplicationService_GetDesiredManifest_FullMethodName                  = "/ApplicationService/GetDesiredManifest"
+	ApplicationService_UninstallRelease_FullMethodName                    = "/ApplicationService/UninstallRelease"
+	ApplicationService_UpgradeRelease_FullMethodName                      = "/ApplicationService/UpgradeRelease"
+	ApplicationService_GetDeploymentDetail_FullMethodName                 = "/ApplicationService/GetDeploymentDetail"
+	ApplicationService_InstallRelease_FullMethodName                      = "/ApplicationService/InstallRelease"
+	ApplicationService_UpgradeReleaseWithChartInfo_FullMethodName         = "/ApplicationService/UpgradeReleaseWithChartInfo"
+	ApplicationService_IsReleaseInstalled_FullMethodName                  = "/ApplicationService/IsReleaseInstalled"
+	ApplicationService_RollbackRelease_FullMethodName                     = "/ApplicationService/RollbackRelease"
+	ApplicationService_TemplateChart_FullMethodName                       = "/ApplicationService/TemplateChart"
+	ApplicationService_TemplateChartBulk_FullMethodName                   = "/ApplicationService/TemplateChartBulk"
+	ApplicationService_TemplateChartAndRetrieveChart_FullMethodName       = "/ApplicationService/TemplateChartAndRetrieveChart"
+	ApplicationService_InstallReleaseWithCustomChart_FullMethodName       = "/ApplicationService/InstallReleaseWithCustomChart"
+	ApplicationService_GetNotes_FullMethodName                            = "/ApplicationService/GetNotes"
+	ApplicationService_UpgradeReleaseWithCustomChart_FullMethodName       = "/ApplicationService/UpgradeReleaseWithCustomChart"
+	ApplicationService_ValidateOCIRegistry_FullMethodName                 = "/ApplicationService/ValidateOCIRegistry"
+	ApplicationService_PushHelmChartToOCIRegistry_FullMethodName          = "/ApplicationService/PushHelmChartToOCIRegistry"
+	ApplicationService_GetResourceTreeForExternalResources_FullMethodName = "/ApplicationService/GetResourceTreeForExternalResources"
+	ApplicationService_GetFluxAppDetail_FullMethodName                    = "/ApplicationService/GetFluxAppDetail"
+	ApplicationService_GetReleaseDetails_FullMethodName                   = "/ApplicationService/GetReleaseDetails"
+	ApplicationService_BuildResourceTreeUsingParentObjects_FullMethodName = "/ApplicationService/BuildResourceTreeUsingParentObjects"
 )
 
 // ApplicationServiceClient is the client API for ApplicationService service.
@@ -56,7 +55,6 @@ const (
 type ApplicationServiceClient interface {
 	ListApplications(ctx context.Context, in *AppListRequest, opts ...grpc.CallOption) (ApplicationService_ListApplicationsClient, error)
 	ListFluxApplications(ctx context.Context, in *AppListRequest, opts ...grpc.CallOption) (ApplicationService_ListFluxApplicationsClient, error)
-	GetHelmReleaseDetailWithDesiredManifest(ctx context.Context, in *AppConfigRequest, opts ...grpc.CallOption) (*GetReleaseDetailWithManifestResponse, error)
 	GetAppDetail(ctx context.Context, in *AppDetailRequest, opts ...grpc.CallOption) (*AppDetail, error)
 	GetAppStatus(ctx context.Context, in *AppDetailRequest, opts ...grpc.CallOption) (*AppStatus, error)
 	Hibernate(ctx context.Context, in *HibernateRequest, opts ...grpc.CallOption) (*HibernateResponse, error)
@@ -82,7 +80,7 @@ type ApplicationServiceClient interface {
 	GetResourceTreeForExternalResources(ctx context.Context, in *ExternalResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error)
 	GetFluxAppDetail(ctx context.Context, in *FluxAppDetailRequest, opts ...grpc.CallOption) (*FluxAppDetail, error)
 	GetReleaseDetails(ctx context.Context, in *ReleaseIdentifier, opts ...grpc.CallOption) (*DeployedAppDetail, error)
-	GetResourceTreeUsingCacheOnly(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error)
+	BuildResourceTreeUsingParentObjects(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error)
 }
 
 type applicationServiceClient struct {
@@ -155,15 +153,6 @@ func (x *applicationServiceListFluxApplicationsClient) Recv() (*FluxApplicationL
 		return nil, err
 	}
 	return m, nil
-}
-
-func (c *applicationServiceClient) GetHelmReleaseDetailWithDesiredManifest(ctx context.Context, in *AppConfigRequest, opts ...grpc.CallOption) (*GetReleaseDetailWithManifestResponse, error) {
-	out := new(GetReleaseDetailWithManifestResponse)
-	err := c.cc.Invoke(ctx, ApplicationService_GetHelmReleaseDetailWithDesiredManifest_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *applicationServiceClient) GetAppDetail(ctx context.Context, in *AppDetailRequest, opts ...grpc.CallOption) (*AppDetail, error) {
@@ -391,9 +380,9 @@ func (c *applicationServiceClient) GetReleaseDetails(ctx context.Context, in *Re
 	return out, nil
 }
 
-func (c *applicationServiceClient) GetResourceTreeUsingCacheOnly(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error) {
+func (c *applicationServiceClient) BuildResourceTreeUsingParentObjects(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error) {
 	out := new(ResourceTreeResponse)
-	err := c.cc.Invoke(ctx, ApplicationService_GetResourceTreeUsingCacheOnly_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ApplicationService_BuildResourceTreeUsingParentObjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +395,6 @@ func (c *applicationServiceClient) GetResourceTreeUsingCacheOnly(ctx context.Con
 type ApplicationServiceServer interface {
 	ListApplications(*AppListRequest, ApplicationService_ListApplicationsServer) error
 	ListFluxApplications(*AppListRequest, ApplicationService_ListFluxApplicationsServer) error
-	GetHelmReleaseDetailWithDesiredManifest(context.Context, *AppConfigRequest) (*GetReleaseDetailWithManifestResponse, error)
 	GetAppDetail(context.Context, *AppDetailRequest) (*AppDetail, error)
 	GetAppStatus(context.Context, *AppDetailRequest) (*AppStatus, error)
 	Hibernate(context.Context, *HibernateRequest) (*HibernateResponse, error)
@@ -432,7 +420,7 @@ type ApplicationServiceServer interface {
 	GetResourceTreeForExternalResources(context.Context, *ExternalResourceTreeRequest) (*ResourceTreeResponse, error)
 	GetFluxAppDetail(context.Context, *FluxAppDetailRequest) (*FluxAppDetail, error)
 	GetReleaseDetails(context.Context, *ReleaseIdentifier) (*DeployedAppDetail, error)
-	GetResourceTreeUsingCacheOnly(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error)
+	BuildResourceTreeUsingParentObjects(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error)
 	mustEmbedUnimplementedApplicationServiceServer()
 }
 
@@ -445,9 +433,6 @@ func (UnimplementedApplicationServiceServer) ListApplications(*AppListRequest, A
 }
 func (UnimplementedApplicationServiceServer) ListFluxApplications(*AppListRequest, ApplicationService_ListFluxApplicationsServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListFluxApplications not implemented")
-}
-func (UnimplementedApplicationServiceServer) GetHelmReleaseDetailWithDesiredManifest(context.Context, *AppConfigRequest) (*GetReleaseDetailWithManifestResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetHelmReleaseDetailWithDesiredManifest not implemented")
 }
 func (UnimplementedApplicationServiceServer) GetAppDetail(context.Context, *AppDetailRequest) (*AppDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAppDetail not implemented")
@@ -524,8 +509,8 @@ func (UnimplementedApplicationServiceServer) GetFluxAppDetail(context.Context, *
 func (UnimplementedApplicationServiceServer) GetReleaseDetails(context.Context, *ReleaseIdentifier) (*DeployedAppDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReleaseDetails not implemented")
 }
-func (UnimplementedApplicationServiceServer) GetResourceTreeUsingCacheOnly(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetResourceTreeUsingCacheOnly not implemented")
+func (UnimplementedApplicationServiceServer) BuildResourceTreeUsingParentObjects(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BuildResourceTreeUsingParentObjects not implemented")
 }
 func (UnimplementedApplicationServiceServer) mustEmbedUnimplementedApplicationServiceServer() {}
 
@@ -580,24 +565,6 @@ type applicationServiceListFluxApplicationsServer struct {
 
 func (x *applicationServiceListFluxApplicationsServer) Send(m *FluxApplicationList) error {
 	return x.ServerStream.SendMsg(m)
-}
-
-func _ApplicationService_GetHelmReleaseDetailWithDesiredManifest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AppConfigRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ApplicationServiceServer).GetHelmReleaseDetailWithDesiredManifest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ApplicationService_GetHelmReleaseDetailWithDesiredManifest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApplicationServiceServer).GetHelmReleaseDetailWithDesiredManifest(ctx, req.(*AppConfigRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _ApplicationService_GetAppDetail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1050,20 +1017,20 @@ func _ApplicationService_GetReleaseDetails_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ApplicationService_GetResourceTreeUsingCacheOnly_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ApplicationService_BuildResourceTreeUsingParentObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetResourceTreeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ApplicationServiceServer).GetResourceTreeUsingCacheOnly(ctx, in)
+		return srv.(ApplicationServiceServer).BuildResourceTreeUsingParentObjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ApplicationService_GetResourceTreeUsingCacheOnly_FullMethodName,
+		FullMethod: ApplicationService_BuildResourceTreeUsingParentObjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApplicationServiceServer).GetResourceTreeUsingCacheOnly(ctx, req.(*GetResourceTreeRequest))
+		return srv.(ApplicationServiceServer).BuildResourceTreeUsingParentObjects(ctx, req.(*GetResourceTreeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1075,10 +1042,6 @@ var ApplicationService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ApplicationService",
 	HandlerType: (*ApplicationServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetHelmReleaseDetailWithDesiredManifest",
-			Handler:    _ApplicationService_GetHelmReleaseDetailWithDesiredManifest_Handler,
-		},
 		{
 			MethodName: "GetAppDetail",
 			Handler:    _ApplicationService_GetAppDetail_Handler,
@@ -1180,8 +1143,8 @@ var ApplicationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ApplicationService_GetReleaseDetails_Handler,
 		},
 		{
-			MethodName: "GetResourceTreeUsingCacheOnly",
-			Handler:    _ApplicationService_GetResourceTreeUsingCacheOnly_Handler,
+			MethodName: "BuildResourceTreeUsingParentObjects",
+			Handler:    _ApplicationService_BuildResourceTreeUsingParentObjects_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

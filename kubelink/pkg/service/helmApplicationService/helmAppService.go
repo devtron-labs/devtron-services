@@ -105,8 +105,7 @@ type HelmAppService interface {
 	PushHelmChartToOCIRegistryRepo(ctx context.Context, OCIRegistryRequest *client.OCIRegistryRequest) (*client.OCIRegistryResponse, error)
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error)
-	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
-	GetResourceTreeUsingCacheOnly(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
+	BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
 }
 
 type HelmAppServiceImpl struct {
@@ -223,9 +222,6 @@ func (impl *HelmAppServiceImpl) GetApplicationListForCluster(config *client.Clus
 
 func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
 	return impl.common.GetResourceTreeForExternalResources(ctx, req)
-}
-func (impl HelmAppServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
-	return impl.common.GetHelmReleaseDetailWithDesiredManifest(appConfig)
 }
 
 func (impl HelmAppServiceImpl) BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error) {
@@ -1801,17 +1797,27 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 	return release, nil
 }
 
-func (impl *HelmAppServiceImpl) GetResourceTreeUsingCacheOnly(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+func (impl *HelmAppServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
 	appDetailReq := &client.AppDetailRequest{
-		ClusterConfig: nil,
-		Namespace:     "",
-		ReleaseName:   "",
-		PreferCache:   true,
-		UseFallBack:   false,
+		ClusterConfig: req.ClusterConfig,
+		Namespace:     req.Namespace,
+		ReleaseName:   req.GetReleaseName(),
+		PreferCache:   req.PreferCache,
+		UseFallBack:   req.UseFallBack,
 		CacheConfig:   req.CacheConfig,
 	}
 
-	resp, err := impl.common.BuildResourceTreeUsingParentObjects(ctx, appDetailReq, nil, req.ObjectIdentifiers)
+	var conf *rest.Config
+	var err error
+	if req.ClusterConfig != nil {
+		conf, err = impl.common.GetRestConfigForClusterConfig(req.ClusterConfig)
+		if err != nil {
+			impl.logger.Errorw("error in getting rest config ", "clusterConfig", req.GetClusterConfig(), "err", err)
+			return nil, err
+		}
+	}
+
+	resp, err := impl.common.BuildResourceTreeUsingParentObjects(ctx, appDetailReq, conf, req.ObjectIdentifiers)
 	if err != nil {
 		return nil, err
 	}

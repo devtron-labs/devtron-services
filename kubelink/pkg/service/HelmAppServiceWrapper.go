@@ -97,17 +97,6 @@ func (impl *ApplicationServiceServerImpl) ListApplications(req *client.AppListRe
 	return nil
 }
 
-func (impl *ApplicationServiceServerImpl) GetHelmReleaseDetailWithDesiredManifest(ctx context.Context, req *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
-	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
-		"namespace", req.Namespace)
-	resp, err := impl.HelmAppService.GetHelmReleaseDetailWithDesiredManifest(req)
-	if err != nil {
-		impl.Logger.Errorw("Error in GetHelmReleaseDetailWithDesiredManifest request", "payload", req, "err", err)
-		return nil, err
-	}
-	return resp, nil
-}
-
 func (impl *ApplicationServiceServerImpl) GetAppDetail(ctxt context.Context, req *client.AppDetailRequest) (*client.AppDetail, error) {
 	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
 		"namespace", req.Namespace)
@@ -692,8 +681,9 @@ func (impl *ApplicationServiceServerImpl) GetReleaseDetails(ctx context.Context,
 	return deployAppDetail, nil
 }
 
-func (impl *ApplicationServiceServerImpl) GetResourceTreeUsingCacheOnly(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	resp, err := impl.HelmAppService.GetResourceTreeUsingCacheOnly(ctx, req)
+func (impl *ApplicationServiceServerImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+
+	resp, err := impl.HelmAppService.BuildResourceTreeUsingParentObjects(ctx, req)
 	if err != nil {
 		impl.Logger.Errorw("error in fetching resource tree", "payload", req, "err", err)
 		return nil, err
