@@ -237,7 +237,7 @@ func (impl HelmAppServiceImpl) BuildAppDetail(ctx context.Context, req *client.A
 		}
 		return nil, err
 	}
-	resourceTreeResponse, err := impl.common.BuildResourceTree(ctx, req, helmRelease)
+	resourceTreeResponse, err := impl.common.BuildResourceTreeForHelmRelease(ctx, req, helmRelease)
 	if err != nil {
 		impl.logger.Errorw("error in building resource tree ", "err", err)
 		return nil, err

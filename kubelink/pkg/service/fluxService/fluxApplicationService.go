@@ -317,7 +317,7 @@ func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForHelmReleaseApp(ctx 
 		ClusterConfig: request.Config,
 	}
 
-	resourceTreeResponse, err := impl.common.BuildResourceTree(ctx, appDetailRequest, helmRelease)
+	resourceTreeResponse, err := impl.common.BuildResourceTreeForHelmRelease(ctx, appDetailRequest, helmRelease)
 	if err != nil {
 		impl.logger.Errorw("error in building resource tree of flux app ", "helmReleaseName", helmRelease.Name, "helmReleaseNamespace", helmRelease.Namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "helmReleaseName", helmRelease.Name, "helmReleaseNamespace", helmRelease.Namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
 		return nil, appStatus, err
@@ -415,7 +415,7 @@ func (impl *FluxApplicationServiceImpl) getResponseTreeForKsChildrenHrList(ctx c
 			Namespace:     namespace,
 			ClusterConfig: request.Config,
 		}
-		resourceTreeResponse, err := impl.common.BuildResourceTree(ctx, appDetailRequest, helmRelease)
+		resourceTreeResponse, err := impl.common.BuildResourceTreeForHelmRelease(ctx, appDetailRequest, helmRelease)
 		if err != nil {
 			impl.logger.Errorw("error in building resource tree of helmRelease ", "clusterId", request.Config.ClusterId, "helmRelease", helmRelease.Name, "namespace", helmRelease.Namespace, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
 			continue

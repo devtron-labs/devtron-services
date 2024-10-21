@@ -27,7 +27,7 @@ import (
 
 type CommonHelmService interface {
 	GetHelmRelease(clusterConfig *client.ClusterConfig, namespace string, releaseName string) (*release.Release, error)
-	BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error)
+	BuildResourceTreeForHelmRelease(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error)
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
@@ -84,7 +84,7 @@ func (impl *CommonHelmServiceImpl) GetResourceTreeUsingCache(ctx context.Context
 
 }
 
-func (impl *CommonHelmServiceImpl) BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error) {
+func (impl *CommonHelmServiceImpl) BuildResourceTreeForHelmRelease(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error) {
 
 	conf, err := impl.GetRestConfigForClusterConfig(appDetailRequest.ClusterConfig)
 	if err != nil {
