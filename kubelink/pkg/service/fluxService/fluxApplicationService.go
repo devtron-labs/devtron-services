@@ -168,7 +168,6 @@ func (impl *FluxApplicationServiceImpl) fetchFluxAppList(kustomizationListRespon
 func (impl *FluxApplicationServiceImpl) getKsAppInventoryMap(app *FluxApplicationDto) (map[string]string, error) {
 	cluster, err := impl.clusterRepository.FindById(app.EnvironmentDetails.ClusterId)
 	if err != nil {
-		impl.logger.Debugw("error in getting cluster repository for ks", "clusterId", app.EnvironmentDetails.ClusterId, "fluxKsName", app.Name, "namespace", app.EnvironmentDetails.Namespace, "err", err)
 		impl.logger.Errorw("error in getting cluster repository", "clusterId", app.EnvironmentDetails.ClusterId, "fluxKsName", app.Name, "namespace", app.EnvironmentDetails.Namespace, "err", err)
 		return nil, err
 	}
