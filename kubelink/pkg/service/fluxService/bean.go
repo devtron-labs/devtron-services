@@ -93,6 +93,8 @@ type FluxAppDetailRequest struct {
 	Namespace   string              `json:"namespace"`
 	IsKustomize bool                `json:"isKustomize"`
 	CacheConfig *client.CacheConfig `json:"cacheConfig"`
+	PreferCache bool                `json:"preferCache"`
+	UseFallBack bool                `json:"useFallBack"`
 }
 
 type FluxKsAppDetail struct {

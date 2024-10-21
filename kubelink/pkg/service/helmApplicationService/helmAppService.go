@@ -81,7 +81,7 @@ const (
 
 type HelmAppService interface {
 	GetApplicationListForCluster(config *client.ClusterConfig) *client.DeployedAppList
-	BuildAppDetail(req *client.AppDetailRequest) (*bean.AppDetail, error)
+	BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error)
 	FetchApplicationStatus(req *client.AppDetailRequest) (*client.AppStatus, error)
 	GetHelmAppValues(req *client.AppDetailRequest) (*client.ReleaseInfo, error)
 	ScaleObjects(ctx context.Context, clusterConfig *client.ClusterConfig, requests []*client.ObjectIdentifier, scaleDown bool) (*client.HibernateResponse, error)
@@ -103,7 +103,7 @@ type HelmAppService interface {
 	ValidateOCIRegistryLogin(ctx context.Context, OCIRegistryRequest *client.RegistryCredential) (*client.OCIRegistryResponse, error)
 	// PushHelmChartToOCIRegistryRepo Pushes the helm chart to the OCI registry and returns the generated digest and pushedUrl
 	PushHelmChartToOCIRegistryRepo(ctx context.Context, OCIRegistryRequest *client.OCIRegistryRequest) (*client.OCIRegistryResponse, error)
-	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
+	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error)
 	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
 	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
@@ -221,14 +221,14 @@ func (impl *HelmAppServiceImpl) GetApplicationListForCluster(config *client.Clus
 	return deployedApp
 }
 
-func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
-	return impl.common.GetResourceTreeForExternalResources(req)
+func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
+	return impl.common.GetResourceTreeForExternalResources(ctx, req)
 }
 func (impl HelmAppServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
 	return impl.common.GetHelmReleaseDetailWithDesiredManifest(appConfig)
 }
 
-func (impl HelmAppServiceImpl) BuildAppDetail(req *client.AppDetailRequest) (*bean.AppDetail, error) {
+func (impl HelmAppServiceImpl) BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error) {
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
@@ -241,7 +241,7 @@ func (impl HelmAppServiceImpl) BuildAppDetail(req *client.AppDetailRequest) (*be
 		}
 		return nil, err
 	}
-	resourceTreeResponse, err := impl.common.BuildResourceTree(req, helmRelease)
+	resourceTreeResponse, err := impl.common.BuildResourceTree(ctx, req, helmRelease)
 	if err != nil {
 		impl.logger.Errorw("error in building resource tree ", "err", err)
 		return nil, err

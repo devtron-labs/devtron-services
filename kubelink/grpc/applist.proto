@@ -56,6 +56,12 @@ service ApplicationService {
 message GetResourceTreeRequest{
   repeated ObjectIdentifier objectIdentifiers = 1;
   CacheConfig cacheConfig = 2;
+  ClusterConfig clusterConfig = 3;
+  bool PreferCache = 4;
+  bool UseFallBack = 5;
+  string namespace = 6;
+  // Map key cannot be float, double, bytes, message, or enum types (map<Gvk, Labels> could be a better option)
+  ResourceTreeFilter resourceTreeFilter = 7;
 }
 
 message CacheConfig {
@@ -66,6 +72,9 @@ message CacheConfig {
 message ExternalResourceTreeRequest{
   ClusterConfig clusterConfig = 1;
   repeated ExternalResourceDetail externalResourceDetail = 2;
+  CacheConfig cacheConfig = 3;
+  bool PreferCache = 4;
+  bool UseFallBack = 5;
 }
 
 message ExternalResourceDetail {
@@ -107,6 +116,8 @@ message FluxAppDetailRequest{
   string name = 3;
   bool IsKustomizeApp =4;
   CacheConfig cacheConfig = 5;
+  bool PreferCache = 6;
+  bool UseFallBack = 7;
 }
 
 message FluxAppDetail{
@@ -147,6 +158,9 @@ message AppDetailRequest {
   string ReleaseName = 3;
   // Map key cannot be float, double, bytes, message, or enum types (map<Gvk, Labels> could be a better option)
   ResourceTreeFilter resourceTreeFilter = 4;
+  bool PreferCache = 5;
+  bool UseFallBack = 6;
+  CacheConfig cacheConfig = 7;
 }
 
 message AppDetail{

@@ -112,7 +112,7 @@ func (impl *ApplicationServiceServerImpl) GetAppDetail(ctxt context.Context, req
 	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
 		"namespace", req.Namespace)
 
-	helmAppDetail, err := impl.HelmAppService.BuildAppDetail(req)
+	helmAppDetail, err := impl.HelmAppService.BuildAppDetail(ctxt, req)
 	if err != nil {
 		if helmAppDetail != nil && !helmAppDetail.ReleaseExists {
 			// This error (release not exists for this app) is being used in orchestrator so please don't edit it.
@@ -128,7 +128,7 @@ func (impl *ApplicationServiceServerImpl) GetAppDetail(ctxt context.Context, req
 }
 
 func (impl *ApplicationServiceServerImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	resourceTree, err := impl.HelmAppService.GetResourceTreeForExternalResources(req)
+	resourceTree, err := impl.HelmAppService.GetResourceTreeForExternalResources(ctx, req)
 	if err != nil {
 		impl.Logger.Errorw("error in getting resource tree for external resources", "err", err)
 		return nil, err

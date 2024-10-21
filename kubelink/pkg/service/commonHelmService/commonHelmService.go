@@ -30,10 +30,11 @@ import (
 
 type CommonHelmService interface {
 	GetHelmRelease(clusterConfig *client.ClusterConfig, namespace string, releaseName string) (*release.Release, error)
-	BuildResourceTree(appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error)
+	BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error)
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
-	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
+	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
+	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, desiredOrLiveManifests []*bean.DesiredOrLiveManifest) (*bean.ResourceTreeResponse, error)
 	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 }
 
@@ -87,15 +88,47 @@ func (impl *CommonHelmServiceImpl) GetResourceTreeUsingCache(ctx context.Context
 
 }
 
-func (impl *CommonHelmServiceImpl) BuildResourceTree(appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error) {
+func (impl *CommonHelmServiceImpl) BuildResourceTree(ctx context.Context, appDetailRequest *client.AppDetailRequest, helmRelease *release.Release) (*bean.ResourceTreeResponse, error) {
+
 	conf, err := impl.getRestConfigForClusterConfig(appDetailRequest.ClusterConfig)
 	if err != nil {
 		return nil, err
 	}
-	desiredOrLiveManifests, err := impl.getLiveManifests(conf, release)
+	desiredOrLiveManifests, err := impl.getLiveManifests(conf, helmRelease)
 	if err != nil {
 		return nil, err
 	}
+
+	return impl.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, desiredOrLiveManifests)
+
+}
+
+func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, desiredOrLiveManifests []*bean.DesiredOrLiveManifest) (*bean.ResourceTreeResponse, error) {
+	if appDetailRequest.PreferCache && appDetailRequest.CacheConfig != nil {
+		objectIdentifiers := make([]*client.ObjectIdentifier, 0)
+		for _, desiredOrLiveManifest := range desiredOrLiveManifests {
+			objectIdentifier := GetObjectIdentifierFromHelmManifest(desiredOrLiveManifest.Manifest, appDetailRequest.Namespace)
+			if objectIdentifier != nil && len(objectIdentifier.Kind) > 0 && len(objectIdentifier.Name) > 0 {
+				objectIdentifiers = append(objectIdentifiers, objectIdentifier)
+			}
+		}
+		resp, err := impl.GetResourceTreeUsingCache(ctx, &client.GetResourceTreeRequest{
+			ObjectIdentifiers: objectIdentifiers,
+			CacheConfig:       appDetailRequest.GetCacheConfig(),
+		})
+
+		if err != nil {
+			impl.logger.Errorw("Error in getting resource tree using cache", "appDetailRequest", appDetailRequest, "err", err)
+			if !appDetailRequest.UseFallBack {
+				impl.logger.Info("Use fallback is false, hence returning with error", "appDetailRequest", appDetailRequest, "err", err)
+				return nil, err
+			}
+		} else {
+			return resp, nil
+		}
+
+	}
+
 	// build resource Nodes
 	req := NewBuildNodesRequest(NewBuildNodesConfig(conf).
 		WithReleaseNamespace(appDetailRequest.Namespace)).
@@ -126,6 +159,7 @@ func (impl *CommonHelmServiceImpl) BuildResourceTree(appDetailRequest *client.Ap
 	}
 	return resourceTreeResponse, nil
 }
+
 func (impl *CommonHelmServiceImpl) getRestConfigForClusterConfig(clusterConfig *client.ClusterConfig) (*rest.Config, error) {
 	k8sClusterConfig := impl.converter.GetClusterConfigFromClientBean(clusterConfig)
 	conf, err := impl.k8sUtil.GetRestConfigByCluster(k8sClusterConfig)
@@ -148,18 +182,10 @@ func (impl *CommonHelmServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appCo
 	if helmRelease == nil {
 		return nil, errors.New(fmt.Sprintf("no helm release found for name=%s", appConfig.ReleaseName))
 	}
-	manifests, err := impl.getManifestsFromHelmRelease(helmRelease)
+	objectIdentifiers, err := impl.getObjectIdentifiersFromHelmRelease(helmRelease, appConfig.Namespace)
 	if err != nil {
-		impl.logger.Errorw("Error in getting helm release", "helmRelease", helmRelease, "err", err)
+		impl.logger.Errorw("Error in getting helm release", "appConfig", appConfig, "err", err)
 		return nil, err
-	}
-
-	objectIdentifiers := make([]*client.ObjectIdentifier, 0)
-	for _, manifest := range manifests {
-		objectIdentifier := GetObjectIdentifierFromHelmManifest(manifest, appConfig.Namespace)
-		if objectIdentifier != nil && len(objectIdentifier.Kind) > 0 && len(objectIdentifier.Name) > 0 {
-			objectIdentifiers = append(objectIdentifiers, objectIdentifier)
-		}
 	}
 
 	resp := &client.GetReleaseDetailWithManifestResponse{
@@ -184,6 +210,24 @@ func (impl *CommonHelmServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appCo
 	}
 
 	return resp, nil
+}
+
+func (impl *CommonHelmServiceImpl) getObjectIdentifiersFromHelmRelease(helmRelease *release.Release, namespace string) ([]*client.ObjectIdentifier, error) {
+	manifests, err := impl.getManifestsFromHelmRelease(helmRelease)
+	if err != nil {
+		impl.logger.Errorw("Error in getting helm release", "helmRelease", helmRelease, "err", err)
+		return nil, err
+	}
+
+	objectIdentifiers := make([]*client.ObjectIdentifier, 0)
+	for _, manifest := range manifests {
+		objectIdentifier := GetObjectIdentifierFromHelmManifest(&manifest, namespace)
+		if objectIdentifier != nil && len(objectIdentifier.Kind) > 0 && len(objectIdentifier.Name) > 0 {
+			objectIdentifiers = append(objectIdentifiers, objectIdentifier)
+		}
+	}
+
+	return objectIdentifiers, nil
 }
 
 func (impl *CommonHelmServiceImpl) getManifestsFromHelmRelease(helmRelease *release.Release) ([]unstructured.Unstructured, error) {
@@ -498,7 +542,7 @@ func (impl *CommonHelmServiceImpl) filterNodes(resourceTreeFilter *client.Resour
 	return filteredNodes
 }
 
-func (impl *CommonHelmServiceImpl) GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
+func (impl *CommonHelmServiceImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
 	k8sClusterConfig := impl.converter.GetClusterConfigFromClientBean(req.ClusterConfig)
 	restConfig, err := impl.k8sUtil.GetRestConfigByCluster(k8sClusterConfig)
 	if err != nil {
@@ -507,28 +551,12 @@ func (impl *CommonHelmServiceImpl) GetResourceTreeForExternalResources(req *clie
 	}
 
 	manifests := impl.getManifestsForExternalResources(restConfig, req.ExternalResourceDetail)
-	// build resource Nodes
-	buildNodesRequest := NewBuildNodesRequest(NewBuildNodesConfig(restConfig)).
-		WithDesiredOrLiveManifests(manifests...).
-		WithBatchWorker(impl.helmReleaseConfig.BuildNodesBatchSize, impl.logger)
-	buildNodesResponse, err := impl.BuildNodes(buildNodesRequest)
-	if err != nil {
-		impl.logger.Errorw("error in building Nodes", "err", err)
-		return nil, err
-	}
-
-	// build pods metadata
-	podsMetadata, err := impl.buildPodMetadata(buildNodesResponse.Nodes, restConfig)
-	if err != nil {
-		return nil, err
-	}
-	resourceTreeResponse := &bean.ResourceTreeResponse{
-		ApplicationTree: &bean.ApplicationTree{
-			Nodes: buildNodesResponse.Nodes,
-		},
-		PodMetadata: podsMetadata,
-	}
-	return resourceTreeResponse, nil
+	return impl.BuildResourceTreeUsingParentObjects(ctx, &client.AppDetailRequest{
+		ClusterConfig: req.ClusterConfig,
+		PreferCache:   req.PreferCache,
+		UseFallBack:   req.UseFallBack,
+		CacheConfig:   req.CacheConfig,
+	}, restConfig, manifests)
 }
 
 func (impl *CommonHelmServiceImpl) getManifestsForExternalResources(restConfig *rest.Config, externalResourceDetails []*client.ExternalResourceDetail) []*bean.DesiredOrLiveManifest {
