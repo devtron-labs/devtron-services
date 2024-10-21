@@ -106,7 +106,7 @@ type HelmAppService interface {
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error)
 	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
-	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
+	GetResourceTreeUsingCacheOnly(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
 }
 
 type HelmAppServiceImpl struct {
@@ -1801,8 +1801,17 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 	return release, nil
 }
 
-func (impl *HelmAppServiceImpl) GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	resp, err := impl.common.GetResourceTreeUsingCache(ctx, req)
+func (impl *HelmAppServiceImpl) GetResourceTreeUsingCacheOnly(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+	appDetailReq := &client.AppDetailRequest{
+		ClusterConfig: nil,
+		Namespace:     "",
+		ReleaseName:   "",
+		PreferCache:   true,
+		UseFallBack:   false,
+		CacheConfig:   req.CacheConfig,
+	}
+
+	resp, err := impl.common.BuildResourceTreeUsingParentObjects(ctx, appDetailReq, nil, req.ObjectIdentifiers)
 	if err != nil {
 		return nil, err
 	}

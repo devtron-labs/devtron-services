@@ -50,7 +50,7 @@ service ApplicationService {
   rpc GetResourceTreeForExternalResources(ExternalResourceTreeRequest) returns(ResourceTreeResponse){}
   rpc GetFluxAppDetail(FluxAppDetailRequest)returns(FluxAppDetail){}
   rpc GetReleaseDetails(ReleaseIdentifier) returns(DeployedAppDetail){}
-  rpc GetResourceTreeUsingCache(GetResourceTreeRequest) returns(ResourceTreeResponse){}
+  rpc GetResourceTreeUsingCacheOnly(GetResourceTreeRequest) returns(ResourceTreeResponse){}
 }
 
 message GetResourceTreeRequest{

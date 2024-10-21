@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/rest"
 	"net/http"
 	"sigs.k8s.io/yaml"
-	"sync"
 )
 
 type CommonHelmService interface {
@@ -34,8 +33,7 @@ type CommonHelmService interface {
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
-	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, desiredOrLiveManifests []*bean.DesiredOrLiveManifest) (*bean.ResourceTreeResponse, error)
-	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error)
+	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
 }
 
 type CommonHelmServiceImpl struct {
@@ -94,26 +92,26 @@ func (impl *CommonHelmServiceImpl) BuildResourceTree(ctx context.Context, appDet
 	if err != nil {
 		return nil, err
 	}
-	desiredOrLiveManifests, err := impl.getLiveManifests(conf, helmRelease)
+
+	desiredManifests, err := impl.GetHelmReleaseDetailWithDesiredManifest(&client.AppConfigRequest{
+		ClusterConfig: appDetailRequest.ClusterConfig,
+		Namespace:     appDetailRequest.Namespace,
+		ReleaseName:   appDetailRequest.ReleaseName,
+	})
 	if err != nil {
+		impl.logger.Errorw("error in getting helm release", "namespace", appDetailRequest.Namespace, "releaseName", appDetailRequest.ReleaseName, "error", err)
 		return nil, err
 	}
 
-	return impl.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, desiredOrLiveManifests)
+	return impl.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, desiredManifests.ParentObjects)
 
 }
 
-func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, desiredOrLiveManifests []*bean.DesiredOrLiveManifest) (*bean.ResourceTreeResponse, error) {
+func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
 	if appDetailRequest.PreferCache && appDetailRequest.CacheConfig != nil {
-		objectIdentifiers := make([]*client.ObjectIdentifier, 0)
-		for _, desiredOrLiveManifest := range desiredOrLiveManifests {
-			objectIdentifier := GetObjectIdentifierFromHelmManifest(desiredOrLiveManifest.Manifest, appDetailRequest.Namespace)
-			if objectIdentifier != nil && len(objectIdentifier.Kind) > 0 && len(objectIdentifier.Name) > 0 {
-				objectIdentifiers = append(objectIdentifiers, objectIdentifier)
-			}
-		}
+
 		resp, err := impl.GetResourceTreeUsingCache(ctx, &client.GetResourceTreeRequest{
-			ObjectIdentifiers: objectIdentifiers,
+			ObjectIdentifiers: parentObjects,
 			CacheConfig:       appDetailRequest.GetCacheConfig(),
 		})
 
@@ -128,11 +126,18 @@ func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingParentObjects(ctx conte
 		}
 
 	}
+	//fallback
+	return impl.buildResourceTreeUsingK8s(ctx, appDetailRequest, conf, parentObjects)
+
+}
+
+func (impl *CommonHelmServiceImpl) buildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
+	liveManifests := impl.getManifestsForGVKList(conf, parentObjects)
 
 	// build resource Nodes
 	req := NewBuildNodesRequest(NewBuildNodesConfig(conf).
 		WithReleaseNamespace(appDetailRequest.Namespace)).
-		WithDesiredOrLiveManifests(desiredOrLiveManifests...).
+		WithDesiredOrLiveManifests(liveManifests...).
 		WithBatchWorker(impl.helmReleaseConfig.BuildNodesBatchSize, impl.logger)
 	buildNodesResponse, err := impl.BuildNodes(req)
 	if err != nil {
@@ -239,21 +244,6 @@ func (impl *CommonHelmServiceImpl) getManifestsFromHelmRelease(helmRelease *rele
 	return manifests, nil
 }
 
-func (impl *CommonHelmServiceImpl) getLiveManifests(config *rest.Config, helmRelease *release.Release) ([]*bean.DesiredOrLiveManifest, error) {
-	manifests, err := impl.getManifestsFromHelmRelease(helmRelease)
-	if err != nil {
-		impl.logger.Errorw("error in parsing manifests", "payload", helmRelease, "error", err)
-		return nil, err
-	}
-	// get live manifests from kubernetes
-	//impl.logger.Infow("manifests added", "manifests", manifests, "helmRelease", helmRelease.Name)
-	desiredOrLiveManifests, err := impl.getDesiredOrLiveManifests(config, manifests, helmRelease.Namespace)
-	if err != nil {
-		impl.logger.Errorw("error in getting desired or live manifest", "host", config.Host, "helmReleaseName", helmRelease.Name, "err", err)
-		return nil, err
-	}
-	return desiredOrLiveManifests, nil
-}
 func (impl *CommonHelmServiceImpl) addHookResourcesInManifest(helmRelease *release.Release, manifests []unstructured.Unstructured) []unstructured.Unstructured {
 	for _, helmHook := range helmRelease.Hooks {
 		var hook unstructured.Unstructured
@@ -265,60 +255,6 @@ func (impl *CommonHelmServiceImpl) addHookResourcesInManifest(helmRelease *relea
 		manifests = append(manifests, hook)
 	}
 	return manifests
-}
-func (impl *CommonHelmServiceImpl) getDesiredOrLiveManifests(restConfig *rest.Config, desiredManifests []unstructured.Unstructured, releaseNamespace string) ([]*bean.DesiredOrLiveManifest, error) {
-
-	totalManifestCount := len(desiredManifests)
-	desiredOrLiveManifestArray := make([]*bean.DesiredOrLiveManifest, totalManifestCount)
-	batchSize := impl.helmReleaseConfig.ManifestFetchBatchSize
-
-	for i := 0; i < totalManifestCount; {
-		// requests left to process
-		remainingBatch := totalManifestCount - i
-		if remainingBatch < batchSize {
-			batchSize = remainingBatch
-		}
-		var wg sync.WaitGroup
-		for j := 0; j < batchSize; j++ {
-			wg.Add(1)
-			go func(j int) {
-				defer wg.Done()
-				desiredOrLiveManifest := impl.getManifestData(restConfig, releaseNamespace, desiredManifests[i+j])
-				desiredOrLiveManifestArray[i+j] = desiredOrLiveManifest
-			}(j)
-		}
-		wg.Wait()
-		i += batchSize
-	}
-
-	return desiredOrLiveManifestArray, nil
-}
-func (impl *CommonHelmServiceImpl) getManifestData(restConfig *rest.Config, releaseNamespace string, desiredManifest unstructured.Unstructured) *bean.DesiredOrLiveManifest {
-	gvk := desiredManifest.GroupVersionKind()
-	_namespace := desiredManifest.GetNamespace()
-	if _namespace == "" {
-		_namespace = releaseNamespace
-	}
-	liveManifest, _, err := impl.k8sService.GetLiveManifest(restConfig, _namespace, &gvk, desiredManifest.GetName())
-	desiredOrLiveManifest := &bean.DesiredOrLiveManifest{}
-
-	if err != nil {
-		impl.logger.Errorw("Error in getting live manifest ", "err", err)
-		statusError, _ := err.(*errors2.StatusError)
-		desiredOrLiveManifest = &bean.DesiredOrLiveManifest{
-			// using deep copy as it replaces item in manifest in loop
-			Manifest:                 desiredManifest.DeepCopy(),
-			IsLiveManifestFetchError: true,
-		}
-		if statusError != nil {
-			desiredOrLiveManifest.LiveManifestFetchErrorCode = statusError.Status().Code
-		}
-	} else {
-		desiredOrLiveManifest = &bean.DesiredOrLiveManifest{
-			Manifest: liveManifest,
-		}
-	}
-	return desiredOrLiveManifest
 }
 
 // BuildNodes builds Nodes from desired or live manifest.
@@ -550,18 +486,17 @@ func (impl *CommonHelmServiceImpl) GetResourceTreeForExternalResources(ctx conte
 		return nil, err
 	}
 
-	manifests := impl.getManifestsForExternalResources(restConfig, req.ExternalResourceDetail)
 	return impl.BuildResourceTreeUsingParentObjects(ctx, &client.AppDetailRequest{
 		ClusterConfig: req.ClusterConfig,
 		PreferCache:   req.PreferCache,
 		UseFallBack:   req.UseFallBack,
 		CacheConfig:   req.CacheConfig,
-	}, restConfig, manifests)
+	}, restConfig, GetObjectIdentifierFromExternalResource(req.ExternalResourceDetail))
 }
 
-func (impl *CommonHelmServiceImpl) getManifestsForExternalResources(restConfig *rest.Config, externalResourceDetails []*client.ExternalResourceDetail) []*bean.DesiredOrLiveManifest {
+func (impl *CommonHelmServiceImpl) getManifestsForGVKList(restConfig *rest.Config, gvkList []*client.ObjectIdentifier) []*bean.DesiredOrLiveManifest {
 	var manifests []*bean.DesiredOrLiveManifest
-	for _, resource := range externalResourceDetails {
+	for _, resource := range gvkList {
 		gvk := &schema.GroupVersionKind{
 			Group:   resource.GetGroup(),
 			Version: resource.GetVersion(),

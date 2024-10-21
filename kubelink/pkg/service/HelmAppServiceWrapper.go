@@ -692,8 +692,8 @@ func (impl *ApplicationServiceServerImpl) GetReleaseDetails(ctx context.Context,
 	return deployAppDetail, nil
 }
 
-func (impl *ApplicationServiceServerImpl) GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	resp, err := impl.HelmAppService.GetResourceTreeUsingCache(ctx, req)
+func (impl *ApplicationServiceServerImpl) GetResourceTreeUsingCacheOnly(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+	resp, err := impl.HelmAppService.GetResourceTreeUsingCacheOnly(ctx, req)
 	if err != nil {
 		impl.Logger.Errorw("error in fetching resource tree", "payload", req, "err", err)
 		return nil, err

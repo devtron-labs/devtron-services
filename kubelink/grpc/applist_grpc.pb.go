@@ -47,7 +47,7 @@ const (
 	ApplicationService_GetResourceTreeForExternalResources_FullMethodName     = "/ApplicationService/GetResourceTreeForExternalResources"
 	ApplicationService_GetFluxAppDetail_FullMethodName                        = "/ApplicationService/GetFluxAppDetail"
 	ApplicationService_GetReleaseDetails_FullMethodName                       = "/ApplicationService/GetReleaseDetails"
-	ApplicationService_GetResourceTreeUsingCache_FullMethodName               = "/ApplicationService/GetResourceTreeUsingCache"
+	ApplicationService_GetResourceTreeUsingCacheOnly_FullMethodName           = "/ApplicationService/GetResourceTreeUsingCacheOnly"
 )
 
 // ApplicationServiceClient is the client API for ApplicationService service.
@@ -82,7 +82,7 @@ type ApplicationServiceClient interface {
 	GetResourceTreeForExternalResources(ctx context.Context, in *ExternalResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error)
 	GetFluxAppDetail(ctx context.Context, in *FluxAppDetailRequest, opts ...grpc.CallOption) (*FluxAppDetail, error)
 	GetReleaseDetails(ctx context.Context, in *ReleaseIdentifier, opts ...grpc.CallOption) (*DeployedAppDetail, error)
-	GetResourceTreeUsingCache(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error)
+	GetResourceTreeUsingCacheOnly(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error)
 }
 
 type applicationServiceClient struct {
@@ -391,9 +391,9 @@ func (c *applicationServiceClient) GetReleaseDetails(ctx context.Context, in *Re
 	return out, nil
 }
 
-func (c *applicationServiceClient) GetResourceTreeUsingCache(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error) {
+func (c *applicationServiceClient) GetResourceTreeUsingCacheOnly(ctx context.Context, in *GetResourceTreeRequest, opts ...grpc.CallOption) (*ResourceTreeResponse, error) {
 	out := new(ResourceTreeResponse)
-	err := c.cc.Invoke(ctx, ApplicationService_GetResourceTreeUsingCache_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ApplicationService_GetResourceTreeUsingCacheOnly_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +432,7 @@ type ApplicationServiceServer interface {
 	GetResourceTreeForExternalResources(context.Context, *ExternalResourceTreeRequest) (*ResourceTreeResponse, error)
 	GetFluxAppDetail(context.Context, *FluxAppDetailRequest) (*FluxAppDetail, error)
 	GetReleaseDetails(context.Context, *ReleaseIdentifier) (*DeployedAppDetail, error)
-	GetResourceTreeUsingCache(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error)
+	GetResourceTreeUsingCacheOnly(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error)
 	mustEmbedUnimplementedApplicationServiceServer()
 }
 
@@ -524,8 +524,8 @@ func (UnimplementedApplicationServiceServer) GetFluxAppDetail(context.Context, *
 func (UnimplementedApplicationServiceServer) GetReleaseDetails(context.Context, *ReleaseIdentifier) (*DeployedAppDetail, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReleaseDetails not implemented")
 }
-func (UnimplementedApplicationServiceServer) GetResourceTreeUsingCache(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetResourceTreeUsingCache not implemented")
+func (UnimplementedApplicationServiceServer) GetResourceTreeUsingCacheOnly(context.Context, *GetResourceTreeRequest) (*ResourceTreeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetResourceTreeUsingCacheOnly not implemented")
 }
 func (UnimplementedApplicationServiceServer) mustEmbedUnimplementedApplicationServiceServer() {}
 
@@ -1050,20 +1050,20 @@ func _ApplicationService_GetReleaseDetails_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ApplicationService_GetResourceTreeUsingCache_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ApplicationService_GetResourceTreeUsingCacheOnly_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetResourceTreeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ApplicationServiceServer).GetResourceTreeUsingCache(ctx, in)
+		return srv.(ApplicationServiceServer).GetResourceTreeUsingCacheOnly(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ApplicationService_GetResourceTreeUsingCache_FullMethodName,
+		FullMethod: ApplicationService_GetResourceTreeUsingCacheOnly_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApplicationServiceServer).GetResourceTreeUsingCache(ctx, req.(*GetResourceTreeRequest))
+		return srv.(ApplicationServiceServer).GetResourceTreeUsingCacheOnly(ctx, req.(*GetResourceTreeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1180,8 +1180,8 @@ var ApplicationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ApplicationService_GetReleaseDetails_Handler,
 		},
 		{
-			MethodName: "GetResourceTreeUsingCache",
-			Handler:    _ApplicationService_GetResourceTreeUsingCache_Handler,
+			MethodName: "GetResourceTreeUsingCacheOnly",
+			Handler:    _ApplicationService_GetResourceTreeUsingCacheOnly_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

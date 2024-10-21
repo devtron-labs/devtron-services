@@ -19,3 +19,21 @@ func GetObjectIdentifierFromHelmManifest(manifest *unstructured.Unstructured, na
 		Namespace: namespaceManifest,
 	}
 }
+
+func GetObjectIdentifierFromExternalResource(externalResourceList []*client.ExternalResourceDetail) []*client.ObjectIdentifier {
+	if len(externalResourceList) == 0 {
+		return []*client.ObjectIdentifier{}
+	}
+	resp := make([]*client.ObjectIdentifier, len(externalResourceList))
+	for _, externalResource := range externalResourceList {
+		objectIdentifier := &client.ObjectIdentifier{
+			Group:     externalResource.Group,
+			Kind:      externalResource.Kind,
+			Version:   externalResource.Version,
+			Name:      externalResource.Name,
+			Namespace: externalResource.Namespace,
+		}
+		resp = append(resp, objectIdentifier)
+	}
+	return resp
+}
