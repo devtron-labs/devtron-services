@@ -56,12 +56,6 @@ service ApplicationService {
 message GetResourceTreeRequest{
   repeated ObjectIdentifier objectIdentifiers = 1;
   CacheConfig cacheConfig = 2;
-  ClusterConfig clusterConfig = 3;
-  bool PreferCache = 4;
-  bool UseFallBack = 5;
-  string namespace = 6;
-  // Map key cannot be float, double, bytes, message, or enum types (map<Gvk, Labels> could be a better option)
-  ResourceTreeFilter resourceTreeFilter = 7;
 }
 
 message CacheConfig {
