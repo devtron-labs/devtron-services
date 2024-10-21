@@ -1,0 +1,56 @@
+# Workflow name: Go Linter (golangci-lint)
+name: Go Linter
+
+# Trigger the workflow on pull request events
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches:    
+      - 'main'
+      - 'rc-*'
+      - 'hotfix-*'
+      - 'develop'
+
+# Set permissions for the GITHUB_TOKEN
+permissions:
+  contents: read  # Only read access to the repository contents is needed for linting
+
+# Define the jobs to run
+jobs:
+  golangci-lint:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Define the directories to run linting on
+        working-directory: [common-lib, authenticator, chart-sync, kubewatch, git-sensor, kubelink, lens]
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable  # Use the latest stable version of Go
+
+      # Step 3: Install dependencies for common-lib (if applicable)
+      - name: Install common-lib dependencies
+        if: ${{ matrix.working-directory == 'common-lib' }}
+        run: |
+          cd common-lib
+          go get oras.land/oras-go/pkg/auth/docker
+          go mod tidy
+          go mod download
+          go mod vendor
+
+      # Step 4: Run golangci-lint
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61  # Specify the version of golangci-lint to use
+          args: --timeout=30m --tests=false --verbose  # Set linting arguments
+          only-new-issues: "true"  # Only report new issues
+          working-directory: ${{ matrix.working-directory }}  # Set the working directory based on the matrix
