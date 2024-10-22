@@ -12,7 +12,7 @@ BASEIMAGE?=alpine:3.9
 include $(ENV_FILE)
 export
 
-build: clean dependency wire
+build: clean  wire
 	$(ENVVAR) GOOS=$(GOOS) go build -o chart-sync
 
 wire:
