@@ -218,7 +218,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 				impl.logger.Info("Retrying fetching for", "repo", material.Url)
 				updated, repo, errMsg, err = impl.FetchAndUpdateMaterial(gitCtx, material, location)
 				if err != nil {
-					dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(material.Id, sql.SOURCE_TYPE_BRANCH_FIXED)
+					dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(material.Id, sql.SOURCE_TYPE_BRANCH_FIXED, errMsg)
 					if dbErr != nil {
 						// made this non-blocking
 						impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", material.Id, "dbErr", dbErr)
@@ -228,7 +228,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 				}
 			}
 		} else {
-			dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(material.Id, sql.SOURCE_TYPE_BRANCH_FIXED)
+			dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(material.Id, sql.SOURCE_TYPE_BRANCH_FIXED, errMsg)
 			if dbErr != nil {
 				// made this non-blocking
 				impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", material.Id, "dbErr", dbErr)
