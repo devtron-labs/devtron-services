@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/devtron-labs/common-lib/git-manager/util"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
-	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -264,24 +263,4 @@ func PopulateStageError(errorMessage string) {
 	if writeErr != nil {
 		log.Println(util.DEVTRON, "failed to write error message: ", writeErr)
 	}
-}
-
-func PrintFileContent(filePath string) {
-	// Open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Println(util.DEVTRON, "Error opening file:", err)
-		return
-	}
-	defer file.Close()
-
-	// Read the entire content of the file
-	content, err := io.ReadAll(file)
-	if err != nil {
-		log.Println(util.DEVTRON, "Error reading file:", err)
-		return
-	}
-
-	// Print the file content
-	log.Println(util.DEVTRON, string(content))
 }
