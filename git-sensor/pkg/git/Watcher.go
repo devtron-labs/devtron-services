@@ -201,7 +201,8 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 	if err != nil {
 		impl.logger.Errorw("error in fetching material details ", "repo", material.Url, "errMsg", errMsg, "err", err)
 		// there might be the case if ssh private key gets flush from disk, so creating and single retrying in this case
-		if gitProvider.AuthMode == sql.AUTH_MODE_SSH {
+		sshKeyPathExist := CheckIfSshPrivateKeyExists(gitProvider.Id)
+		if gitProvider.AuthMode == sql.AUTH_MODE_SSH && !sshKeyPathExist {
 			if strings.Contains(material.CheckoutLocation, "/.git") {
 				location, _, _, err = impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
 				if err != nil {
@@ -219,6 +220,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 				if err != nil {
 					dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(material.Id, sql.SOURCE_TYPE_BRANCH_FIXED)
 					if dbErr != nil {
+						// made this non-blocking
 						impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", material.Id, "dbErr", dbErr)
 					}
 					impl.logger.Errorw("error in fetching material details in retry", "repo", material.Url, "err", err)
@@ -228,6 +230,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		} else {
 			dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(material.Id, sql.SOURCE_TYPE_BRANCH_FIXED)
 			if dbErr != nil {
+				// made this non-blocking
 				impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", material.Id, "dbErr", dbErr)
 			}
 			return errMsg, err

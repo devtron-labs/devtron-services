@@ -44,12 +44,12 @@ type GitMaterial struct {
 	CheckoutMsgAny   string   `sql:"checkout_msg_any"`
 	Deleted          bool     `sql:"deleted,notnull"`
 	//------
-	LastFetchTime       time.Time `json:"last_fetch_time"`
-	FetchStatus         bool      `json:"fetch_status"`
-	LastFetchErrorCount int       `json:"last_fetch_error_count"` //continues fetch error
-	FetchErrorMessage   string    `json:"fetch_error_message"`
+	LastFetchTime       time.Time `json:"last_fetch_time" sql:"last_fetch_time"`
+	FetchStatus         bool      `json:"fetch_status" sql:"fetch_status"`
+	LastFetchErrorCount int       `json:"last_fetch_error_count"  sql:"last_fetch_error_count"` //continues fetch error
+	FetchErrorMessage   string    `json:"fetch_error_message"  sql:"fetch_error_message"`
 	CloningMode         string    `json:"cloning_mode" sql:"-"`
-	FilterPattern       []string  `sql:"filter_pattern"`
+	FilterPattern       []string  `sql:"filter_pattern"  sql:"filter_pattern"`
 	GitProvider         *GitProvider
 	CiPipelineMaterials []*CiPipelineMaterial
 }
