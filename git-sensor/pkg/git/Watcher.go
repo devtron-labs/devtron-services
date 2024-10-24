@@ -325,9 +325,7 @@ func (impl GitWatcherImpl) FetchAndUpdateMaterial(gitCtx GitContext, material *s
 	updated, repo, errMsg, err := impl.repositoryManager.Fetch(gitCtx, material.Url, location)
 	if err == nil {
 		material.CheckoutLocation = location
-		material.CheckoutStatus = true
-	} else {
-		material.CheckoutStatus = false
+		material.FetchStatus = true
 	}
 	return updated, repo, errMsg, err
 }

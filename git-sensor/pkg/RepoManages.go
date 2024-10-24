@@ -282,6 +282,7 @@ func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitM
 	existingMaterial.GitProviderId = material.GitProviderId
 	existingMaterial.Deleted = material.Deleted
 	existingMaterial.CheckoutStatus = false
+	existingMaterial.FetchStatus = false
 	existingMaterial.FetchSubmodules = material.FetchSubmodules
 	existingMaterial.FilterPattern = material.FilterPattern
 	err = impl.materialRepository.Update(existingMaterial)
@@ -373,8 +374,7 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 		return material, gitCtx.Err()
 	} else if err != nil {
 		material.CheckoutStatus = false
-		material.CheckoutMsgAny = err.Error()
-		material.FetchErrorMessage = util2.BuildDisplayErrorMessage(errMsg, err)
+		material.CheckoutMsgAny = util2.BuildDisplayErrorMessage(errMsg, err)
 	} else {
 		material.CheckoutLocation = checkoutLocationForFetching
 		material.CheckoutStatus = true
@@ -496,9 +496,12 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 	response.LastFetchTime = gitMaterial.LastFetchTime
 	if pipelineMaterial.Errored {
 		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "errMsg", pipelineMaterial.ErrorMsg)
-		if !gitMaterial.CheckoutStatus {
+		if !gitMaterial.FetchStatus {
 			response.IsRepoError = true
 			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+		} else if !gitMaterial.CheckoutStatus {
+			response.IsRepoError = true
+			response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
 		} else {
 			response.IsBranchError = true
 			response.BranchErrorMsg = pipelineMaterial.ErrorMsg
@@ -536,9 +539,13 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 func (impl RepoManagerImpl) FetchGitCommitsForWebhookTypePipeline(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial) (*git.MaterialChangeResp, error) {
 	response := &git.MaterialChangeResp{}
 	response.LastFetchTime = gitMaterial.LastFetchTime
-	if pipelineMaterial.Errored && !gitMaterial.CheckoutStatus {
+	if pipelineMaterial.Errored {
 		response.IsRepoError = true
-		response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+		if !gitMaterial.FetchStatus {
+			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+		} else if !gitMaterial.CheckoutStatus {
+			response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
+		}
 		return response, nil
 	}
 
@@ -674,15 +681,12 @@ func (impl RepoManagerImpl) GetLatestCommitForBranch(gitCtx git.GitContext, pipe
 		impl.logger.Warn("repository is up to date")
 	}
 	if err != nil {
-		gitMaterial.CheckoutStatus = false
-		gitMaterial.CheckoutMsgAny = err.Error()
+		gitMaterial.FetchStatus = false
 		gitMaterial.FetchErrorMessage = util2.BuildDisplayErrorMessage(errMsg, err)
-
 		impl.logger.Errorw("error in fetching the repository ", "gitMaterial", gitMaterial, "err", err)
 		return nil, err
 	} else {
-		gitMaterial.CheckoutStatus = true
-
+		gitMaterial.FetchStatus = true
 	}
 
 	err = impl.materialRepository.Update(gitMaterial)
