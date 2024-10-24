@@ -7,7 +7,6 @@ dep-update-oss:
 	cd git-sensor && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd chart-sync && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd ci-runner && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
-	cd common-lib && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd kubelink && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd kubewatch && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd lens && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
