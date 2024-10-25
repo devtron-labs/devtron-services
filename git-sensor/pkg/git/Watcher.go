@@ -274,8 +274,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		}
 		fetchCount := impl.configuration.GitHistoryCount
 		commits, errMsg, err := impl.repositoryManager.ChangesSinceByRepository(gitCtx, repo, material.Value, lastSeenHash, "", fetchCount, checkoutLocation, false)
-		impl.logger.Debugw("Running changesBySinceRepository for material - ", "commits", commits, "errMsg", errMsg, "err", err)
-		impl.logger.Debugw("---------------------------------------------------------- ")
+		impl.logger.Debugw("Got changesBySinceRepository for material ", "commits", commits, "errMsg", errMsg, "err", err)
 		if err != nil {
 			impl.logger.Errorw("error in fetching ChangesSinceByRepository", "err", err, "errMsg", errMsg, "Value", material.Value)
 			material.Errored = true
@@ -313,6 +312,11 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 				updatedMaterialsModel = append(updatedMaterialsModel, material)
 			}
 			middleware.GitMaterialUpdateCounter.WithLabelValues().Inc()
+		} else if len(commits) == 0 {
+			// no new commit found, this is the case when no new commits are found but all git operations are working fine so update the error save in pipeline material to false
+			material.Errored = false
+			material.ErrorMsg = ""
+			updatedMaterialsModel = append(updatedMaterialsModel, material)
 		}
 	}
 	if len(updatedMaterialsModel) > 0 {
