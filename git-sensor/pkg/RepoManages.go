@@ -498,6 +498,7 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "errMsg", pipelineMaterial.ErrorMsg)
 		if !gitMaterial.CheckoutStatus {
 			response.IsRepoError = true
+			// doing this as previously fetch message was stored with checkoutStatus flag, if empty return fetchErrormessage
 			if len(gitMaterial.CheckoutMsgAny) > 0 {
 				response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
 			} else {
