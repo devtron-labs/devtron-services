@@ -375,6 +375,7 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 	} else if err != nil {
 		material.CheckoutStatus = false
 		material.CheckoutMsgAny = util2.BuildDisplayErrorMessage(errMsg, err)
+		return nil, err
 	} else {
 		material.CheckoutLocation = checkoutLocationForFetching
 		material.CheckoutStatus = true
