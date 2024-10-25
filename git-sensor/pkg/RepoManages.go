@@ -496,12 +496,16 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 	response.LastFetchTime = gitMaterial.LastFetchTime
 	if pipelineMaterial.Errored {
 		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "errMsg", pipelineMaterial.ErrorMsg)
-		if !gitMaterial.FetchStatus {
+		if !gitMaterial.CheckoutStatus {
+			response.IsRepoError = true
+			if len(gitMaterial.CheckoutMsgAny) > 0 {
+				response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
+			} else {
+				response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+			}
+		} else if !gitMaterial.FetchStatus {
 			response.IsRepoError = true
 			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
-		} else if !gitMaterial.CheckoutStatus {
-			response.IsRepoError = true
-			response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
 		} else {
 			response.IsBranchError = true
 			response.BranchErrorMsg = pipelineMaterial.ErrorMsg
@@ -541,10 +545,14 @@ func (impl RepoManagerImpl) FetchGitCommitsForWebhookTypePipeline(pipelineMateri
 	response.LastFetchTime = gitMaterial.LastFetchTime
 	if pipelineMaterial.Errored {
 		response.IsRepoError = true
-		if !gitMaterial.FetchStatus {
+		if !gitMaterial.CheckoutStatus {
+			if len(gitMaterial.CheckoutMsgAny) > 0 {
+				response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
+			} else {
+				response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+			}
+		} else if !gitMaterial.FetchStatus {
 			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
-		} else if !gitMaterial.CheckoutStatus {
-			response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
 		}
 		return response, nil
 	}
