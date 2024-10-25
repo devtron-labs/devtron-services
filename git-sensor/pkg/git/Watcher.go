@@ -275,6 +275,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		fetchCount := impl.configuration.GitHistoryCount
 		commits, errMsg, err := impl.repositoryManager.ChangesSinceByRepository(gitCtx, repo, material.Value, lastSeenHash, "", fetchCount, checkoutLocation, false)
 		if err != nil {
+			impl.logger.Errorw("error in fetching ChangesSinceByRepository", "err", err, "errMsg", errMsg, "Value", material.Value)
 			material.Errored = true
 			material.ErrorMsg = util2.BuildDisplayErrorMessage(errMsg, err)
 
