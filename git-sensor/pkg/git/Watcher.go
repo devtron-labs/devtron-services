@@ -264,7 +264,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		if material.Type != sql.SOURCE_TYPE_BRANCH_FIXED {
 			continue
 		}
-		impl.logger.Debugw("Running changesBySinceRepository for material - ", material)
+		impl.logger.Debugw("Running changesBySinceRepository for material - ", "materialId", material.Id)
 		impl.logger.Debugw("---------------------------------------------------------- ")
 		// parse env variables here, then search for the count field and pass here.
 		lastSeenHash := ""
@@ -274,6 +274,8 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		}
 		fetchCount := impl.configuration.GitHistoryCount
 		commits, errMsg, err := impl.repositoryManager.ChangesSinceByRepository(gitCtx, repo, material.Value, lastSeenHash, "", fetchCount, checkoutLocation, false)
+		impl.logger.Debugw("Running changesBySinceRepository for material - ", "commits", commits, "errMsg", errMsg, "err", err)
+		impl.logger.Debugw("---------------------------------------------------------- ")
 		if err != nil {
 			impl.logger.Errorw("error in fetching ChangesSinceByRepository", "err", err, "errMsg", errMsg, "Value", material.Value)
 			material.Errored = true
