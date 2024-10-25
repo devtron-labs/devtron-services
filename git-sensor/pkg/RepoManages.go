@@ -373,9 +373,11 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 		impl.logger.Errorw("context error in git checkout", "err", gitCtx.Err())
 		return material, gitCtx.Err()
 	} else if err != nil {
+		impl.logger.Errorw("error encountered in adding git repo", "materialId", material.Id, "err", err, "errMsg", errMsg)
 		material.CheckoutStatus = false
-		material.CheckoutMsgAny = util2.BuildDisplayErrorMessage(errMsg, err)
-		return nil, err
+		errorMessage := util2.BuildDisplayErrorMessage(errMsg, err)
+		material.CheckoutMsgAny = errorMessage
+		return nil, errors.New(errorMessage)
 	} else {
 		material.CheckoutLocation = checkoutLocationForFetching
 		material.CheckoutStatus = true
