@@ -494,24 +494,7 @@ func (impl RepoManagerImpl) FetchChanges(pipelineMaterialId int, from string, to
 func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial, showAll bool) (*git.MaterialChangeResp, error) {
 	response := &git.MaterialChangeResp{}
 	response.LastFetchTime = gitMaterial.LastFetchTime
-	if pipelineMaterial.Errored {
-		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "errMsg", pipelineMaterial.ErrorMsg)
-		if !gitMaterial.CheckoutStatus {
-			response.IsRepoError = true
-			// doing this as previously fetch message was stored with checkoutStatus flag, if empty return fetchErrormessage
-			if len(gitMaterial.CheckoutMsgAny) > 0 {
-				response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
-			} else {
-				response.RepoErrorMsg = gitMaterial.FetchErrorMessage
-			}
-		} else if !gitMaterial.FetchStatus {
-			response.IsRepoError = true
-			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
-		} else {
-			response.IsBranchError = true
-			response.BranchErrorMsg = pipelineMaterial.ErrorMsg
-		}
-
+	if impl.CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial, gitMaterial, response) {
 		return response, nil
 	}
 	commits := make([]*git.GitCommitBase, 0)
@@ -541,20 +524,33 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 	return response, nil
 }
 
-func (impl RepoManagerImpl) FetchGitCommitsForWebhookTypePipeline(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial) (*git.MaterialChangeResp, error) {
-	response := &git.MaterialChangeResp{}
-	response.LastFetchTime = gitMaterial.LastFetchTime
+func (impl RepoManagerImpl) CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial, response *git.MaterialChangeResp) bool {
 	if pipelineMaterial.Errored {
-		response.IsRepoError = true
+		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "gitMaterialId", gitMaterial.Id, "fetchErrorMessage", gitMaterial.FetchErrorMessage, "checkoutMsgAny", gitMaterial.CheckoutMsgAny, "errMsg", pipelineMaterial.ErrorMsg)
 		if !gitMaterial.CheckoutStatus {
+			response.IsRepoError = true
+			// doing this as previously fetch message was stored with checkoutStatus flag, if empty return fetchErrormessage
 			if len(gitMaterial.CheckoutMsgAny) > 0 {
 				response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
 			} else {
 				response.RepoErrorMsg = gitMaterial.FetchErrorMessage
 			}
 		} else if !gitMaterial.FetchStatus {
+			response.IsRepoError = true
 			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+		} else {
+			response.IsBranchError = true
+			response.BranchErrorMsg = pipelineMaterial.ErrorMsg
 		}
+		return true
+	}
+	return false
+}
+
+func (impl RepoManagerImpl) FetchGitCommitsForWebhookTypePipeline(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial) (*git.MaterialChangeResp, error) {
+	response := &git.MaterialChangeResp{}
+	response.LastFetchTime = gitMaterial.LastFetchTime
+	if impl.CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial, gitMaterial, response) {
 		return response, nil
 	}
 
