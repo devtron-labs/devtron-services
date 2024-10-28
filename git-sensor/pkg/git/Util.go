@@ -117,8 +117,7 @@ func CheckIfSshPrivateKeyExists(gitProviderId int) bool {
 }
 
 func CreateOrUpdateSshPrivateKeyOnDisk(gitProviderId int, sshPrivateKeyContent string) error {
-	sshPrivateKeyFolderPath := path.Join(SSH_PRIVATE_KEY_DIR, strconv.Itoa(gitProviderId))
-	sshPrivateKeyFilePath := path.Join(sshPrivateKeyFolderPath, SSH_PRIVATE_KEY_FILE_NAME)
+	sshPrivateKeyFolderPath, sshPrivateKeyFilePath := getSSHPrivateKeyFolderAndFilePath(gitProviderId)
 
 	// if file exists then delete file
 	if _, err := os.Stat(sshPrivateKeyFilePath); os.IsExist(err) {
