@@ -77,9 +77,28 @@ func (tr TimeRange) getWindowStartAndEndTime(targetTime time.Time) (time.Time, t
 	return windowStart, windowEnd, nil
 }
 
+/*
+There are three possible cases for windowStart and windowEnd
+relative to the defined time range (TimeFrom to TimeTo):
+
+1. windowStart < TimeFrom
+   - The window has not yet started.
+
+2. windowStart > TimeTo
+   - The occurrence has expired because the window starts after the end date.
+
+3. windowEnd > TimeTo
+   - The occurrence has expired because the window ends after the end date.
+
+In each case, windowStart and windowEnd represent the next occurrence calculated based on the current time.
+*/
+
 func (tr TimeRange) applyStartEndBoundary(windowStart time.Time, windowEnd time.Time) (time.Time, time.Time) {
 	if !tr.TimeFrom.IsZero() && windowStart.Before(tr.TimeFrom) {
 		windowStart = tr.TimeFrom
+	}
+	if !tr.TimeTo.IsZero() && windowStart.After(tr.TimeTo) {
+		windowStart = tr.TimeTo
 	}
 	if !tr.TimeTo.IsZero() && windowEnd.After(tr.TimeTo) {
 		windowEnd = tr.TimeTo
@@ -97,11 +116,39 @@ func (tr TimeRange) currentTimeMinusWindowDuration(targetTime time.Time, duratio
 // while tr.TimeFrom and tr.TimeTo are in GMT. Therefore, to compare them accurately, (in case of Fixed it happens)
 // we convert the time range to match the time zone of targetTime.
 func (tr TimeRange) getWindowForFixedTime(targetTime time.Time) (time.Time, time.Time) {
-	var windowStartOrEnd time.Time
 	timeFromInLocation := tr.TimeFrom.In(targetTime.Location())
 	timeToInLocation := tr.TimeTo.In(targetTime.Location())
-	if targetTime.After(timeToInLocation) {
-		return windowStartOrEnd, windowStartOrEnd
-	}
 	return timeFromInLocation, timeToInLocation
+}
+func (tr TimeRange) SanitizeTimeFromAndTo(loc *time.Location) TimeRange {
+	if !tr.TimeFrom.IsZero() {
+		// Parse HourMinuteFrom (in HH:MM format)
+		hourMinuteFrom, err := time.Parse("15:04", tr.HourMinuteFrom)
+		if err != nil {
+			fmt.Println("Error parsing HourMinuteFrom:", err)
+			return tr // Return unchanged in case of an error
+		}
+
+		// Update TimeFrom with the parsed hour and minute while keeping date and location
+		tr.TimeFrom = time.Date(
+			tr.TimeFrom.Year(), tr.TimeFrom.Month(), tr.TimeFrom.Day(),
+			hourMinuteFrom.Hour(), hourMinuteFrom.Minute(), 0, 0, loc,
+		)
+
+	}
+	if !tr.TimeTo.IsZero() {
+		// Parse HourMinuteTo (in HH:MM format)
+		hourMinuteTo, err := time.Parse("15:04", tr.HourMinuteTo)
+		if err != nil {
+			fmt.Println("Error parsing HourMinuteTo:", err)
+			return tr // Return unchanged in case of an error
+		}
+		// Update TimeTo with the parsed hour and minute while keeping date and location
+		tr.TimeTo = time.Date(
+			tr.TimeTo.Year(), tr.TimeTo.Month(), tr.TimeTo.Day(),
+			hourMinuteTo.Hour(), hourMinuteTo.Minute(), 0, 0, loc,
+		)
+
+	}
+	return tr
 }

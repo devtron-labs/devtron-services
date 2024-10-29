@@ -54,3 +54,14 @@ func isToBeforeFrom(from, to string) bool {
 func isTimeInBetween(timeCurrent, periodStart, periodEnd time.Time) bool {
 	return (timeCurrent.After(periodStart) && timeCurrent.Before(periodEnd)) || timeCurrent.Equal(periodStart)
 }
+
+// Validate the date from and date to handle same day limits
+func isDateFromBeforeTo(timeFrom, timeTo time.Time) bool {
+	yearFrom, monthFrom, dayFrom := timeFrom.Date()
+	yearTo, monthTo, dayTo := timeTo.Date()
+	// Create new dates without the time component for comparison
+	dateFrom := time.Date(yearFrom, monthFrom, dayFrom, 0, 0, 0, 0, time.UTC)
+	dateTo := time.Date(yearTo, monthTo, dayTo, 0, 0, 0, 0, time.UTC)
+	// Return true if dateFrom is strictly less than dateTo
+	return dateFrom.Before(dateTo)
+}

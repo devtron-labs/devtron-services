@@ -37,14 +37,27 @@ func (tr TimeRange) ValidateTimeRange() error {
 			return err
 		}
 
+		// Ensure HourMinuteFrom < HourMinuteTo for Daily and Weekly frequencies
+		if tr.Frequency == Daily || tr.Frequency == Weekly {
+			if isToBeforeFrom(tr.HourMinuteFrom, tr.HourMinuteTo) {
+				return errors.New(string(InvalidHourMinuteForWeeklyAndDaily))
+			}
+		}
 	}
 
 	if !tr.TimeFrom.IsZero() && !tr.TimeTo.IsZero() {
-		if tr.TimeFrom.After(tr.TimeTo) {
-			return errors.New(string(TimeFromLessThanTimeTo))
-		}
-		if tr.TimeFrom.Equal(tr.TimeTo) {
-			return errors.New(string(TimeFromEqualToTimeTo))
+		if tr.Frequency == Fixed {
+			if tr.TimeFrom.After(tr.TimeTo) {
+				return errors.New(string(TimeFromLessThanTimeTo))
+			}
+			if tr.TimeFrom.Equal(tr.TimeTo) {
+				return errors.New(string(TimeFromEqualToTimeTo))
+			}
+		} else {
+			// Validate that the date range is valid (same date safe for recurrence type windows)
+			if !isDateFromBeforeTo(tr.TimeFrom, tr.TimeTo) {
+				return errors.New(string(DayFromOrToNotValid))
+			}
 		}
 	}
 
