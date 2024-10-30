@@ -35,7 +35,7 @@ func (tr TimeRange) GetTimeRangeWindow(targetTime time.Time) (nextWindowEdge tim
 		return windowEnd, true, false, nil
 	}
 	if targetTime.After(windowEnd) {
-		return windowStart, false, true, nil
+		return windowEnd, false, true, nil
 	}
 	return windowStart, false, false, nil
 }
