@@ -22,19 +22,22 @@ import (
 	"time"
 )
 
-func (tr TimeRange) GetTimeRangeWindow(targetTime time.Time) (nextWindowEdge time.Time, isTimeBetween bool, err error) {
+func (tr TimeRange) GetTimeRangeWindow(targetTime time.Time) (nextWindowEdge time.Time, isTimeBetween, isExpired bool, err error) {
 	err = tr.ValidateTimeRange()
 	if err != nil {
-		return nextWindowEdge, false, err
+		return nextWindowEdge, false, false, err
 	}
 	windowStart, windowEnd, err := tr.getWindowForTargetTime(targetTime)
 	if err != nil {
-		return nextWindowEdge, isTimeBetween, err
+		return nextWindowEdge, isTimeBetween, isExpired, err
 	}
 	if isTimeInBetween(targetTime, windowStart, windowEnd) {
-		return windowEnd, true, nil
+		return windowEnd, true, false, nil
 	}
-	return windowStart, false, nil
+	if targetTime.After(windowEnd) {
+		return windowStart, false, true, nil
+	}
+	return windowStart, false, false, nil
 }
 func (tr TimeRange) getWindowForTargetTime(targetTime time.Time) (time.Time, time.Time, error) {
 
