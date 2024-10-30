@@ -48,7 +48,7 @@ func constructDateTime(hourMinute string, days int) time.Time {
 func isToBeforeFrom(from, to string) bool {
 	parseHourFrom, _ := time.Parse(hourMinuteFormat, from)
 	parsedHourTo, _ := time.Parse(hourMinuteFormat, to)
-	return parsedHourTo.Before(parseHourFrom)
+	return parsedHourTo.Before(parseHourFrom) || parsedHourTo.Equal(parseHourFrom)
 }
 
 func isTimeInBetween(timeCurrent, periodStart, periodEnd time.Time) bool {
