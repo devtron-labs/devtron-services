@@ -93,6 +93,14 @@ func (tr TimeRange) ValidateTimeRange() error {
 		if tr.DayFrom == tr.DayTo && isToBeforeFrom(tr.HourMinuteFrom, tr.HourMinuteTo) {
 			return errors.New(string(ToBeforeFrom))
 		}
+		// DayFrom > DayTo => check for the correct value
+		if tr.DayFrom > 0 && tr.DayTo > 0 && tr.DayFrom > tr.DayTo {
+			return errors.New(string(DayFromOrToNotValid))
+		}
+		if tr.DayFrom < 0 && tr.DayTo > 0 {
+			return errors.New(string(DayFromOrToNotValid))
+		}
+
 		// this is to prevent overlapping windows crossing to next month for both negatives
 		if tr.DayFrom < 0 && tr.DayTo < 0 && tr.DayFrom > tr.DayTo {
 			return errors.New(string(BothLessThanZeroAndFromGreaterThanTo))

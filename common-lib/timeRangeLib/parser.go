@@ -75,8 +75,15 @@ func (tr TimeRange) getWindowStartAndEndTime(targetTime time.Time) (time.Time, t
 	timeMinusDuration := tr.currentTimeMinusWindowDuration(targetTime, prevDuration)
 	windowStart := schedule.Next(timeMinusDuration)
 	windowEnd = windowStart.Add(duration)
+	timeMinusTwiceDuration := tr.currentTimeMinusWindowDuration(targetTime, 2*prevDuration)
+	windowPrevStart := schedule.Next(timeMinusTwiceDuration)
+	windowPrevEnd := windowPrevStart.Add(duration)
 
 	windowStart, windowEnd = tr.applyStartEndBoundary(windowStart, windowEnd)
+	// case where the end Date is after teh recurrence ended before that .
+	if targetTime.Before(windowEnd) && windowEnd.Equal(windowStart) {
+		return windowPrevEnd, windowPrevEnd, nil
+	}
 	return windowStart, windowEnd, nil
 }
 
