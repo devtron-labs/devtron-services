@@ -77,14 +77,14 @@ func (tr TimeRange) getWindowStartAndEndTime(targetTime time.Time) (time.Time, t
 	windowEnd = windowStart.Add(duration)
 
 	// Calculate start and end of the previous window
-	timeMinusPrevDuration := tr.currentTimeMinusWindowDuration(targetTime, 2*prevDuration)
+	timeMinusPrevDuration := tr.currentTimeMinusPrevWindowDuration(targetTime, 2*prevDuration)
 	windowPrevStart := schedule.Next(timeMinusPrevDuration)
 	windowPrevEnd := windowPrevStart.Add(duration)
 
 	// Move back through windows until `windowPrevEnd` is less than `targetTime`
 	for windowPrevEnd.After(targetTime) && targetTime.Before(windowEnd) {
 		prevDuration += prevDuration
-		timeMinusPrevDuration = tr.currentTimeMinusWindowDuration(targetTime, prevDuration)
+		timeMinusPrevDuration = tr.currentTimeMinusPrevWindowDuration(targetTime, prevDuration)
 		windowPrevStart = schedule.Next(timeMinusPrevDuration)
 		windowPrevEnd = windowPrevStart.Add(duration)
 	}
@@ -92,8 +92,8 @@ func (tr TimeRange) getWindowStartAndEndTime(targetTime time.Time) (time.Time, t
 	windowStart, windowEnd = tr.applyStartEndBoundary(windowStart, windowEnd)
 
 	// edge case where targetTime is within a recurrence boundary
-	if targetTime.Before(windowEnd) && windowEnd.Equal(windowStart) && targetTime.After(windowPrevEnd) {
-		return windowPrevEnd, windowPrevEnd, nil
+	if windowEnd.Equal(windowStart) && targetTime.Before(windowEnd) {
+		return windowPrevStart, windowPrevEnd, nil
 	}
 	return windowStart, windowEnd, nil
 }
@@ -128,6 +128,12 @@ func (tr TimeRange) applyStartEndBoundary(windowStart time.Time, windowEnd time.
 }
 
 func (tr TimeRange) currentTimeMinusWindowDuration(targetTime time.Time, duration time.Duration) time.Time {
+	if !tr.TimeFrom.IsZero() && targetTime.Before(tr.TimeFrom) {
+		return tr.TimeFrom.Add(-1 * duration)
+	}
+	return targetTime.Add(-1 * duration)
+}
+func (tr TimeRange) currentTimeMinusPrevWindowDuration(targetTime time.Time, duration time.Duration) time.Time {
 	return targetTime.Add(-1 * duration)
 }
 
@@ -143,33 +149,19 @@ func (tr TimeRange) getWindowForFixedTime(targetTime time.Time) (time.Time, time
 }
 func (tr TimeRange) SanitizeTimeFromAndTo(loc *time.Location) TimeRange {
 	if !tr.TimeFrom.IsZero() {
-		// Parse HourMinuteFrom (in HH:MM format)
-		hourMinuteFrom, err := time.Parse("15:04", tr.HourMinuteFrom)
-		if err != nil {
-			fmt.Println("Error parsing HourMinuteFrom:", err)
-			return tr // Return unchanged in case of an error
-		}
-
 		// Update TimeFrom with the parsed hour and minute while keeping date and location
 		tr.TimeFrom = time.Date(
 			tr.TimeFrom.Year(), tr.TimeFrom.Month(), tr.TimeFrom.Day(),
-			hourMinuteFrom.Hour(), hourMinuteFrom.Minute(), 0, 0, loc,
+			0, 0, 0, 1, loc,
 		)
 
 	}
 	if !tr.TimeTo.IsZero() {
-		// Parse HourMinuteTo (in HH:MM format)
-		hourMinuteTo, err := time.Parse("15:04", tr.HourMinuteTo)
-		if err != nil {
-			fmt.Println("Error parsing HourMinuteTo:", err)
-			return tr // Return unchanged in case of an error
-		}
 		// Update TimeTo with the parsed hour and minute while keeping date and location
 		tr.TimeTo = time.Date(
 			tr.TimeTo.Year(), tr.TimeTo.Month(), tr.TimeTo.Day(),
-			hourMinuteTo.Hour(), hourMinuteTo.Minute(), 0, 0, loc,
+			23, 59, 59, 0, loc,
 		)
-
 	}
 	return tr
 }
