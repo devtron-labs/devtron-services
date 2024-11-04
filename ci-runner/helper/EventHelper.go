@@ -672,7 +672,7 @@ func (dockerBuildConfig *DockerBuildConfig) CheckForBuildX() bool {
 	type BuildxFlag struct {
 		DISABLE_BUILDX bool `env:"DISABLE_BUILDX" envDefault:"false"`
 	}
-	buildxFlg := BuildxFlag{}
+	buildxFlg := &BuildxFlag{}
 	err := env.Parse(buildxFlg)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in parsing disable buildx flag", err)
