@@ -31,4 +31,8 @@ docker-build-push: docker-build-image
 	docker push ${REGISTRY}/testci-runner:${TAG}
 
 
-
+dep-update-oss:
+	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH) \
+	            -replace=github.com/devtron-labs/ci-runner=github.com/devtron-labs/devtron-services/ci-runner@$(TARGET_BRANCH)
+	go mod tidy
+	go mod vendor
