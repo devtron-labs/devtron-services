@@ -53,11 +53,12 @@ import (
 )
 
 const (
-	DEVTRON_ENV_VAR_PREFIX = "$devtron_env_"
-	BUILD_ARG_FLAG         = "--build-arg"
-	ROOT_PATH              = "."
-	BUILDX_K8S_DRIVER_NAME = "devtron-buildx-builder"
-	BUILDX_NODE_NAME       = "devtron-buildx-node-"
+	DEVTRON_ENV_VAR_PREFIX   = "$devtron_env_"
+	BUILD_ARG_FLAG           = "--build-arg"
+	ROOT_PATH                = "."
+	BUILDX_K8S_DRIVER_NAME   = "devtron-buildx-builder"
+	BUILDX_NODE_NAME         = "devtron-buildx-node-"
+	DOCKERD_OUTPUT_FILE_PATH = "/usr/local/bin/nohup.out"
 )
 
 type DockerHelper interface {
@@ -112,7 +113,7 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 			dockerMtuValueFlag = fmt.Sprintf("--mtu=%d", commonWorkflowRequest.CiBuildDockerMtuValue)
 		}
 		if connection == util.INSECURE {
-			dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag)
+			dockerdstart = fmt.Sprintf("dockerd  %s --insecure-registry %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > %s 2>&1 &", defaultAddressPoolFlag, host, dockerMtuValueFlag, DOCKERD_OUTPUT_FILE_PATH)
 			log.Println("Insecure Registry")
 		} else {
 			if connection == util.SECUREWITHCERT {
@@ -149,20 +150,22 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 					return err
 				}
 			}
-			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > /usr/local/bin/nohup.out 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag)
+			dockerdstart = fmt.Sprintf("dockerd %s --host=unix:///var/run/docker.sock %s --host=tcp://0.0.0.0:2375 > %s 2>&1 &", defaultAddressPoolFlag, dockerMtuValueFlag, DOCKERD_OUTPUT_FILE_PATH)
 		}
 		cmd := impl.GetCommandToExecute(dockerdstart)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Println("failed to start docker daemon")
+			util.PrintFileContent(DOCKERD_OUTPUT_FILE_PATH)
 			return err
 		}
 		log.Println("docker daemon started ", string(out))
 		err = impl.waitForDockerDaemon(util.DOCKER_PS_START_WAIT_SECONDS)
 		if err != nil {
+			util.PrintFileContent(DOCKERD_OUTPUT_FILE_PATH)
 			return err
 		}
-		return err
+		return nil
 	}
 
 	if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
