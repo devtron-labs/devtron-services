@@ -47,6 +47,7 @@ type CiPipelineMaterialRepository interface {
 	Exists(id int) (bool, error)
 	Save(material []*CiPipelineMaterial) ([]*CiPipelineMaterial, error)
 	UpdateMaterialsErroredForGitMaterialId(gitMaterialId int, materialType SourceType, errorMessage string) error
+	UpdateMaterialsNonErroredForGitMaterialId(gitMaterialId int, materialType SourceType) error
 }
 
 type CiPipelineMaterialRepositoryImpl struct {
@@ -110,6 +111,17 @@ func (impl CiPipelineMaterialRepositoryImpl) UpdateMaterialsErroredForGitMateria
 	_, err := impl.dbConnection.Model(&CiPipelineMaterial{}).
 		Set("errored = ?", true).
 		Set("error_msg = ?", errorMessage).
+		Where("active = ?", true).
+		Where("git_material_id = ?", gitMaterialId).
+		Where("type = ?", materialType).
+		Update()
+	return err
+}
+
+func (impl CiPipelineMaterialRepositoryImpl) UpdateMaterialsNonErroredForGitMaterialId(gitMaterialId int, materialType SourceType) error {
+	_, err := impl.dbConnection.Model(&CiPipelineMaterial{}).
+		Set("errored = ?", false).
+		Set("error_msg = ?", "").
 		Where("active = ?", true).
 		Where("git_material_id = ?", gitMaterialId).
 		Where("type = ?", materialType).

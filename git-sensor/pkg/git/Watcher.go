@@ -219,6 +219,14 @@ func (impl GitWatcherImpl) logAndUpdateDbError(materialId int, errMsg string) {
 	}
 }
 
+func (impl GitWatcherImpl) logAndUpdateDbNonError(materialId int) {
+	dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsNonErroredForGitMaterialId(materialId, sql.SOURCE_TYPE_BRANCH_FIXED)
+	if dbErr != nil {
+		// made this non-blocking
+		impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", materialId, "dbErr", dbErr)
+	}
+}
+
 func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (string, error) {
 	gitProvider := material.GitProvider
 	userName, password, err := GetUserNamePassword(gitProvider)
@@ -249,6 +257,8 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		}
 	}
 	if !updated {
+		// update set errored false in ci pipeline material as fetch is successful
+		impl.logAndUpdateDbNonError(material.Id)
 		return "", nil
 	}
 	materials, err := impl.ciPipelineMaterialRepository.FindByGitMaterialId(material.Id)
