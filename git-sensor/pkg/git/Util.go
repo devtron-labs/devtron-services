@@ -28,19 +28,19 @@ import (
 )
 
 const (
-	GIT_BASE_DIR              = "/git-base/"
-	SSH_PRIVATE_KEY_DIR       = GIT_BASE_DIR + "ssh-keys/"
-	TLS_FILES_DIR             = GIT_BASE_DIR + "tls-files/"
-	SSH_PRIVATE_KEY_FILE_NAME = "ssh_pvt_key"
-	TLS_KEY_FILE_NAME         = "tls_key.key"
-	TLS_CERT_FILE_NAME        = "tls_cert.pem"
-	CA_CERT_FILE_NAME         = "ca_cert.pem"
-	CLONE_TIMEOUT_SEC         = 600
-	FETCH_TIMEOUT_SEC         = 30
-	GITHUB_PROVIDER           = "github.com"
-	GITLAB_PROVIDER           = "gitlab.com"
-	CloningModeShallow        = "SHALLOW"
-	CloningModeFull           = "FULL"
+	GIT_BASE_DIR                   = "/git-base/"
+	SSH_PRIVATE_KEY_DIR            = GIT_BASE_DIR + "ssh-keys/"
+	TLS_FILES_DIR                  = GIT_BASE_DIR + "tls-files/"
+	SSH_PRIVATE_KEY_FILE_NAME      = "ssh_pvt_key"
+	TLS_KEY_FILE_NAME              = "tls_key.key"
+	TLS_CERT_FILE_NAME             = "tls_cert.pem"
+	CA_CERT_FILE_NAME              = "ca_cert.pem"
+	CLONE_TIMEOUT_SEC              = 600
+	FETCH_TIMEOUT_SEC              = 30
+	GITHUB_PROVIDER                = "github.com"
+	GITLAB_PROVIDER                = "gitlab.com"
+	CloningModeShallow             = "SHALLOW"
+	CloningModeFull                = "FULL"
 	NO_COMMIT_GIT_ERROR_MESSAGE    = "unknown revision or path not in the working tree."
 	NO_COMMIT_CUSTOM_ERROR_MESSAGE = "No Commit Found"
 )
@@ -79,10 +79,13 @@ func GetUserNamePassword(gitProvider *sql.GitProvider) (userName, password strin
 		return "", "", fmt.Errorf("unsupported %s", gitProvider.AuthMode)
 	}
 }
-
-func GetOrCreateSshPrivateKeyOnDisk(gitProviderId int, sshPrivateKeyContent string) (privateKeyPath string, err error) {
+func getSSHPrivateKeyFolderAndFilePath(gitProviderId int) (string, string) {
 	sshPrivateKeyFolderPath := path.Join(SSH_PRIVATE_KEY_DIR, strconv.Itoa(gitProviderId))
 	sshPrivateKeyFilePath := path.Join(sshPrivateKeyFolderPath, SSH_PRIVATE_KEY_FILE_NAME)
+	return sshPrivateKeyFolderPath, sshPrivateKeyFilePath
+}
+func GetOrCreateSshPrivateKeyOnDisk(gitProviderId int, sshPrivateKeyContent string) (privateKeyPath string, err error) {
+	sshPrivateKeyFolderPath, sshPrivateKeyFilePath := getSSHPrivateKeyFolderAndFilePath(gitProviderId)
 
 	// if file exists then return
 	if _, err := os.Stat(sshPrivateKeyFilePath); os.IsExist(err) {
@@ -104,9 +107,17 @@ func GetOrCreateSshPrivateKeyOnDisk(gitProviderId int, sshPrivateKeyContent stri
 	return sshPrivateKeyFilePath, nil
 }
 
+func CheckIfSshPrivateKeyExists(gitProviderId int) bool {
+	_, sshPrivateKeyFilePath := getSSHPrivateKeyFolderAndFilePath(gitProviderId)
+	// if file exists then return true
+	if _, err := os.Stat(sshPrivateKeyFilePath); os.IsExist(err) {
+		return true
+	}
+	return false
+}
+
 func CreateOrUpdateSshPrivateKeyOnDisk(gitProviderId int, sshPrivateKeyContent string) error {
-	sshPrivateKeyFolderPath := path.Join(SSH_PRIVATE_KEY_DIR, strconv.Itoa(gitProviderId))
-	sshPrivateKeyFilePath := path.Join(sshPrivateKeyFolderPath, SSH_PRIVATE_KEY_FILE_NAME)
+	sshPrivateKeyFolderPath, sshPrivateKeyFilePath := getSSHPrivateKeyFolderAndFilePath(gitProviderId)
 
 	// if file exists then delete file
 	if _, err := os.Stat(sshPrivateKeyFilePath); os.IsExist(err) {

@@ -185,6 +185,48 @@ func (impl GitWatcherImpl) pollAndUpdateGitMaterial(materialReq *sql.GitMaterial
 	return material, err
 }
 
+// Helper function to handle SSH key creation and retry fetching material
+func (impl GitWatcherImpl) handleSshKeyCreationAndRetry(gitCtx GitContext, material *sql.GitMaterial, location string, gitProvider *sql.GitProvider) (updated bool, repo *GitRepository, errMsg string, err error) {
+	if strings.Contains(material.CheckoutLocation, "/.git") {
+		location, _, _, err = impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
+		if err != nil {
+			impl.logger.Errorw("error in getting clone location ", "material", material, "errMsg", errMsg, "err", err)
+			return false, nil, errMsg, err
+		}
+	}
+	_, errMsg, err = impl.repositoryManager.CreateSshFileIfNotExistsAndConfigureSshCommand(gitCtx, location, gitProvider.Id, gitProvider.SshPrivateKey)
+	if err != nil {
+		impl.logger.Errorw("error in creating/configuring ssh private key on disk ", "repo", material.Url, "gitProviderId", gitProvider.Id, "errMsg", errMsg, "err", err)
+		return false, nil, errMsg, err
+	} else {
+		impl.logger.Info("Retrying fetching for", "repo", material.Url)
+		updated, repo, errMsg, err = impl.FetchAndUpdateMaterial(gitCtx, material, location)
+		if err != nil {
+			impl.logAndUpdateDbError(material.Id, errMsg)
+			impl.logger.Errorw("error in fetching material details in retry", "repo", material.Url, "err", err)
+			return false, nil, errMsg, err
+		}
+	}
+	return updated, repo, errMsg, err
+}
+
+// Helper function to log and update database with error message for CI pipeline material
+func (impl GitWatcherImpl) logAndUpdateDbError(materialId int, errMsg string) {
+	dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(materialId, sql.SOURCE_TYPE_BRANCH_FIXED, errMsg)
+	if dbErr != nil {
+		// made this non-blocking
+		impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", materialId, "dbErr", dbErr)
+	}
+}
+
+func (impl GitWatcherImpl) logAndUpdateDbNonError(materialId int) {
+	dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsNonErroredForGitMaterialId(materialId, sql.SOURCE_TYPE_BRANCH_FIXED)
+	if dbErr != nil {
+		// made this non-blocking
+		impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", materialId, "dbErr", dbErr)
+	}
+}
+
 func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (string, error) {
 	gitProvider := material.GitProvider
 	userName, password, err := GetUserNamePassword(gitProvider)
@@ -201,31 +243,22 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 	if err != nil {
 		impl.logger.Errorw("error in fetching material details ", "repo", material.Url, "errMsg", errMsg, "err", err)
 		// there might be the case if ssh private key gets flush from disk, so creating and single retrying in this case
-		if gitProvider.AuthMode == sql.AUTH_MODE_SSH {
-			if strings.Contains(material.CheckoutLocation, "/.git") {
-				location, _, _, err = impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
-				if err != nil {
-					impl.logger.Errorw("error in getting clone location ", "material", material, "errMsg", errMsg, "err", err)
-					return "", err
-				}
-			}
-			_, errMsg, err = impl.repositoryManager.CreateSshFileIfNotExistsAndConfigureSshCommand(gitCtx, location, gitProvider.Id, gitProvider.SshPrivateKey)
+		// Retry mechanism for SSH-based authentication
+		if gitProvider.AuthMode == sql.AUTH_MODE_SSH && !CheckIfSshPrivateKeyExists(gitProvider.Id) {
+			updated, repo, errMsg, err = impl.handleSshKeyCreationAndRetry(gitCtx, material, location, gitProvider)
 			if err != nil {
-				impl.logger.Errorw("error in creating/configuring ssh private key on disk ", "repo", material.Url, "gitProviderId", gitProvider.Id, "errMsg", errMsg, "err", err)
+				impl.logger.Errorw("error in fetching material details in retry", "repo", material.Url, "materialId", material.Id, "errMsg", errMsg, "err", err)
 				return errMsg, err
-			} else {
-				impl.logger.Info("Retrying fetching for", "repo", material.Url)
-				updated, repo, errMsg, err = impl.FetchAndUpdateMaterial(gitCtx, material, location)
-				if err != nil {
-					impl.logger.Errorw("error in fetching material details in retry", "repo", material.Url, "err", err)
-					return errMsg, err
-				}
 			}
 		} else {
+			// Log and update database if retry not possible or SSH key already exists
+			impl.logAndUpdateDbError(material.Id, errMsg)
 			return errMsg, err
 		}
 	}
 	if !updated {
+		// update set errored false in ci pipeline material as fetch is successful
+		impl.logAndUpdateDbNonError(material.Id)
 		return "", nil
 	}
 	materials, err := impl.ciPipelineMaterialRepository.FindByGitMaterialId(material.Id)
@@ -241,7 +274,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		if material.Type != sql.SOURCE_TYPE_BRANCH_FIXED {
 			continue
 		}
-		impl.logger.Debugw("Running changesBySinceRepository for material - ", material)
+		impl.logger.Debugw("Running changesBySinceRepository for material - ", "materialId", material.Id)
 		impl.logger.Debugw("---------------------------------------------------------- ")
 		// parse env variables here, then search for the count field and pass here.
 		lastSeenHash := ""
@@ -251,7 +284,9 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		}
 		fetchCount := impl.configuration.GitHistoryCount
 		commits, errMsg, err := impl.repositoryManager.ChangesSinceByRepository(gitCtx, repo, material.Value, lastSeenHash, "", fetchCount, checkoutLocation, false)
+		impl.logger.Debugw("Got changesBySinceRepository for material ", "commits", commits, "errMsg", errMsg, "err", err)
 		if err != nil {
+			impl.logger.Errorw("error in fetching ChangesSinceByRepository", "err", err, "errMsg", errMsg, "Value", material.Value)
 			material.Errored = true
 			material.ErrorMsg = util2.BuildDisplayErrorMessage(errMsg, err)
 
@@ -287,6 +322,11 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 				updatedMaterialsModel = append(updatedMaterialsModel, material)
 			}
 			middleware.GitMaterialUpdateCounter.WithLabelValues().Inc()
+		} else if len(commits) == 0 {
+			// no new commit found, this is the case when no new commits are found but all git operations are working fine so update the error save in pipeline material to false
+			material.Errored = false
+			material.ErrorMsg = ""
+			updatedMaterialsModel = append(updatedMaterialsModel, material)
 		}
 	}
 	if len(updatedMaterialsModel) > 0 {
@@ -314,7 +354,7 @@ func (impl GitWatcherImpl) FetchAndUpdateMaterial(gitCtx GitContext, material *s
 	updated, repo, errMsg, err := impl.repositoryManager.Fetch(gitCtx, material.Url, location)
 	if err == nil {
 		material.CheckoutLocation = location
-		material.CheckoutStatus = true
+		material.FetchStatus = true
 	}
 	return updated, repo, errMsg, err
 }

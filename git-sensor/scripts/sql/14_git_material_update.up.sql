@@ -1,0 +1,1 @@
+ALTER TABLE git_material ALTER COLUMN checkout_msg_any TYPE  text;
