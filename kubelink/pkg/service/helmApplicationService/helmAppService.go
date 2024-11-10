@@ -109,23 +109,25 @@ type HelmAppService interface {
 }
 
 type HelmAppServiceImpl struct {
-	logger            *zap.SugaredLogger
-	k8sService        commonHelmService.K8sService
-	randSource        rand.Source
-	K8sInformer       k8sInformer.K8sInformer
-	helmReleaseConfig *globalConfig.HelmReleaseConfig
-	k8sUtil           k8sUtils.K8sService
-	pubsubClient      *pubsub_lib.PubSubClientServiceImpl
-	clusterRepository repository.ClusterRepository
-	converter         converter.ClusterBeanConverter
-	registrySettings  registry2.SettingsFactory
-	common            commonHelmService.CommonHelmService
+	logger              *zap.SugaredLogger
+	k8sService          commonHelmService.K8sService
+	randSource          rand.Source
+	K8sInformer         k8sInformer.K8sInformer
+	helmReleaseConfig   *globalConfig.HelmReleaseConfig
+	k8sUtil             k8sUtils.K8sService
+	pubsubClient        *pubsub_lib.PubSubClientServiceImpl
+	clusterRepository   repository.ClusterRepository
+	converter           converter.ClusterBeanConverter
+	registrySettings    registry2.SettingsFactory
+	common              commonHelmService.CommonHelmService
+	resourceTreeService commonHelmService.ResourceTreeService
 }
 
 func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService commonHelmService.K8sService,
 	k8sInformer k8sInformer.K8sInformer, helmReleaseConfig *globalConfig.HelmReleaseConfig,
 	k8sUtil k8sUtils.K8sService, converter converter.ClusterBeanConverter,
-	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry2.SettingsFactory) (*HelmAppServiceImpl, error) {
+	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry2.SettingsFactory,
+	resourceTreeService commonHelmService.ResourceTreeService) (*HelmAppServiceImpl, error) {
 
 	var pubsubClient *pubsub_lib.PubSubClientServiceImpl
 	var err error
@@ -136,17 +138,18 @@ func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService commonHelmServi
 		}
 	}
 	helmAppServiceImpl := &HelmAppServiceImpl{
-		logger:            logger,
-		k8sService:        k8sService,
-		randSource:        rand.NewSource(time.Now().UnixNano()),
-		K8sInformer:       k8sInformer,
-		helmReleaseConfig: helmReleaseConfig,
-		pubsubClient:      pubsubClient,
-		k8sUtil:           k8sUtil,
-		clusterRepository: clusterRepository,
-		converter:         converter,
-		registrySettings:  registrySettings,
-		common:            common,
+		logger:              logger,
+		k8sService:          k8sService,
+		randSource:          rand.NewSource(time.Now().UnixNano()),
+		K8sInformer:         k8sInformer,
+		helmReleaseConfig:   helmReleaseConfig,
+		pubsubClient:        pubsubClient,
+		k8sUtil:             k8sUtil,
+		clusterRepository:   clusterRepository,
+		converter:           converter,
+		registrySettings:    registrySettings,
+		common:              common,
+		resourceTreeService: resourceTreeService,
 	}
 	err = os.MkdirAll(helmReleaseConfig.ChartWorkingDirectory, os.ModePerm)
 	if err != nil {
@@ -1295,7 +1298,7 @@ func (impl *HelmAppServiceImpl) getNodes(appDetailRequest *client.AppDetailReque
 		WithReleaseNamespace(appDetailRequest.Namespace)).
 		WithDesiredOrLiveManifests(desiredOrLiveManifests...).
 		WithBatchWorker(impl.helmReleaseConfig.BuildNodesBatchSize, impl.logger)
-	buildNodesResponse, err := impl.common.BuildNodes(req)
+	buildNodesResponse, err := impl.resourceTreeService.BuildNodes(req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1810,7 +1813,7 @@ func (impl *HelmAppServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.
 		}
 	}
 
-	resp, err := impl.common.BuildResourceTreeUsingParentObjects(ctx, appDetailReq, conf, req.ObjectIdentifiers)
+	resp, err := impl.resourceTreeService.BuildResourceTreeUsingParentObjects(ctx, appDetailReq, conf, req.ObjectIdentifiers)
 	if err != nil {
 		return nil, err
 	}
