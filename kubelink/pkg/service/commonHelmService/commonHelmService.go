@@ -32,7 +32,7 @@ type CommonHelmService interface {
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
 	GetRestConfigForClusterConfig(clusterConfig *client.ClusterConfig) (*rest.Config, error)
-	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error)
+	BuildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
 }
 
 type CommonHelmServiceImpl struct {
@@ -80,11 +80,6 @@ func (impl *CommonHelmServiceImpl) GetHelmRelease(clusterConfig *client.ClusterC
 	return release, nil
 }
 
-func (impl *CommonHelmServiceImpl) GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
-	return nil, errors.New("Not supported in oss")
-
-}
-
 func (impl *CommonHelmServiceImpl) BuildResourceTreeForHelmRelease(ctx context.Context, appDetailRequest *client.AppDetailRequest, release *release.Release) (*bean.ResourceTreeResponse, error) {
 
 	conf, err := impl.GetRestConfigForClusterConfig(appDetailRequest.ClusterConfig)
@@ -104,29 +99,19 @@ func (impl *CommonHelmServiceImpl) BuildResourceTreeForHelmRelease(ctx context.C
 
 func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
 	if appDetailRequest.PreferCache && appDetailRequest.CacheConfig != nil {
-
-		resp, err := impl.GetResourceTreeUsingCache(ctx, &client.GetResourceTreeRequest{
-			ObjectIdentifiers: parentObjects,
-			CacheConfig:       appDetailRequest.GetCacheConfig(),
-		})
-
-		if err != nil {
-			impl.logger.Errorw("Error in getting resource tree using cache", "appDetailRequest", appDetailRequest, "err", err)
-			if !appDetailRequest.UseFallBack {
-				impl.logger.Info("Use fallback is false, hence returning with error", "appDetailRequest", appDetailRequest, "err", err)
-				return nil, err
-			}
-		} else {
-			return resp, nil
+		impl.logger.Infow("Cache is not supported in oss", "payload", appDetailRequest)
+		if !appDetailRequest.UseFallBack {
+			impl.logger.Infow("Use fallback is false, hence returning with error", "appDetailRequest", appDetailRequest)
+			return nil, errors.New("Cache is not supported in oss and use_fallback flag is false")
 		}
 
 	}
 	//fallback
-	return impl.buildResourceTreeUsingK8s(ctx, appDetailRequest, conf, parentObjects)
+	return impl.BuildResourceTreeUsingK8s(ctx, appDetailRequest, conf, parentObjects)
 
 }
 
-func (impl *CommonHelmServiceImpl) buildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
+func (impl *CommonHelmServiceImpl) BuildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
 	liveManifests := impl.getLiveManifestsForGVKList(conf, parentObjects)
 
 	// build resource Nodes
