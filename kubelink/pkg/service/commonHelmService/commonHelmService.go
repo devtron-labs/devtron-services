@@ -32,6 +32,7 @@ type CommonHelmService interface {
 	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
 	GetRestConfigForClusterConfig(clusterConfig *client.ClusterConfig) (*rest.Config, error)
+	GetResourceTreeUsingCache(ctx context.Context, req *client.GetResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 }
 
 type CommonHelmServiceImpl struct {
