@@ -28,6 +28,7 @@ type ResourceTreeServiceImpl struct {
 type ResourceTreeService interface {
 	BuildNodes(request *BuildNodesConfig) (*BuildNodeResponse, error)
 	BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
+	BuildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
 }
 
 func NewResourceTreeServiceImpl(k8sService K8sService,
@@ -49,11 +50,11 @@ func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingParentObjects(ctx con
 
 	}
 	//fallback
-	return impl.buildResourceTreeUsingK8s(ctx, appDetailRequest, conf, parentObjects)
+	return impl.BuildResourceTreeUsingK8s(ctx, appDetailRequest, conf, parentObjects)
 
 }
 
-func (impl *ResourceTreeServiceImpl) buildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
+func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
 	liveManifests := impl.getLiveManifestsForGVKList(conf, parentObjects)
 
 	// build resource Nodes
