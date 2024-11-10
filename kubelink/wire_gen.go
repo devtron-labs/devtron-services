@@ -59,7 +59,7 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	resourceTreeServiceImpl := commonHelmService.NewResourceTreeServiceImpl(k8sServiceImpl, sugaredLogger, k8sK8sServiceImpl, helmReleaseConfig)
+	resourceTreeServiceImpl := commonHelmService.NewResourceTreeServiceImpl(k8sServiceImpl, sugaredLogger, helmReleaseConfig)
 	commonHelmServiceImpl := commonHelmService.NewCommonHelmServiceImpl(sugaredLogger, k8sK8sServiceImpl, clusterBeanConverterImpl, k8sServiceImpl, helmReleaseConfig, resourceTreeServiceImpl)
 	defaultSettingsGetterImpl := registry.NewDefaultSettingsGetter(sugaredLogger)
 	settingsFactoryImpl := registry.NewSettingsFactoryImpl(defaultSettingsGetterImpl)

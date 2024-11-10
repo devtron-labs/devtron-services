@@ -3,7 +3,6 @@ package commonHelmService
 import (
 	"context"
 	"errors"
-	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/common-lib/workerPool"
@@ -23,7 +22,6 @@ import (
 type ResourceTreeServiceImpl struct {
 	k8sService        K8sService
 	logger            *zap.SugaredLogger
-	k8sUtil           k8sUtils.K8sService
 	helmReleaseConfig *globalConfig.HelmReleaseConfig
 }
 
@@ -34,12 +32,10 @@ type ResourceTreeService interface {
 
 func NewResourceTreeServiceImpl(k8sService K8sService,
 	logger *zap.SugaredLogger,
-	k8sUtil k8sUtils.K8sService,
 	helmReleaseConfig *globalConfig.HelmReleaseConfig) *ResourceTreeServiceImpl {
 	return &ResourceTreeServiceImpl{
 		k8sService:        k8sService,
 		logger:            logger,
-		k8sUtil:           k8sUtil,
 		helmReleaseConfig: helmReleaseConfig,
 	}
 }
