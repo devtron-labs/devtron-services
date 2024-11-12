@@ -1,22 +1,29 @@
 
-TARGET_BRANCH?=main
-
 all: build
 
-dep-update-oss:
-	cd git-sensor && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
-	cd chart-sync && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
-	cd ci-runner && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
-	cd kubelink && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
-	cd kubewatch && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
-	cd lens && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
+TAG?=latest
+FLAGS=
+ENVVAR=
+GOOS?=darwin
+REGISTRY?=686244538589.dkr.ecr.us-east-2.amazonaws.com
+BASEIMAGE?=alpine:3.9
+#BUILD_NUMBER=$$(date +'%Y%m%d-%H%M%S')
+#BUILD_NUMBER := $(shell bash -c 'echo $$(date +'%Y%m%d-%H%M%S')')
+include $(ENV_FILE)
+export
 
-build:
-	cd chart-sync && $(MAKE)
-	cd ci-runner && $(MAKE)
-#	cd devtctl && $(MAKE)
-	cd git-sensor && $(MAKE)
-	cd kubelink && $(MAKE)
-	cd kubewatch && $(MAKE)
-	cd lens && $(MAKE)
-#	cd common-lib && $(MAKE)
+build: clean wire
+	$(ENVVAR) GOOS=$(GOOS) go build -o image-scanner
+
+wire:
+	wire
+
+clean:
+	rm -rf image-scanner
+
+run: build
+	./image-scanner
+
+.PHONY: build
+docker-build-image:  build
+	 docker build -t image-scanner:$(TAG) .
