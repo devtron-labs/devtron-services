@@ -404,17 +404,15 @@ func (impl *ApplicationServiceServerImpl) ResourceTreeAdapter(req *bean.Resource
 			}
 		}
 		resourceNode := &client.ResourceNode{
-			Group:      node.Group,
-			Version:    node.Version,
-			Kind:       node.Kind,
-			Namespace:  node.Namespace,
-			Name:       node.Name,
-			Uid:        node.UID,
-			Port:       node.Port,
-			ParentRefs: resourceRefResult(node.ParentRefs),
-			NetworkingInfo: &client.ResourceNetworkingInfo{
-				Labels: node.NetworkingInfo.Labels,
-			},
+			Group:           node.Group,
+			Version:         node.Version,
+			Kind:            node.Kind,
+			Namespace:       node.Namespace,
+			Name:            node.Name,
+			Uid:             node.UID,
+			Port:            node.Port,
+			ParentRefs:      resourceRefResult(node.ParentRefs),
+			NetworkingInfo:  getNetworkingInfoFromNode(node.NetworkingInfo),
 			ResourceVersion: node.ResourceVersion,
 			Health:          healthStatus,
 			IsHibernated:    node.IsHibernated,
