@@ -1,5 +1,6 @@
 
 TARGET_BRANCH?=main
+# TARGET_BRANCH=feature-branch make dep-update-oss
 
 all: build
 
