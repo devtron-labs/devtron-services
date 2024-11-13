@@ -12,7 +12,7 @@ BASEIMAGE?=alpine:3.9
 include $(ENV_FILE)
 export
 
-build: clean dependency wire
+build: clean  wire
 	$(ENVVAR) GOOS=$(GOOS) go build -o chart-sync
 
 wire:
@@ -35,3 +35,9 @@ docker-build-image:  build
 docker-build-push: docker-build-image
 	docker tag chart-sync:${TAG}  ${REGISTRY}/chart-sync:${TAG}
 	docker push ${REGISTRY}/chart-sync:${TAG}
+
+dep-update-oss:
+	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH) \
+	            -replace=github.com/devtron-labs/chart-sync=github.com/devtron-labs/devtron-services/chart-sync@$(TARGET_BRANCH)
+	go mod tidy
+	go mod vendor
