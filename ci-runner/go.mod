@@ -126,3 +126,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/devtron-labs/ci-runner => github.com/devtron-labs/devtron-services/ci-runner v0.0.0-20241103151131-e0ee0068cae4

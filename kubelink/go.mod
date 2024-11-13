@@ -208,3 +208,5 @@ replace (
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.25.0
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.25.0
 )
+
+replace github.com/devtron-labs/kubelink => github.com/devtron-labs/devtron-services/kubelink v0.0.0-20241103151131-e0ee0068cae4
