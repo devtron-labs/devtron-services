@@ -1,0 +1,1 @@
+-- NO down Script as we can have messages stored in the table with more than 250 char so down will break.

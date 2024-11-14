@@ -27,3 +27,8 @@ clean:
 run: build
 	./kubelink
 
+dep-update-oss:
+	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH)
+	go mod tidy
+	go mod vendor
+

@@ -29,3 +29,10 @@ clean-images: stop
 
 clean:
 	"$(GOCMD)" clean -i
+
+
+TARGET_BRANCH?=main
+dep-update-oss:
+	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH)
+	go mod tidy
+	go mod vendor

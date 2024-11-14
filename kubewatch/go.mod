@@ -207,7 +207,7 @@ require (
 	k8s.io/kube-aggregator v0.29.6 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.29.6 // indirect
-	k8s.io/kubernetes v1.29.6 // indirect
+	k8s.io/kubernetes v1.29.10 // indirect
 	k8s.io/metrics v0.29.7 // indirect
 	oras.land/oras-go/v2 v2.3.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -238,7 +238,6 @@ replace (
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.7
 	k8s.io/kubectl => k8s.io/kubectl v0.29.7
 	k8s.io/kubelet => k8s.io/kubelet v0.29.7
-	k8s.io/kubernetes v1.27.13 => k8s.io/kubernetes v1.29.6
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.29.7
 	k8s.io/metrics => k8s.io/metrics v0.29.7
 	k8s.io/mount-utils => k8s.io/mount-utils v0.29.7
@@ -246,4 +245,4 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241010131105-e2c23f9c80da
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241113143019-dcdbe3a4ace0
