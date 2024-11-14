@@ -15,7 +15,6 @@ func TestGetWindowForFixedTime(t *testing.T) {
 	// Define the time zones with GMT offsets
 	locBangui, _ := time.LoadLocation("Africa/Bangui")          // GMT+01:00
 	locParamaribo, _ := time.LoadLocation("America/Paramaribo") // GMT-03:00
-	zeroTime := time.Time{}
 	// Define test cases with different time zones
 	testCases := []struct {
 		name          string
@@ -39,8 +38,8 @@ func TestGetWindowForFixedTime(t *testing.T) {
 		{
 			name:          "Target time in Africa/Bangui (GMT+01:00), after the range (Outside)",
 			targetTime:    time.Date(2024, 10, 14, 19, 30, 0, 0, locBangui), // 7:30 AM GMT+01 (outside)
-			expectedStart: time.Time{},                                      // zeroTime
-			expectedEnd:   time.Time{},                                      // zeroTime
+			expectedStart: time.Date(2024, 10, 14, 10, 0, 0, 0, locBangui),  // zeroTime
+			expectedEnd:   time.Date(2024, 10, 14, 18, 0, 0, 0, locBangui),  // zeroTime
 		},
 
 		{
@@ -58,8 +57,8 @@ func TestGetWindowForFixedTime(t *testing.T) {
 		{
 			name:          "Target time in America/Paramaribo (GMT-03:00), after the range (Outside)",
 			targetTime:    time.Date(2024, 10, 14, 14, 30, 0, 0, locParamaribo), // 2:30 PM GMT-03 (outside)
-			expectedStart: zeroTime,                                             // zeroTime
-			expectedEnd:   zeroTime,                                             // zeroTime
+			expectedStart: time.Date(2024, 10, 14, 6, 0, 0, 0, locParamaribo),   // zeroTime
+			expectedEnd:   time.Date(2024, 10, 14, 14, 0, 0, 0, locParamaribo),
 		},
 	}
 
