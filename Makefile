@@ -11,6 +11,7 @@ dep-update-oss:
 	cd kubelink && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd kubewatch && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 	cd lens && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
+	cd image-scanner && TARGET_BRANCH=$(TARGET_BRANCH) $(MAKE) dep-update-oss
 
 build:
 	cd chart-sync && $(MAKE)
@@ -20,4 +21,5 @@ build:
 	cd kubelink && $(MAKE)
 	cd kubewatch && $(MAKE)
 	cd lens && $(MAKE)
+	cd image-scanner && $(MAKE)
 #	cd common-lib && $(MAKE)

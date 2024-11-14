@@ -4,7 +4,7 @@ go 1.21
 
 toolchain go1.21.8
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241111053504-7a79b0994875
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241113074452-7bd23ef50c96
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -127,4 +127,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/devtron-labs/ci-runner => github.com/devtron-labs/devtron-services/ci-runner v0.0.0-20241103151131-e0ee0068cae4
+replace github.com/devtron-labs/ci-runner => github.com/devtron-labs/devtron-services/ci-runner v0.0.0-20241024131256-7d3ba621dece

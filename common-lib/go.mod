@@ -31,7 +31,7 @@ require (
 	k8s.io/client-go v0.29.7
 	k8s.io/kube-aggregator v0.0.0
 	k8s.io/kubectl v0.29.0
-	k8s.io/kubernetes v1.29.6
+	k8s.io/kubernetes v1.29.10
 	k8s.io/metrics v0.29.7
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/yaml v1.3.0
@@ -77,7 +77,7 @@ require (
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
