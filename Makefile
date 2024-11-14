@@ -1,5 +1,5 @@
 
-TARGET_BRANCH?=7bd23ef50c96c1677aeb13fb226d534ac636e1bc
+TARGET_BRANCH?=main
 
 all: build
 
