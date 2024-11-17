@@ -579,9 +579,14 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 			return nil, err
 		}
 		impl.logger.Debug("Updating the dependencies if required")
-		err = impl.updateChartDependencies(helmRelease, registryClient)
-		if err != nil {
-			return nil, err
+
+		// perform Dependency Update in case we detect any dependency listed in chart.Metadata
+		if helmRelease.Chart.Metadata.Dependencies != nil || len(helmRelease.Chart.Metadata.Dependencies) > 0 {
+			impl.logger.Infow("Dependencies listed in Chart.yaml, performing dependency update before upgrading")
+			err = impl.updateChartDependencies(helmRelease, registryClient)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		updateChartSpec := &helmClient.ChartSpec{
@@ -626,13 +631,6 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 	return upgradeReleaseResponse, nil
 }
 func (impl *HelmAppServiceImpl) updateChartDependencies(helmRelease *release.Release, registry *registry.Client) error {
-
-	// Step 1: Check if Chart.yaml has dependencies
-	if helmRelease.Chart.Metadata.Dependencies == nil || len(helmRelease.Chart.Metadata.Dependencies) == 0 {
-		impl.logger.Infow("No dependencies listed in Chart.yaml, skipping update.")
-		return nil
-	}
-
 	// Step 1: Update chart dependencies
 	dirPath := "/tmp/dir"
 	outputChartPathDir := fmt.Sprintf("%s", dirPath)
@@ -715,7 +713,7 @@ func (impl *HelmAppServiceImpl) processTGZFiles(chartsDir string, helmRelease *r
 		if strings.HasSuffix(file.Name(), ".tgz") {
 			tgzPath := filepath.Join(chartsDir, file.Name())
 
-			if err := impl.expandAndSetDependency(tgzPath, chartsDir, helmRelease, file.Name()); err != nil {
+			if err := impl.expandAndSetDependency(tgzPath, helmRelease); err != nil {
 				return err
 			}
 		}
@@ -724,20 +722,61 @@ func (impl *HelmAppServiceImpl) processTGZFiles(chartsDir string, helmRelease *r
 }
 
 // expandAndSetDependency expands a .tgz file and sets it as a dependency.
-func (impl *HelmAppServiceImpl) expandAndSetDependency(tgzPath, chartsDir string, helmRelease *release.Release, fileName string) error {
+func (impl *HelmAppServiceImpl) expandAndSetDependency(tgzPath string, helmRelease *release.Release) error {
+	// Create a temporary directory for expanding the chart
+	tempDir, err := os.MkdirTemp("", "helmDependencyChart*")
+	if err != nil {
+		impl.logger.Errorw("Error creating temporary directory", "err", err)
+		return err
+	}
+	defer func() {
+		// Clean up the temporary directory
+		if removeErr := os.RemoveAll(tempDir); removeErr != nil {
+			impl.logger.Warnw("Error removing temporary directory", "dir", tempDir, "err", removeErr)
+		}
+	}()
+
+	// Open the .tgz file
 	tgzFile, err := os.Open(tgzPath)
 	if err != nil {
 		impl.logger.Errorw("Error opening tgz file", "file", tgzPath, "err", err)
 		return err
 	}
-	defer tgzFile.Close()
+	defer func(tgzFile *os.File) {
+		err := tgzFile.Close()
+		if err != nil {
+			impl.logger.Errorw("Error closing tgz file", "file", tgzPath, "err", err)
+		}
+	}(tgzFile)
 
-	if err := chartutil.Expand(chartsDir, tgzFile); err != nil {
+	// Expand the .tgz file into the temporary directory
+	if err := chartutil.Expand(tempDir, tgzFile); err != nil {
 		impl.logger.Errorw("Error expanding tgz file", "file", tgzPath, "err", err)
 		return err
 	}
 
-	expandedChartDir := filepath.Join(chartsDir, fileName)
+	// Dynamically find the expanded chart directory
+	entries, err := os.ReadDir(tempDir)
+	if err != nil {
+		impl.logger.Errorw("Error reading contents of temporary directory", "dir", tempDir, "err", err)
+		return err
+	}
+
+	var expandedChartDir string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			expandedChartDir = filepath.Join(tempDir, entry.Name())
+			break
+		}
+	}
+
+	if expandedChartDir == "" {
+		err := fmt.Errorf("no expanded chart directory found in %s", tempDir)
+		impl.logger.Errorw("Error locating expanded chart directory", "dir", tempDir, "err", err)
+		return err
+	}
+
+	// Load the expanded chart
 	expandedChart, err := loader.LoadDir(expandedChartDir)
 	if err != nil {
 		impl.logger.Errorw("Error loading expanded chart", "dir", expandedChartDir, "err", err)
