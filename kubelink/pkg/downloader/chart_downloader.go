@@ -26,8 +26,8 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 
-	"helm.sh/helm/v3/internal/fileutil"
-	"helm.sh/helm/v3/internal/urlutil"
+	"github.com/devtron-labs/kubelink/internals/fileutil"
+	"github.com/devtron-labs/kubelink/internals/urlutil"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/helmpath"
 	"helm.sh/helm/v3/pkg/provenance"
@@ -96,8 +96,6 @@ func (c *ChartDownloader) DownloadTo(ref, version, dest string) (string, *proven
 	if err != nil {
 		return "", nil, err
 	}
-
-	c.Options = append(c.Options, getter.WithAcceptHeader("application/gzip,application/octet-stream"))
 
 	data, err := g.Get(u.String(), c.Options...)
 	if err != nil {
