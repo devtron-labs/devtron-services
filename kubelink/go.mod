@@ -166,7 +166,7 @@ require (
 	k8s.io/kube-aggregator v0.26.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.29.0 // indirect
-	k8s.io/kubernetes v1.29.6 // indirect
+	k8s.io/kubernetes v1.29.10 // indirect
 	k8s.io/metrics v0.29.7 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	mellium.im/sasl v0.3.1 // indirect
@@ -177,7 +177,7 @@ require (
 )
 
 replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241114074910-d314d22f9884
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241118130104-cf2b8bc5fa88
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.18.0
 	// https://github.com/kubernetes/kubernetes/issues/79384#issuecomment-505627280
 	k8s.io/api => k8s.io/api v0.29.0
@@ -208,5 +208,3 @@ replace (
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.25.0
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.25.0
 )
-
-replace github.com/devtron-labs/kubelink => github.com/devtron-labs/devtron-services/kubelink v0.0.0-20241103151131-e0ee0068cae4
