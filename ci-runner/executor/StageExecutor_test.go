@@ -18,81 +18,82 @@ package executor
 
 import (
 	"github.com/devtron-labs/ci-runner/helper"
+	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
 	"reflect"
 	"testing"
 )
 
 func Test_deduceVariables(t *testing.T) {
 	type args struct {
-		desiredVars          []*helper.VariableObject
+		desiredVars          []*commonBean.VariableObject
 		globalVars           map[string]string
-		preeCiStageVariable  map[int]map[string]*helper.VariableObject
-		postCiStageVariables map[int]map[string]*helper.VariableObject
+		preeCiStageVariable  map[int]map[string]*commonBean.VariableObject
+		postCiStageVariables map[int]map[string]*commonBean.VariableObject
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    []*helper.VariableObject
+		want    []*commonBean.VariableObject
 		wantErr bool
 	}{
 		{name: "only value type",
 			args: args{
-				desiredVars: []*helper.VariableObject{&helper.VariableObject{Name: "age", Value: "20", VariableType: helper.VariableTypeValue, Format: helper.FormatTypeNumber},
-					&helper.VariableObject{Name: "name", Value: "test", VariableType: helper.VariableTypeValue, Format: helper.FormatTypeString},
-					&helper.VariableObject{Name: "status", Value: "true", VariableType: helper.VariableTypeValue, Format: helper.FormatTypeBool}},
+				desiredVars: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", Value: "20", VariableType: commonBean.VariableTypeValue, Format: commonBean.FormatTypeNumber},
+					&commonBean.VariableObject{Name: "name", Value: "test", VariableType: commonBean.VariableTypeValue, Format: commonBean.FormatTypeString},
+					&commonBean.VariableObject{Name: "status", Value: "true", VariableType: commonBean.VariableTypeValue, Format: commonBean.FormatTypeBool}},
 				globalVars:           nil,
 				preeCiStageVariable:  nil,
 				postCiStageVariables: nil,
 			},
 			wantErr: false,
-			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", Value: "20", VariableType: helper.VariableTypeValue, Format: helper.FormatTypeNumber},
-				&helper.VariableObject{Name: "name", Value: "test", VariableType: helper.VariableTypeValue, Format: helper.FormatTypeString},
-				&helper.VariableObject{Name: "status", Value: "true", VariableType: helper.VariableTypeValue, Format: helper.FormatTypeBool}},
+			want: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", Value: "20", VariableType: commonBean.VariableTypeValue, Format: commonBean.FormatTypeNumber},
+				&commonBean.VariableObject{Name: "name", Value: "test", VariableType: commonBean.VariableTypeValue, Format: commonBean.FormatTypeString},
+				&commonBean.VariableObject{Name: "status", Value: "true", VariableType: commonBean.VariableTypeValue, Format: commonBean.FormatTypeBool}},
 		}, {name: "from global",
 			args: args{
-				desiredVars: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.VariableTypeRefGlobal, Format: helper.FormatTypeNumber, ReferenceVariableName: "age"},
-					&helper.VariableObject{Name: "name", VariableType: helper.VariableTypeRefGlobal, Format: helper.FormatTypeString, ReferenceVariableName: "my-name"},
-					&helper.VariableObject{Name: "status", VariableType: helper.VariableTypeRefGlobal, Format: helper.FormatTypeBool, ReferenceVariableName: "status"}},
+				desiredVars: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", VariableType: commonBean.VariableTypeRefGlobal, Format: commonBean.FormatTypeNumber, ReferenceVariableName: "age"},
+					&commonBean.VariableObject{Name: "name", VariableType: commonBean.VariableTypeRefGlobal, Format: commonBean.FormatTypeString, ReferenceVariableName: "my-name"},
+					&commonBean.VariableObject{Name: "status", VariableType: commonBean.VariableTypeRefGlobal, Format: commonBean.FormatTypeBool, ReferenceVariableName: "status"}},
 				globalVars:           map[string]string{"age": "20", "my-name": "test", "status": "true"},
 				preeCiStageVariable:  nil,
 				postCiStageVariables: nil,
 			},
 			wantErr: false,
-			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", Value: "20", VariableType: helper.VariableTypeRefGlobal, Format: helper.FormatTypeNumber, TypedValue: float64(20), ReferenceVariableName: "age"},
-				&helper.VariableObject{Name: "name", Value: "test", VariableType: helper.VariableTypeRefGlobal, Format: helper.FormatTypeString, TypedValue: "test", ReferenceVariableName: "my-name"},
-				&helper.VariableObject{Name: "status", Value: "true", VariableType: helper.VariableTypeRefGlobal, Format: helper.FormatTypeBool, TypedValue: true, ReferenceVariableName: "status"}},
+			want: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", Value: "20", VariableType: commonBean.VariableTypeRefGlobal, Format: commonBean.FormatTypeNumber, TypedValue: float64(20), ReferenceVariableName: "age"},
+				&commonBean.VariableObject{Name: "name", Value: "test", VariableType: commonBean.VariableTypeRefGlobal, Format: commonBean.FormatTypeString, TypedValue: "test", ReferenceVariableName: "my-name"},
+				&commonBean.VariableObject{Name: "status", Value: "true", VariableType: commonBean.VariableTypeRefGlobal, Format: commonBean.FormatTypeBool, TypedValue: true, ReferenceVariableName: "status"}},
 		}, {name: "REF_PRE_CI",
 			args: args{
-				desiredVars: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.VariableTypeRefPreCi, Format: helper.FormatTypeNumber, ReferenceVariableName: "age", ReferenceVariableStepIndex: 1},
-					&helper.VariableObject{Name: "name", VariableType: helper.VariableTypeRefPreCi, Format: helper.FormatTypeString, ReferenceVariableName: "my-name", ReferenceVariableStepIndex: 1},
-					&helper.VariableObject{Name: "status", VariableType: helper.VariableTypeRefPreCi, Format: helper.FormatTypeBool, ReferenceVariableName: "status", ReferenceVariableStepIndex: 1}},
+				desiredVars: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", VariableType: commonBean.VariableTypeRefPreCi, Format: commonBean.FormatTypeNumber, ReferenceVariableName: "age", ReferenceVariableStepIndex: 1},
+					&commonBean.VariableObject{Name: "name", VariableType: commonBean.VariableTypeRefPreCi, Format: commonBean.FormatTypeString, ReferenceVariableName: "my-name", ReferenceVariableStepIndex: 1},
+					&commonBean.VariableObject{Name: "status", VariableType: commonBean.VariableTypeRefPreCi, Format: commonBean.FormatTypeBool, ReferenceVariableName: "status", ReferenceVariableStepIndex: 1}},
 				globalVars: map[string]string{"age": "22", "my-name": "test1", "status": "false"},
-				preeCiStageVariable: map[int]map[string]*helper.VariableObject{1: {"age": &helper.VariableObject{Name: "age", Value: "20"},
-					"my-name": &helper.VariableObject{Name: "my-name", Value: "test"},
-					"status":  &helper.VariableObject{Name: "status", Value: "true"},
+				preeCiStageVariable: map[int]map[string]*commonBean.VariableObject{1: {"age": &commonBean.VariableObject{Name: "age", Value: "20"},
+					"my-name": &commonBean.VariableObject{Name: "my-name", Value: "test"},
+					"status":  &commonBean.VariableObject{Name: "status", Value: "true"},
 				}},
 				postCiStageVariables: nil,
 			},
 			wantErr: false,
-			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.VariableTypeRefPreCi, Format: helper.FormatTypeNumber, ReferenceVariableName: "age", Value: "20", TypedValue: float64(20), ReferenceVariableStepIndex: 1},
-				&helper.VariableObject{Name: "name", VariableType: helper.VariableTypeRefPreCi, Format: helper.FormatTypeString, ReferenceVariableName: "my-name", Value: "test", TypedValue: "test", ReferenceVariableStepIndex: 1},
-				&helper.VariableObject{Name: "status", VariableType: helper.VariableTypeRefPreCi, Format: helper.FormatTypeBool, ReferenceVariableName: "status", Value: "true", TypedValue: true, ReferenceVariableStepIndex: 1}},
+			want: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", VariableType: commonBean.VariableTypeRefPreCi, Format: commonBean.FormatTypeNumber, ReferenceVariableName: "age", Value: "20", TypedValue: float64(20), ReferenceVariableStepIndex: 1},
+				&commonBean.VariableObject{Name: "name", VariableType: commonBean.VariableTypeRefPreCi, Format: commonBean.FormatTypeString, ReferenceVariableName: "my-name", Value: "test", TypedValue: "test", ReferenceVariableStepIndex: 1},
+				&commonBean.VariableObject{Name: "status", VariableType: commonBean.VariableTypeRefPreCi, Format: commonBean.FormatTypeBool, ReferenceVariableName: "status", Value: "true", TypedValue: true, ReferenceVariableStepIndex: 1}},
 		}, {name: "VARIABLE_TYPE_REF_POST_CI",
 			args: args{
-				desiredVars: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.VariableTypeRefPostCi, Format: helper.FormatTypeNumber, ReferenceVariableName: "age", ReferenceVariableStepIndex: 1},
-					&helper.VariableObject{Name: "name", VariableType: helper.VariableTypeRefPostCi, Format: helper.FormatTypeString, ReferenceVariableName: "my-name", ReferenceVariableStepIndex: 1},
-					&helper.VariableObject{Name: "status", VariableType: helper.VariableTypeRefPostCi, Format: helper.FormatTypeBool, ReferenceVariableName: "status", ReferenceVariableStepIndex: 1}},
+				desiredVars: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", VariableType: commonBean.VariableTypeRefPostCi, Format: commonBean.FormatTypeNumber, ReferenceVariableName: "age", ReferenceVariableStepIndex: 1},
+					&commonBean.VariableObject{Name: "name", VariableType: commonBean.VariableTypeRefPostCi, Format: commonBean.FormatTypeString, ReferenceVariableName: "my-name", ReferenceVariableStepIndex: 1},
+					&commonBean.VariableObject{Name: "status", VariableType: commonBean.VariableTypeRefPostCi, Format: commonBean.FormatTypeBool, ReferenceVariableName: "status", ReferenceVariableStepIndex: 1}},
 				globalVars: map[string]string{"age": "22", "my-name": "test1", "status": "false"},
-				postCiStageVariables: map[int]map[string]*helper.VariableObject{1: {"age": &helper.VariableObject{Name: "age", Value: "20"},
-					"my-name": &helper.VariableObject{Name: "my-name", Value: "test"},
-					"status":  &helper.VariableObject{Name: "status", Value: "true"},
+				postCiStageVariables: map[int]map[string]*commonBean.VariableObject{1: {"age": &commonBean.VariableObject{Name: "age", Value: "20"},
+					"my-name": &commonBean.VariableObject{Name: "my-name", Value: "test"},
+					"status":  &commonBean.VariableObject{Name: "status", Value: "true"},
 				}},
 				preeCiStageVariable: nil,
 			},
 			wantErr: false,
-			want: []*helper.VariableObject{&helper.VariableObject{Name: "age", VariableType: helper.VariableTypeRefPostCi, Format: helper.FormatTypeNumber, ReferenceVariableName: "age", Value: "20", TypedValue: float64(20), ReferenceVariableStepIndex: 1},
-				&helper.VariableObject{Name: "name", VariableType: helper.VariableTypeRefPostCi, Format: helper.FormatTypeString, ReferenceVariableName: "my-name", Value: "test", TypedValue: "test", ReferenceVariableStepIndex: 1},
-				&helper.VariableObject{Name: "status", VariableType: helper.VariableTypeRefPostCi, Format: helper.FormatTypeBool, ReferenceVariableName: "status", Value: "true", TypedValue: true, ReferenceVariableStepIndex: 1}},
+			want: []*commonBean.VariableObject{&commonBean.VariableObject{Name: "age", VariableType: commonBean.VariableTypeRefPostCi, Format: commonBean.FormatTypeNumber, ReferenceVariableName: "age", Value: "20", TypedValue: float64(20), ReferenceVariableStepIndex: 1},
+				&commonBean.VariableObject{Name: "name", VariableType: commonBean.VariableTypeRefPostCi, Format: commonBean.FormatTypeString, ReferenceVariableName: "my-name", Value: "test", TypedValue: "test", ReferenceVariableStepIndex: 1},
+				&commonBean.VariableObject{Name: "status", VariableType: commonBean.VariableTypeRefPostCi, Format: commonBean.FormatTypeBool, ReferenceVariableName: "status", Value: "true", TypedValue: true, ReferenceVariableStepIndex: 1}},
 		},
 
 		// TODO: Add test cases.
@@ -116,21 +117,21 @@ func TestRunCiSteps(t *testing.T) {
 		stageType                  helper.StepType
 		req                        *helper.CommonWorkflowRequest
 		globalEnvironmentVariables map[string]string
-		preeCiStageVariable        map[int]map[string]*helper.VariableObject
+		preeCiStageVariable        map[int]map[string]*commonBean.VariableObject
 	}
 	tests := []struct {
 		name                       string
 		args                       args
-		wantPreeCiStageVariableOut map[int]map[string]*helper.VariableObject
-		wantPostCiStageVariable    map[int]map[string]*helper.VariableObject
+		wantPreeCiStageVariableOut map[int]map[string]*commonBean.VariableObject
+		wantPostCiStageVariable    map[int]map[string]*commonBean.VariableObject
 		wantErr                    bool
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
-		stageExecutor := NewStageExecutorImpl()
+		stageExecutor := NewStageExecutorImpl(nil, nil)
 		t.Run(tt.name, func(t *testing.T) {
-			gotPreeCiStageVariableOut, gotPostCiStageVariable, err := stageExecutor.RunCiCdSteps(tt.args.stageType, nil, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
+			gotPreeCiStageVariableOut, gotPostCiStageVariable, _, err := stageExecutor.RunCiCdSteps(tt.args.stageType, nil, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunCiCdSteps() error = %v, wantErr %v", err, tt.wantErr)
 				return

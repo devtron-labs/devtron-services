@@ -19,6 +19,7 @@ package helper
 import (
 	"encoding/json"
 	"fmt"
+	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
 )
 
 type RefPluginObject struct {
@@ -40,25 +41,25 @@ const (
 )
 
 type StepObject struct {
-	Name                     string             `json:"name"`
-	Index                    int                `json:"index"`
-	StepType                 string             `json:"stepType"`     // REF_PLUGIN or INLINE
-	ExecutorType             ExecutorType       `json:"executorType"` // continer_image/ shell
-	RefPluginId              int                `json:"refPluginId"`
-	Script                   string             `json:"script"`
-	InputVars                []*VariableObject  `json:"inputVars"`
-	ExposedPorts             map[int]int        `json:"exposedPorts"` //map of host:container
-	OutputVars               []*VariableObject  `json:"outputVars"`
-	TriggerSkipConditions    []*ConditionObject `json:"triggerSkipConditions"`
-	SuccessFailureConditions []*ConditionObject `json:"successFailureConditions"`
-	DockerImage              string             `json:"dockerImage"`
-	Command                  string             `json:"command"`
-	Args                     []string           `json:"args"`
-	CustomScriptMount        *MountPath         `json:"customScriptMount"` // destination path - storeScriptAt
-	SourceCodeMount          *MountPath         `json:"sourceCodeMount"`   // destination path - mountCodeToContainerPath
-	ExtraVolumeMounts        []*MountPath       `json:"extraVolumeMounts"` // filePathMapping
-	ArtifactPaths            []string           `json:"artifactPaths"`
-	TriggerIfParentStageFail bool               `json:"triggerIfParentStageFail"`
+	Name                     string                       `json:"name"`
+	Index                    int                          `json:"index"`
+	StepType                 string                       `json:"stepType"`     // REF_PLUGIN or INLINE
+	ExecutorType             ExecutorType                 `json:"executorType"` // continer_image/ shell
+	RefPluginId              int                          `json:"refPluginId"`
+	Script                   string                       `json:"script"`
+	InputVars                []*commonBean.VariableObject `json:"inputVars"`
+	ExposedPorts             map[int]int                  `json:"exposedPorts"` //map of host:container
+	OutputVars               []*commonBean.VariableObject `json:"outputVars"`
+	TriggerSkipConditions    []*ConditionObject           `json:"triggerSkipConditions"`
+	SuccessFailureConditions []*ConditionObject           `json:"successFailureConditions"`
+	DockerImage              string                       `json:"dockerImage"`
+	Command                  string                       `json:"command"`
+	Args                     []string                     `json:"args"`
+	CustomScriptMount        *MountPath                   `json:"customScriptMount"` // destination path - storeScriptAt
+	SourceCodeMount          *MountPath                   `json:"sourceCodeMount"`   // destination path - mountCodeToContainerPath
+	ExtraVolumeMounts        []*MountPath                 `json:"extraVolumeMounts"` // filePathMapping
+	ArtifactPaths            []string                     `json:"artifactPaths"`
+	TriggerIfParentStageFail bool                         `json:"triggerIfParentStageFail"`
 }
 
 type MountPath struct {

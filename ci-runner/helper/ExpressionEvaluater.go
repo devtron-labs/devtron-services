@@ -19,6 +19,7 @@ package helper
 import (
 	"fmt"
 	"github.com/Knetic/govaluate"
+	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
 )
 
 type ConditionObject struct {
@@ -29,7 +30,7 @@ type ConditionObject struct {
 	typecastConditionalValue interface{}
 }
 
-func ShouldTriggerStage(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+func ShouldTriggerStage(conditions []*ConditionObject, variables []*commonBean.VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
 	status := true
 	for _, condition := range conditions {
@@ -46,7 +47,7 @@ func ShouldTriggerStage(conditions []*ConditionObject, variables []*VariableObje
 	}
 }
 
-func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+func StageIsSuccess(conditions []*ConditionObject, variables []*commonBean.VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
 	status := true
 	for _, condition := range conditions {
@@ -63,8 +64,8 @@ func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) 
 	}
 }
 
-func evaluateExpression(condition *ConditionObject, variables []*VariableObject) (status bool, err error) {
-	variableMap := make(map[string]*VariableObject)
+func evaluateExpression(condition *ConditionObject, variables []*commonBean.VariableObject) (status bool, err error) {
+	variableMap := make(map[string]*commonBean.VariableObject)
 	for _, variable := range variables {
 		variableMap[variable.Name] = variable
 	}

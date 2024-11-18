@@ -27,6 +27,7 @@ import (
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/helper/adaptor"
 	"github.com/devtron-labs/ci-runner/util"
+	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
@@ -234,7 +235,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		refStageMap[ref.Id] = ref.Steps
 	}
 
-	var preCiStageOutVariable map[int]map[string]*helper.VariableObject
+	var preCiStageOutVariable map[int]map[string]*commonBean.VariableObject
 	start = time.Now()
 	metrics.PreCiStartTime = start
 	var resultsFromPlugin json.RawMessage
@@ -355,7 +356,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	buildSkipEnabled bool, refStageMap map[int][]*helper.StepObject,
-	scriptEnvs map[string]string, artifactUploaded bool) (json.RawMessage, map[int]map[string]*helper.VariableObject, error) {
+	scriptEnvs map[string]string, artifactUploaded bool) (json.RawMessage, map[int]map[string]*commonBean.VariableObject, error) {
 	start := time.Now()
 	metrics.PreCiStartTime = start
 	if !buildSkipEnabled {
@@ -383,7 +384,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 
 func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	refStageMap map[int][]*helper.StepObject, scriptEnvs map[string]string, artifactUploaded bool,
-	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, error) {
+	preCiStageOutVariable map[int]map[string]*commonBean.VariableObject) (string, error) {
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
@@ -436,7 +437,7 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 	return digest, err
 }
 
-func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) (*helper.PluginArtifacts, json.RawMessage, error) {
+func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) (*helper.PluginArtifacts, json.RawMessage, error) {
 	log.Println("running POST-CI steps")
 	// sending build success as true always as post-ci triggers only if ci gets success
 	scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
@@ -491,7 +492,7 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
 }
 
-func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
+func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, artifactUploaded bool) (string, string, error) {
 	dest, err := impl.runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
 	if err != nil {
 		return "", "", err

@@ -23,6 +23,7 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
+	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
 	copylib "github.com/otiai10/copy"
 	"log"
@@ -36,7 +37,7 @@ type StageExecutorImpl struct {
 }
 
 type StageExecutor interface {
-	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*helper.VariableObject, failedStep *helper.StepObject, err error)
+	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *helper.StepObject, err error)
 	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string, stageType helper.PipelineType) error
 }
 
@@ -47,12 +48,12 @@ func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor Scr
 	}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*helper.VariableObject) (*helper.PluginArtifacts, map[int]map[string]*helper.VariableObject, *helper.StepObject, error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (*helper.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *helper.StepObject, error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
 
-	stageVariable := make(map[int]map[string]*helper.VariableObject)
+	stageVariable := make(map[int]map[string]*commonBean.VariableObject)
 	pluginArtifactsFromFile := helper.NewPluginArtifact()
 	for i, step := range steps {
 
@@ -96,9 +97,9 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 
 func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
 	refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string,
-	preCiStageVariable map[int]map[string]*helper.VariableObject,
-	stageVariable map[int]map[string]*helper.VariableObject) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
-	var vars []*helper.VariableObject
+	preCiStageVariable map[int]map[string]*commonBean.VariableObject,
+	stageVariable map[int]map[string]*commonBean.VariableObject) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
+	var vars []*commonBean.VariableObject
 	if stepType == helper.STEP_TYPE_REF_PLUGIN {
 		vars, err = deduceVariables(step.InputVars, globalEnvironmentVariables, nil, nil, stageVariable)
 	} else {
@@ -293,7 +294,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			return nil, step, fmt.Errorf("stage not successful because of condition failure")
 		}
 	}
-	finalOutVarMap := make(map[string]*helper.VariableObject)
+	finalOutVarMap := make(map[string]*commonBean.VariableObject)
 	for _, out := range step.OutputVars {
 		finalOutVarMap[out.Name] = out
 	}
@@ -301,8 +302,8 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	return pluginArtifacts, nil, nil
 }
 
-func populateOutVars(outData map[string]string, desired []*helper.VariableObject) ([]*helper.VariableObject, error) {
-	var finalOutVars []*helper.VariableObject
+func populateOutVars(outData map[string]string, desired []*commonBean.VariableObject) ([]*commonBean.VariableObject, error) {
+	var finalOutVars []*commonBean.VariableObject
 	for _, d := range desired {
 		value := outData[d.Name]
 		if len(value) == 0 {
@@ -321,13 +322,13 @@ func populateOutVars(outData map[string]string, desired []*helper.VariableObject
 	return finalOutVars, nil
 }
 
-func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*helper.VariableObject, postCiStageVariables map[int]map[string]*helper.VariableObject, refPluginStageVariables map[int]map[string]*helper.VariableObject) ([]*helper.VariableObject, error) {
-	var inputVars []*helper.VariableObject
+func deduceVariables(desiredVars []*commonBean.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*commonBean.VariableObject, postCiStageVariables map[int]map[string]*commonBean.VariableObject, refPluginStageVariables map[int]map[string]*commonBean.VariableObject) ([]*commonBean.VariableObject, error) {
+	var inputVars []*commonBean.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
-		case helper.VariableTypeValue:
+		case commonBean.VariableTypeValue:
 			inputVars = append(inputVars, desired)
-		case helper.VariableTypeRefPreCi:
+		case commonBean.VariableTypeRefPreCi:
 			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -342,7 +343,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case helper.VariableTypeRefPostCi:
+		case commonBean.VariableTypeRefPostCi:
 			if v, found := postCiStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -357,14 +358,14 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case helper.VariableTypeRefGlobal:
+		case commonBean.VariableTypeRefGlobal:
 			desired.Value = globalVars[desired.ReferenceVariableName]
 			err := desired.TypeCheck()
 			if err != nil {
 				return nil, err
 			}
 			inputVars = append(inputVars, desired)
-		case helper.VariableTypeRefPlugin:
+		case commonBean.VariableTypeRefPlugin:
 			if v, found := refPluginStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
