@@ -162,7 +162,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	stepOutputVarsFinal := make(map[string]string)
 	var pluginArtifacts *helper.PluginArtifacts
 	//---------------------------------------------------------------------------------------------------
-	if step.StepType == helper.STEP_TYPE_INLINE {
+	if step.StepType == helper.STEP_TYPE_INLINE.String() {
 		//add system env variable
 		for k, v := range util2.GetSystemEnvVariables() {
 			//add only when not overridden by user
@@ -236,7 +236,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				}
 			}
 		}
-	} else if step.StepType == string(helper.STEP_TYPE_REF_PLUGIN) {
+	} else if step.StepType == helper.STEP_TYPE_REF_PLUGIN.String() {
 		steps := refStageMap[step.RefPluginId]
 		stepIndexVarNameValueMap := make(map[int]map[string]string)
 		for _, inVar := range step.InputVars {
@@ -309,12 +309,12 @@ func populateOutVars(outData map[string]string, desired []*helper.VariableObject
 			log.Printf("%s not present\n", d.Name)
 			continue
 		}
-		typedVal, err := helper.TypeConverter(value, d.Format)
+		d.Value = value
+		typedVal, err := d.Format.Convert(d.Value)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
-		d.Value = value
 		d.TypedValue = typedVal
 		finalOutVars = append(finalOutVars, d)
 	}
@@ -325,9 +325,9 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 	var inputVars []*helper.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
-		case helper.VALUE:
+		case helper.VariableTypeValue:
 			inputVars = append(inputVars, desired)
-		case helper.REF_PRE_CI:
+		case helper.VariableTypeRefPreCi:
 			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -342,7 +342,7 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case helper.REF_POST_CI:
+		case helper.VariableTypeRefPostCi:
 			if v, found := postCiStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
@@ -357,14 +357,14 @@ func deduceVariables(desiredVars []*helper.VariableObject, globalVars map[string
 			} else {
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
-		case helper.REF_GLOBAL:
+		case helper.VariableTypeRefGlobal:
 			desired.Value = globalVars[desired.ReferenceVariableName]
 			err := desired.TypeCheck()
 			if err != nil {
 				return nil, err
 			}
 			inputVars = append(inputVars, desired)
-		case helper.REF_PLUGIN:
+		case helper.VariableTypeRefPlugin:
 			if v, found := refPluginStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value

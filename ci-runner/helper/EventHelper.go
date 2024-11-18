@@ -771,11 +771,3 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 	event.PipelineType = stage
 	return event
 }
-
-type StepType string
-
-const (
-	STEP_TYPE_PRE        StepType = "PRE"
-	STEP_TYPE_POST       StepType = "POST"
-	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
-)

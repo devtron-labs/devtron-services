@@ -19,7 +19,6 @@ package helper
 import (
 	"fmt"
 	"github.com/Knetic/govaluate"
-	"strconv"
 )
 
 type ConditionObject struct {
@@ -71,13 +70,13 @@ func evaluateExpression(condition *ConditionObject, variables []*VariableObject)
 	}
 	variableOperand := variableMap[condition.ConditionOnVariable]
 	if variableOperand.TypedValue == nil {
-		converted, err := TypeConverter(variableOperand.Value, variableOperand.Format)
+		converted, err := variableOperand.Format.Convert(variableOperand.Value)
 		if err != nil {
 			return false, err
 		}
 		variableOperand.TypedValue = converted
 	}
-	refOperand, err := TypeConverter(condition.ConditionalValue, variableOperand.Format)
+	refOperand, err := variableOperand.Format.Convert(condition.ConditionalValue)
 	if err != nil {
 		return false, err
 	}
@@ -94,19 +93,4 @@ func evaluateExpression(condition *ConditionObject, variables []*VariableObject)
 	}
 	status = result.(bool)
 	return status, nil
-}
-
-func TypeConverter(value string, format Format) (interface{}, error) {
-	switch format {
-	case STRING:
-		return value, nil
-	case NUMBER:
-		return strconv.ParseFloat(value, 8)
-	case BOOL:
-		return strconv.ParseBool(value)
-	case DATE:
-		return value, nil
-	default:
-		return nil, fmt.Errorf("unsupported datatype")
-	}
 }
