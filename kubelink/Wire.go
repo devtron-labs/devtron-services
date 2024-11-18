@@ -53,6 +53,8 @@ func InitializeApp() (*App, error) {
 		wire.Bind(new(commonHelmService.K8sService), new(*commonHelmService.K8sServiceImpl)),
 		commonHelmService.NewCommonHelmServiceImpl,
 		wire.Bind(new(commonHelmService.CommonHelmService), new(*commonHelmService.CommonHelmServiceImpl)),
+		commonHelmService.NewResourceTreeServiceImpl,
+		wire.Bind(new(commonHelmService.ResourceTreeService), new(*commonHelmService.ResourceTreeServiceImpl)),
 		helmApplicationService.NewHelmAppServiceImpl,
 		wire.Bind(new(helmApplicationService.HelmAppService), new(*helmApplicationService.HelmAppServiceImpl)),
 		converter.NewConverterImpl,
