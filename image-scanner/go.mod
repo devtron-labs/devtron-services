@@ -75,3 +75,5 @@ require (
 )
 
 replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241024135802-b4888f54a136
+
+replace github.com/devtron-labs/image-scanner => github.com/devtron-labs/devtron-services/image-scanner v0.0.0-20241114074910-d314d22f9884

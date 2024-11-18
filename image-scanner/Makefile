@@ -27,3 +27,8 @@ run: build
 .PHONY: build
 docker-build-image:  build
 	 docker build -t image-scanner:$(TAG) .
+
+dep-update-oss:
+	go mod edit -replace=github.com/devtron-labs/image-scanner=github.com/devtron-labs/devtron-services/image-scanner@$(TARGET_BRANCH)
+	go mod tidy
+	go mod vendor
