@@ -65,8 +65,10 @@ message GetResourceTreeRequest{
 }
 
 message CacheConfig {
-  string url = 1;
-  string passKey= 2;
+  string serviceName = 1;
+  string namespace= 2;
+  string passKey= 3;
+  string port= 4;
 }
 
 message ExternalResourceTreeRequest{
