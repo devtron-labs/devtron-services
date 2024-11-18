@@ -37,7 +37,6 @@ docker-build-push: docker-build-image
 	docker push ${REGISTRY}/chart-sync:${TAG}
 
 dep-update-oss:
-	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH) \
-	            -replace=github.com/devtron-labs/chart-sync=github.com/devtron-labs/devtron-services/chart-sync@$(TARGET_BRANCH)
+	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH)
 	go mod tidy
 	go mod vendor

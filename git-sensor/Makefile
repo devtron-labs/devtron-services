@@ -38,8 +38,7 @@ run: build
 #	docker push ${REGISTRY}/orchestrator:${TAG}
 
 dep-update-oss:
-	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH) \
-	            -replace=github.com/devtron-labs/git-sensor=github.com/devtron-labs/devtron-services/git-sensor@$(TARGET_BRANCH)
+	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH)
 	go mod tidy
 	go mod vendor
 
