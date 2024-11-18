@@ -22,6 +22,10 @@ const (
 	FormatTypeDate Format = "DATE"
 )
 
+func NewFormat(format string) (Format, error) {
+	return Format(format).ValuesOf(format)
+}
+
 func (d Format) ValuesOf(format string) (Format, error) {
 	if format == "NUMBER" || format == "number" {
 		return FormatTypeNumber, nil
