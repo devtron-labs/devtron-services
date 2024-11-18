@@ -268,14 +268,14 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 
 					if string(action) == ADD {
 						err = impl.startInformerAndPopulateCache(id_int)
-						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
+						if err != nil && err.Error() != errors.New(INFORMER_ALREADY_EXIST_MESSAGE).Error() {
 							impl.logger.Debugw("error in adding informer for cluster", "id", id_int, "err", err)
 							return
 						}
 					}
 					if string(action) == UPDATE {
 						err = impl.syncInformer(id_int)
-						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
+						if err != nil && err.Error() != errors.New(INFORMER_ALREADY_EXIST_MESSAGE).Error() {
 							impl.logger.Debugw("error in updating informer for cluster", "id", clusterInfo.ClusterId, "name", clusterInfo.ClusterName, "err", err)
 							return
 						}
@@ -295,7 +295,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 
 					if string(action) == ADD {
 						err = impl.startInformerAndPopulateCache(clusterInfo.ClusterId)
-						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
+						if err != nil && err.Error() != errors.New(INFORMER_ALREADY_EXIST_MESSAGE).Error() {
 							impl.logger.Errorw("error in adding informer for cluster", "id", id_int, "err", err)
 							return
 						}
@@ -331,7 +331,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 	// these informers will be used to populate helm release cache
 
 	err = impl.startInformerAndPopulateCache(clusterInfo.ClusterId)
-	if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
+	if err != nil && err.Error() != errors.New(INFORMER_ALREADY_EXIST_MESSAGE).Error() {
 		impl.logger.Errorw("error in creating informer for new cluster", "err", err)
 		return err
 	}
