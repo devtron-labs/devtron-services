@@ -81,7 +81,7 @@ const (
 
 type HelmAppService interface {
 	GetApplicationListForCluster(config *client.ClusterConfig) *client.DeployedAppList
-	BuildAppDetail(req *client.AppDetailRequest) (*bean.AppDetail, error)
+	BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error)
 	FetchApplicationStatus(req *client.AppDetailRequest) (*client.AppStatus, error)
 	GetHelmAppValues(req *client.AppDetailRequest) (*client.ReleaseInfo, error)
 	ScaleObjects(ctx context.Context, clusterConfig *client.ClusterConfig, requests []*client.ObjectIdentifier, scaleDown bool) (*client.HibernateResponse, error)
@@ -103,29 +103,31 @@ type HelmAppService interface {
 	ValidateOCIRegistryLogin(ctx context.Context, OCIRegistryRequest *client.RegistryCredential) (*client.OCIRegistryResponse, error)
 	// PushHelmChartToOCIRegistryRepo Pushes the helm chart to the OCI registry and returns the generated digest and pushedUrl
 	PushHelmChartToOCIRegistryRepo(ctx context.Context, OCIRegistryRequest *client.OCIRegistryRequest) (*client.OCIRegistryResponse, error)
-	GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
+	GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error)
 	GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error)
-	GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error)
+	BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error)
 }
 
 type HelmAppServiceImpl struct {
-	logger            *zap.SugaredLogger
-	k8sService        commonHelmService.K8sService
-	randSource        rand.Source
-	K8sInformer       k8sInformer.K8sInformer
-	helmReleaseConfig *globalConfig.HelmReleaseConfig
-	k8sUtil           k8sUtils.K8sService
-	pubsubClient      *pubsub_lib.PubSubClientServiceImpl
-	clusterRepository repository.ClusterRepository
-	converter         converter.ClusterBeanConverter
-	registrySettings  registry2.SettingsFactory
-	common            commonHelmService.CommonHelmService
+	logger              *zap.SugaredLogger
+	k8sService          commonHelmService.K8sService
+	randSource          rand.Source
+	K8sInformer         k8sInformer.K8sInformer
+	helmReleaseConfig   *globalConfig.HelmReleaseConfig
+	k8sUtil             k8sUtils.K8sService
+	pubsubClient        *pubsub_lib.PubSubClientServiceImpl
+	clusterRepository   repository.ClusterRepository
+	converter           converter.ClusterBeanConverter
+	registrySettings    registry2.SettingsFactory
+	common              commonHelmService.CommonHelmService
+	resourceTreeService commonHelmService.ResourceTreeService
 }
 
 func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService commonHelmService.K8sService,
 	k8sInformer k8sInformer.K8sInformer, helmReleaseConfig *globalConfig.HelmReleaseConfig,
 	k8sUtil k8sUtils.K8sService, converter converter.ClusterBeanConverter,
-	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry2.SettingsFactory) (*HelmAppServiceImpl, error) {
+	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry2.SettingsFactory,
+	resourceTreeService commonHelmService.ResourceTreeService) (*HelmAppServiceImpl, error) {
 
 	var pubsubClient *pubsub_lib.PubSubClientServiceImpl
 	var err error
@@ -136,17 +138,18 @@ func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService commonHelmServi
 		}
 	}
 	helmAppServiceImpl := &HelmAppServiceImpl{
-		logger:            logger,
-		k8sService:        k8sService,
-		randSource:        rand.NewSource(time.Now().UnixNano()),
-		K8sInformer:       k8sInformer,
-		helmReleaseConfig: helmReleaseConfig,
-		pubsubClient:      pubsubClient,
-		k8sUtil:           k8sUtil,
-		clusterRepository: clusterRepository,
-		converter:         converter,
-		registrySettings:  registrySettings,
-		common:            common,
+		logger:              logger,
+		k8sService:          k8sService,
+		randSource:          rand.NewSource(time.Now().UnixNano()),
+		K8sInformer:         k8sInformer,
+		helmReleaseConfig:   helmReleaseConfig,
+		pubsubClient:        pubsubClient,
+		k8sUtil:             k8sUtil,
+		clusterRepository:   clusterRepository,
+		converter:           converter,
+		registrySettings:    registrySettings,
+		common:              common,
+		resourceTreeService: resourceTreeService,
 	}
 	err = os.MkdirAll(helmReleaseConfig.ChartWorkingDirectory, os.ModePerm)
 	if err != nil {
@@ -220,14 +223,11 @@ func (impl *HelmAppServiceImpl) GetApplicationListForCluster(config *client.Clus
 	return deployedApp
 }
 
-func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
-	return impl.common.GetResourceTreeForExternalResources(req)
-}
-func (impl HelmAppServiceImpl) GetHelmReleaseDetailWithDesiredManifest(appConfig *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
-	return impl.common.GetHelmReleaseDetailWithDesiredManifest(appConfig)
+func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
+	return impl.common.GetResourceTreeForExternalResources(ctx, req)
 }
 
-func (impl HelmAppServiceImpl) BuildAppDetail(req *client.AppDetailRequest) (*bean.AppDetail, error) {
+func (impl HelmAppServiceImpl) BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error) {
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
@@ -240,7 +240,7 @@ func (impl HelmAppServiceImpl) BuildAppDetail(req *client.AppDetailRequest) (*be
 		}
 		return nil, err
 	}
-	resourceTreeResponse, err := impl.common.BuildResourceTree(req, helmRelease)
+	resourceTreeResponse, err := impl.common.BuildResourceTreeForHelmRelease(ctx, req, helmRelease)
 	if err != nil {
 		impl.logger.Errorw("error in building resource tree ", "err", err)
 		return nil, err
@@ -1298,7 +1298,7 @@ func (impl *HelmAppServiceImpl) getNodes(appDetailRequest *client.AppDetailReque
 		WithReleaseNamespace(appDetailRequest.Namespace)).
 		WithDesiredOrLiveManifests(desiredOrLiveManifests...).
 		WithBatchWorker(impl.helmReleaseConfig.BuildNodesBatchSize, impl.logger)
-	buildNodesResponse, err := impl.common.BuildNodes(req)
+	buildNodesResponse, err := impl.resourceTreeService.BuildNodes(req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1798,4 +1798,125 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 	}
 
 	return release, nil
+}
+
+func (impl *HelmAppServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+	appDetailReq := GetAppDetailRequestFromGetResourceTreeRequest(req)
+
+	var conf *rest.Config
+	var err error
+	if req.ClusterConfig != nil {
+		conf, err = impl.common.GetRestConfigForClusterConfig(req.ClusterConfig)
+		if err != nil {
+			impl.logger.Errorw("error in getting rest config ", "clusterConfig", req.GetClusterConfig(), "err", err)
+			return nil, err
+		}
+	}
+
+	resp, err := impl.resourceTreeService.BuildResourceTreeUsingParentObjects(ctx, appDetailReq, conf, req.ObjectIdentifiers)
+	if err != nil {
+		return nil, err
+	}
+	resourceTreeResponse := &client.ResourceTreeResponse{
+		Nodes:       impl.resourceNodeAdapter(resp.Nodes),
+		PodMetadata: podMetadataAdapter(resp.PodMetadata),
+	}
+	return resourceTreeResponse, nil
+}
+func (impl *HelmAppServiceImpl) resourceNodeAdapter(nodes []*commonBean.ResourceNode) []*client.ResourceNode {
+	var resourceNodes []*client.ResourceNode
+	for _, node := range nodes {
+		var healthStatus *client.HealthStatus
+		if node.Health != nil {
+			healthStatus = &client.HealthStatus{
+				Status:  node.Health.Status,
+				Message: node.Health.Message,
+			}
+		}
+		resourceNode := &client.ResourceNode{
+			Group:           node.Group,
+			Version:         node.Version,
+			Kind:            node.Kind,
+			Namespace:       node.Namespace,
+			Name:            node.Name,
+			Uid:             node.UID,
+			ParentRefs:      resourceRefResult(node.ParentRefs),
+			NetworkingInfo:  getNetworkingInfoFromNode(node.NetworkingInfo),
+			ResourceVersion: node.ResourceVersion,
+			Health:          healthStatus,
+			IsHibernated:    node.IsHibernated,
+			CanBeHibernated: node.CanBeHibernated,
+			Info:            impl.buildInfoItems(node.Info),
+			CreatedAt:       node.CreatedAt,
+			Port:            node.Port,
+			IsHook:          node.IsHook,
+			HookType:        node.HookType,
+		}
+		resourceNodes = append(resourceNodes, resourceNode)
+	}
+
+	return resourceNodes
+
+}
+
+func getNetworkingInfoFromNode(info *commonBean.ResourceNetworkingInfo) *client.ResourceNetworkingInfo {
+	if info == nil {
+		return &client.ResourceNetworkingInfo{}
+	}
+	return &client.ResourceNetworkingInfo{
+		Labels: info.Labels,
+	}
+}
+
+func (impl *HelmAppServiceImpl) buildInfoItems(infoItemBeans []commonBean.InfoItem) []*client.InfoItem {
+	infoItems := make([]*client.InfoItem, 0, len(infoItemBeans))
+	for _, infoItemBean := range infoItemBeans {
+		switch infoItemBean.Value.(type) {
+		case string:
+			infoItems = append(infoItems, &client.InfoItem{Name: infoItemBean.Name, Value: infoItemBean.Value.(string)})
+		default:
+			// skip other types
+			impl.logger.Debugw("ignoring other info item value types", "infoItem", infoItemBean.Value)
+		}
+
+	}
+	return infoItems
+}
+
+func resourceRefResult(resourceRefs []*commonBean.ResourceRef) (resourceRefResults []*client.ResourceRef) {
+	for _, resourceRef := range resourceRefs {
+		resourceRefResult := &client.ResourceRef{
+			Group:     resourceRef.Group,
+			Version:   resourceRef.Version,
+			Kind:      resourceRef.Kind,
+			Namespace: resourceRef.Namespace,
+			Name:      resourceRef.Name,
+			Uid:       resourceRef.UID,
+		}
+		resourceRefResults = append(resourceRefResults, resourceRefResult)
+	}
+	return resourceRefResults
+}
+
+func podMetadataAdapter(podmetadatas []*commonBean.PodMetadata) []*client.PodMetadata {
+	podMetadatas := make([]*client.PodMetadata, 0, len(podmetadatas))
+	for _, pm := range podmetadatas {
+		ephemeralContainers := make([]*client.EphemeralContainerData, 0, len(pm.EphemeralContainers))
+		for _, ec := range pm.EphemeralContainers {
+			ephemeralContainers = append(ephemeralContainers, &client.EphemeralContainerData{
+				Name:       ec.Name,
+				IsExternal: ec.IsExternal,
+			})
+		}
+		podMetadata := &client.PodMetadata{
+			Name:                pm.Name,
+			Uid:                 pm.UID,
+			Containers:          pm.Containers,
+			InitContainers:      pm.InitContainers,
+			EphemeralContainers: ephemeralContainers,
+			IsNew:               pm.IsNew,
+		}
+		podMetadatas = append(podMetadatas, podMetadata)
+	}
+	return podMetadatas
 }

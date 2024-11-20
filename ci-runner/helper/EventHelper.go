@@ -67,6 +67,9 @@ type DockerBuildConfig struct {
 	UseBuildx              bool                `json:"useBuildx"`
 	BuildxProvenanceMode   string              `json:"buildxProvenanceMode"`
 	BuildxK8sDriverOptions []map[string]string `json:"buildxK8SDriverOptions"`
+
+	//ent only
+	BuildxDriverImage string `json:"buildxDriverImage"`
 }
 
 type BuildPackConfig struct {

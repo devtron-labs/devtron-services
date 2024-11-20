@@ -89,10 +89,14 @@ const (
 
 type FluxAppDetailRequest struct {
 	Config      *client.ClusterConfig
-	Name        string `json:"name"`
-	Namespace   string `json:"namespace"`
-	IsKustomize bool   `json:"isKustomize"`
+	Name        string              `json:"name"`
+	Namespace   string              `json:"namespace"`
+	IsKustomize bool                `json:"isKustomize"`
+	CacheConfig *client.CacheConfig `json:"cacheConfig"`
+	PreferCache bool                `json:"preferCache"`
+	UseFallBack bool                `json:"useFallBack"`
 }
+
 type FluxKsAppDetail struct {
 	*FluxApplicationDto
 	AppStatusDto *FluxAppStatusDetail
