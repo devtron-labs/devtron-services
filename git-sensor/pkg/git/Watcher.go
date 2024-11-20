@@ -260,6 +260,7 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 		}
 	}
 	if !updated {
+		impl.logger.Debugw("no new commit found but fetch success", "url", material.Url, "fetchStatus", material.FetchStatus)
 		// update set errored false in ci pipeline material as fetch is successful
 		impl.logAndUpdateDbNonError(material.Id, material.FetchStatus)
 		return "", nil
