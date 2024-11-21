@@ -41,6 +41,7 @@ func NewResourceTreeServiceImpl(k8sService K8sService,
 	}
 }
 func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
+	parentObjects = sanitizeParentObjects(parentObjects)
 	if appDetailRequest.PreferCache && appDetailRequest.CacheConfig != nil {
 		impl.logger.Infow("Cache is not supported in oss", "payload", appDetailRequest)
 		if !appDetailRequest.UseFallBack {
@@ -51,6 +52,19 @@ func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingParentObjects(ctx con
 	}
 	//fallback
 	return impl.BuildResourceTreeUsingK8s(ctx, appDetailRequest, conf, parentObjects)
+
+}
+
+func sanitizeParentObjects(parentObjects []*client.ObjectIdentifier) []*client.ObjectIdentifier {
+	sanitizedParentObjects := make([]*client.ObjectIdentifier, 0)
+	if len(parentObjects) > 0 {
+		for _, parentObject := range parentObjects {
+			if parentObject != nil {
+				sanitizedParentObjects = append(sanitizedParentObjects, parentObject)
+			}
+		}
+	}
+	return sanitizedParentObjects
 
 }
 
