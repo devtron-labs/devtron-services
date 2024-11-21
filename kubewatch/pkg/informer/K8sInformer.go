@@ -25,6 +25,7 @@ import (
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	k8s1 "github.com/devtron-labs/common-lib/utils/k8s"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/utils"
@@ -439,10 +440,16 @@ func (impl *K8sInformerImpl) getK8sClientForCluster(clusterInfo *repository.Clus
 	} else {
 		restConfig = &rest.Config{
 			Host:            clusterInfo.ServerUrl,
-			BearerToken:     clusterInfo.Config["bearer_token"],
-			TLSClientConfig: rest.TLSClientConfig{Insecure: true},
+			BearerToken:     clusterInfo.Config[commonBean.BearerToken],
+			TLSClientConfig: rest.TLSClientConfig{Insecure: clusterInfo.InsecureSkipTlsVerify},
+		}
+		if !restConfig.TLSClientConfig.Insecure {
+			restConfig.TLSClientConfig.KeyData = []byte(clusterInfo.Config[commonBean.TlsKey])
+			restConfig.TLSClientConfig.CertData = []byte(clusterInfo.Config[commonBean.CertData])
+			restConfig.TLSClientConfig.CAData = []byte(clusterInfo.Config[commonBean.CertificateAuthorityData])
 		}
 	}
+
 	return impl.getK8sClientForConfig(restConfig)
 }
 
