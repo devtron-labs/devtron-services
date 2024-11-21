@@ -84,6 +84,8 @@ func (impl *CommonHelmServiceImpl) BuildResourceTreeForHelmRelease(ctx context.C
 		return nil, err
 	}
 
+	impl.logger.Infow("BuildResourceTreeForHelmRelease", "release", release, "parentObjects", parentObjects, "appDetailRequest", appDetailRequest)
+
 	return impl.resourceTreeService.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, parentObjects)
 
 }
