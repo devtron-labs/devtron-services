@@ -48,6 +48,7 @@ const (
 	CHART_WORKING_DIR_PATH      = "/tmp/charts/"
 	DefaultCachePath            = "/home/devtron/devtroncd/.helmcache"
 	DefaultRepositoryConfigPath = "/home/devtron/devtroncd/.helmrepo"
+	DefaultTempDirectory        = "/tmp/dir/"
 )
 
 // NewClientFromRestConf returns a new Helm client constructed with the provided REST config options
@@ -829,4 +830,8 @@ func GetChartSavedDir(helmChart *chart.Chart) (string, error) {
 	}
 
 	return absFilePath, nil
+}
+
+func (c *HelmClient) GetProviders() getter.Providers {
+	return c.Providers
 }

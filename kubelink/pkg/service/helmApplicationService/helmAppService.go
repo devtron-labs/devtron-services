@@ -29,16 +29,11 @@ import (
 	error2 "github.com/devtron-labs/kubelink/error"
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/commonHelmService"
-	chart2 "helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
-	downloader2 "helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"net/url"
 	"path"
-	"sigs.k8s.io/yaml"
 	"strings"
 	"time"
 
@@ -583,7 +578,7 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 		// perform Dependency Update in case we detect any dependency listed in chart.Metadata
 		if helmRelease.Chart.Metadata.Dependencies != nil || len(helmRelease.Chart.Metadata.Dependencies) > 0 {
 			impl.logger.Infow("Dependencies listed in Chart.yaml, performing dependency update before upgrading")
-			err = impl.updateChartDependencies(helmRelease, registryClient)
+			err = UpdateChartDependencies(helmClientObj.GetProviders(), helmRelease, registryClient)
 			if err != nil {
 				return nil, err
 			}
@@ -629,178 +624,6 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 		upgradeReleaseResponse.Success = res
 	}
 	return upgradeReleaseResponse, nil
-}
-func (impl *HelmAppServiceImpl) updateChartDependencies(helmRelease *release.Release, registry *registry.Client) error {
-	// Step 1: Update chart dependencies
-	dirPath := "/tmp/dir"
-	outputChartPathDir := fmt.Sprintf("%s", dirPath)
-	err := os.MkdirAll(outputChartPathDir, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err := os.RemoveAll(outputChartPathDir)
-		if err != nil {
-			fmt.Println("error in deleting dir", " dir: ", outputChartPathDir, " err: ", err)
-		}
-	}()
-	abpath, err := chartutil.Save(helmRelease.Chart, outputChartPathDir)
-	if err != nil {
-		fmt.Println("error in saving chartdata in the destination dir ", " dir : ", outputChartPathDir, " err : ", err)
-		return err
-	}
-
-	// Unpack the .tgz file to a directory
-	h, err := os.Open(abpath)
-	if err != nil {
-		return err
-	}
-	if err := chartutil.Expand(dirPath, h); err != nil {
-		fmt.Println("error unpacking chart", "dir:", abpath, "err:", err)
-		return err
-	}
-
-	outputChartPathDir = filepath.Join(dirPath, helmRelease.Chart.Metadata.Name)
-	outputBuffer := bytes.NewBuffer(nil)
-	settings := cli.New()
-	err = helmClient.SetEnvSettings(&helmClient.Options{
-		RepositoryConfig: helmClient.DefaultRepositoryConfigPath,
-		RepositoryCache:  helmClient.DefaultCachePath,
-		Linting:          true,
-	}, settings)
-	manager := &downloader2.Manager{
-		ChartPath:        outputChartPathDir,
-		Out:              outputBuffer,
-		Getters:          getter.All(settings),
-		RepositoryConfig: helmClient.DefaultRepositoryConfigPath,
-		RepositoryCache:  helmClient.DefaultCachePath,
-		RegistryClient:   registry,
-	}
-	err = manager.Update()
-	if err != nil {
-		impl.logger.Errorw("Error updating chart dependencies", "err", err)
-		return err
-	}
-
-	// Step 2: Check and process .tgz files in charts directory
-	chartsDir := filepath.Join(outputChartPathDir, "charts")
-	if err := impl.processTGZFiles(chartsDir, helmRelease); err != nil {
-		return err
-	}
-
-	// Step 3: Update the Chart.lock file if it exists
-	lockFilePath := filepath.Join(outputChartPathDir, "Chart.lock")
-	if _, err := os.Stat(lockFilePath); os.IsNotExist(err) {
-		impl.logger.Infow("No Chart.lock file found, skipping lock file update", "file", lockFilePath)
-		return nil
-	}
-
-	if err := impl.updateChartLock(lockFilePath, helmRelease); err != nil {
-		return err
-	}
-	return nil
-}
-
-// processTGZFiles locates and processes .tgz files in the charts directory.
-func (impl *HelmAppServiceImpl) processTGZFiles(chartsDir string, helmRelease *release.Release) error {
-	files, err := os.ReadDir(chartsDir)
-	if err != nil {
-		impl.logger.Errorw("Error reading charts directory", "dir", chartsDir, "err", err)
-		return err
-	}
-
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".tgz") {
-			tgzPath := filepath.Join(chartsDir, file.Name())
-
-			if err := impl.expandAndSetDependency(tgzPath, helmRelease); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// expandAndSetDependency expands a .tgz file and sets it as a dependency.
-func (impl *HelmAppServiceImpl) expandAndSetDependency(tgzPath string, helmRelease *release.Release) error {
-	// Create a temporary directory for expanding the chart
-	tempDir, err := os.MkdirTemp("", "helmDependencyChart*")
-	if err != nil {
-		impl.logger.Errorw("Error creating temporary directory", "err", err)
-		return err
-	}
-	defer func() {
-		// Clean up the temporary directory
-		if removeErr := os.RemoveAll(tempDir); removeErr != nil {
-			impl.logger.Warnw("Error removing temporary directory", "dir", tempDir, "err", removeErr)
-		}
-	}()
-
-	// Open the .tgz file
-	tgzFile, err := os.Open(tgzPath)
-	if err != nil {
-		impl.logger.Errorw("Error opening tgz file", "file", tgzPath, "err", err)
-		return err
-	}
-	defer func(tgzFile *os.File) {
-		err := tgzFile.Close()
-		if err != nil {
-			impl.logger.Errorw("Error closing tgz file", "file", tgzPath, "err", err)
-		}
-	}(tgzFile)
-
-	// Expand the .tgz file into the temporary directory
-	if err := chartutil.Expand(tempDir, tgzFile); err != nil {
-		impl.logger.Errorw("Error expanding tgz file", "file", tgzPath, "err", err)
-		return err
-	}
-
-	// Dynamically find the expanded chart directory
-	entries, err := os.ReadDir(tempDir)
-	if err != nil {
-		impl.logger.Errorw("Error reading contents of temporary directory", "dir", tempDir, "err", err)
-		return err
-	}
-
-	var expandedChartDir string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			expandedChartDir = filepath.Join(tempDir, entry.Name())
-			break
-		}
-	}
-
-	if expandedChartDir == "" {
-		err := fmt.Errorf("no expanded chart directory found in %s", tempDir)
-		impl.logger.Errorw("Error locating expanded chart directory", "dir", tempDir, "err", err)
-		return err
-	}
-
-	// Load the expanded chart
-	expandedChart, err := loader.LoadDir(expandedChartDir)
-	if err != nil {
-		impl.logger.Errorw("Error loading expanded chart", "dir", expandedChartDir, "err", err)
-		return err
-	}
-	helmRelease.Chart.SetDependencies(expandedChart)
-	return nil
-}
-
-// updateChartLock updates the Chart.lock file based on its contents.
-func (impl *HelmAppServiceImpl) updateChartLock(lockFilePath string, helmRelease *release.Release) error {
-	lockFileData, err := os.ReadFile(lockFilePath)
-	if err != nil {
-		impl.logger.Errorw("Error reading Chart.lock file", "file", lockFilePath, "err", err)
-		return err
-	}
-
-	helmRelease.Chart.Lock = &chart2.Lock{}
-	if err := yaml.Unmarshal(lockFileData, helmRelease.Chart.Lock); err != nil {
-		impl.logger.Errorw("Error unmarshalling Chart.lock data", "file", lockFilePath, "err", err)
-		return err
-	}
-
-	return nil
 }
 func (impl *HelmAppServiceImpl) GetDeploymentDetail(request *client.DeploymentDetailRequest) (*client.DeploymentDetailResponse, error) {
 	releaseIdentifier := request.ReleaseIdentifier
