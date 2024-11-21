@@ -97,22 +97,11 @@ func (impl *ApplicationServiceServerImpl) ListApplications(req *client.AppListRe
 	return nil
 }
 
-func (impl *ApplicationServiceServerImpl) GetHelmReleaseDetailWithDesiredManifest(ctx context.Context, req *client.AppConfigRequest) (*client.GetReleaseDetailWithManifestResponse, error) {
-	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
-		"namespace", req.Namespace)
-	resp, err := impl.HelmAppService.GetHelmReleaseDetailWithDesiredManifest(req)
-	if err != nil {
-		impl.Logger.Errorw("Error in GetHelmReleaseDetailWithDesiredManifest request", "payload", req, "err", err)
-		return nil, err
-	}
-	return resp, nil
-}
-
 func (impl *ApplicationServiceServerImpl) GetAppDetail(ctxt context.Context, req *client.AppDetailRequest) (*client.AppDetail, error) {
 	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
 		"namespace", req.Namespace)
 
-	helmAppDetail, err := impl.HelmAppService.BuildAppDetail(req)
+	helmAppDetail, err := impl.HelmAppService.BuildAppDetail(ctxt, req)
 	if err != nil {
 		if helmAppDetail != nil && !helmAppDetail.ReleaseExists {
 			// This error (release not exists for this app) is being used in orchestrator so please don't edit it.
@@ -128,7 +117,7 @@ func (impl *ApplicationServiceServerImpl) GetAppDetail(ctxt context.Context, req
 }
 
 func (impl *ApplicationServiceServerImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	resourceTree, err := impl.HelmAppService.GetResourceTreeForExternalResources(req)
+	resourceTree, err := impl.HelmAppService.GetResourceTreeForExternalResources(ctx, req)
 	if err != nil {
 		impl.Logger.Errorw("error in getting resource tree for external resources", "err", err)
 		return nil, err
@@ -415,17 +404,15 @@ func (impl *ApplicationServiceServerImpl) ResourceTreeAdapter(req *bean.Resource
 			}
 		}
 		resourceNode := &client.ResourceNode{
-			Group:      node.Group,
-			Version:    node.Version,
-			Kind:       node.Kind,
-			Namespace:  node.Namespace,
-			Name:       node.Name,
-			Uid:        node.UID,
-			Port:       node.Port,
-			ParentRefs: resourceRefResult(node.ParentRefs),
-			NetworkingInfo: &client.ResourceNetworkingInfo{
-				Labels: node.NetworkingInfo.Labels,
-			},
+			Group:           node.Group,
+			Version:         node.Version,
+			Kind:            node.Kind,
+			Namespace:       node.Namespace,
+			Name:            node.Name,
+			Uid:             node.UID,
+			Port:            node.Port,
+			ParentRefs:      resourceRefResult(node.ParentRefs),
+			NetworkingInfo:  getNetworkingInfoFromNode(node.NetworkingInfo),
 			ResourceVersion: node.ResourceVersion,
 			Health:          healthStatus,
 			IsHibernated:    node.IsHibernated,
@@ -634,7 +621,7 @@ func (impl *ApplicationServiceServerImpl) ListFluxApplications(req *client.AppLi
 }
 
 func (impl *ApplicationServiceServerImpl) GetFluxAppDetail(ctx context.Context, req *client.FluxAppDetailRequest) (*client.FluxAppDetail, error) {
-	fluxAppDetail, err := impl.FluxAppService.BuildFluxAppDetail(req)
+	fluxAppDetail, err := impl.FluxAppService.BuildFluxAppDetail(ctx, req)
 	if err != nil {
 		impl.Logger.Errorw("error in getting resource tree for external resources", "err", err)
 		return nil, err
@@ -690,4 +677,14 @@ func (impl *ApplicationServiceServerImpl) GetReleaseDetails(ctx context.Context,
 		return nil, err
 	}
 	return deployAppDetail, nil
+}
+
+func (impl *ApplicationServiceServerImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
+
+	resp, err := impl.HelmAppService.BuildResourceTreeUsingParentObjects(ctx, req)
+	if err != nil {
+		impl.Logger.Errorw("error in fetching resource tree", "payload", req, "err", err)
+		return nil, err
+	}
+	return resp, nil
 }

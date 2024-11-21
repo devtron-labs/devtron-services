@@ -22,19 +22,22 @@ import (
 	"time"
 )
 
-func (tr TimeRange) GetTimeRangeWindow(targetTime time.Time) (nextWindowEdge time.Time, isTimeBetween bool, err error) {
+func (tr TimeRange) GetTimeRangeWindow(targetTime time.Time) (nextWindowEdge time.Time, isTimeBetween, isExpired bool, err error) {
 	err = tr.ValidateTimeRange()
 	if err != nil {
-		return nextWindowEdge, false, err
+		return nextWindowEdge, false, false, err
 	}
 	windowStart, windowEnd, err := tr.getWindowForTargetTime(targetTime)
 	if err != nil {
-		return nextWindowEdge, isTimeBetween, err
+		return nextWindowEdge, isTimeBetween, isExpired, err
 	}
 	if isTimeInBetween(targetTime, windowStart, windowEnd) {
-		return windowEnd, true, nil
+		return windowEnd, true, false, nil
 	}
-	return windowStart, false, nil
+	if targetTime.After(windowEnd) {
+		return windowEnd, false, true, nil
+	}
+	return windowStart, false, false, nil
 }
 func (tr TimeRange) getWindowForTargetTime(targetTime time.Time) (time.Time, time.Time, error) {
 
@@ -73,13 +76,50 @@ func (tr TimeRange) getWindowStartAndEndTime(targetTime time.Time) (time.Time, t
 	windowStart := schedule.Next(timeMinusDuration)
 	windowEnd = windowStart.Add(duration)
 
+	// Calculate start and end of the previous window
+	timeMinusPrevDuration := tr.currentTimeMinusPrevWindowDuration(targetTime, 2*prevDuration)
+	windowPrevStart := schedule.Next(timeMinusPrevDuration)
+	windowPrevEnd := windowPrevStart.Add(duration)
+
+	// Move back through windows until `windowPrevEnd` is less than `targetTime`
+	for windowPrevEnd.After(targetTime) && targetTime.Before(windowEnd) {
+		prevDuration += prevDuration
+		timeMinusPrevDuration = tr.currentTimeMinusPrevWindowDuration(targetTime, prevDuration)
+		windowPrevStart = schedule.Next(timeMinusPrevDuration)
+		windowPrevEnd = windowPrevStart.Add(duration)
+	}
+
 	windowStart, windowEnd = tr.applyStartEndBoundary(windowStart, windowEnd)
+
+	// edge case where targetTime is within a recurrence boundary
+	if windowEnd.Equal(windowStart) && targetTime.Before(windowEnd) {
+		return windowPrevStart, windowPrevEnd, nil
+	}
 	return windowStart, windowEnd, nil
 }
+
+/*
+There are three possible cases for windowStart and windowEnd
+relative to the defined time range (TimeFrom to TimeTo):
+
+1. windowStart < TimeFrom
+   - The window has not yet started.
+
+2. windowStart > TimeTo
+   - The occurrence has expired because the window starts after the end date.
+
+3. windowEnd > TimeTo
+   - The occurrence has expired because the window ends after the end date.
+
+In each case, windowStart and windowEnd represent the next occurrence calculated based on the current time.
+*/
 
 func (tr TimeRange) applyStartEndBoundary(windowStart time.Time, windowEnd time.Time) (time.Time, time.Time) {
 	if !tr.TimeFrom.IsZero() && windowStart.Before(tr.TimeFrom) {
 		windowStart = tr.TimeFrom
+	}
+	if !tr.TimeTo.IsZero() && windowStart.After(tr.TimeTo) {
+		windowStart = tr.TimeTo
 	}
 	if !tr.TimeTo.IsZero() && windowEnd.After(tr.TimeTo) {
 		windowEnd = tr.TimeTo
@@ -88,6 +128,12 @@ func (tr TimeRange) applyStartEndBoundary(windowStart time.Time, windowEnd time.
 }
 
 func (tr TimeRange) currentTimeMinusWindowDuration(targetTime time.Time, duration time.Duration) time.Time {
+	if !tr.TimeFrom.IsZero() && targetTime.Before(tr.TimeFrom) {
+		return tr.TimeFrom.Add(-1 * duration)
+	}
+	return targetTime.Add(-1 * duration)
+}
+func (tr TimeRange) currentTimeMinusPrevWindowDuration(targetTime time.Time, duration time.Duration) time.Time {
 	return targetTime.Add(-1 * duration)
 }
 
@@ -97,11 +143,25 @@ func (tr TimeRange) currentTimeMinusWindowDuration(targetTime time.Time, duratio
 // while tr.TimeFrom and tr.TimeTo are in GMT. Therefore, to compare them accurately, (in case of Fixed it happens)
 // we convert the time range to match the time zone of targetTime.
 func (tr TimeRange) getWindowForFixedTime(targetTime time.Time) (time.Time, time.Time) {
-	var windowStartOrEnd time.Time
 	timeFromInLocation := tr.TimeFrom.In(targetTime.Location())
 	timeToInLocation := tr.TimeTo.In(targetTime.Location())
-	if targetTime.After(timeToInLocation) {
-		return windowStartOrEnd, windowStartOrEnd
-	}
 	return timeFromInLocation, timeToInLocation
+}
+func (tr TimeRange) SanitizeTimeFromAndTo(loc *time.Location) TimeRange {
+	if !tr.TimeFrom.IsZero() {
+		// Update TimeFrom with the parsed hour and minute while keeping date and location
+		tr.TimeFrom = time.Date(
+			tr.TimeFrom.Year(), tr.TimeFrom.Month(), tr.TimeFrom.Day(),
+			0, 0, 0, 1, loc,
+		)
+
+	}
+	if !tr.TimeTo.IsZero() {
+		// Update TimeTo with the parsed hour and minute while keeping date and location
+		tr.TimeTo = time.Date(
+			tr.TimeTo.Year(), tr.TimeTo.Month(), tr.TimeTo.Day(),
+			23, 59, 59, 0, loc,
+		)
+	}
+	return tr
 }
