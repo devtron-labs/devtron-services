@@ -106,3 +106,14 @@ func parseDeployedAppDetail(clusterId int32, clusterName string, helmRelease *re
 	}
 	return appDetail
 }
+
+func GetAppDetailRequestFromGetResourceTreeRequest(req *client.GetResourceTreeRequest) *client.AppDetailRequest {
+	return &client.AppDetailRequest{
+		ClusterConfig: req.ClusterConfig,
+		Namespace:     req.Namespace,
+		ReleaseName:   req.GetReleaseName(),
+		PreferCache:   req.PreferCache,
+		UseFallBack:   req.UseFallBack,
+		CacheConfig:   req.CacheConfig,
+	}
+}

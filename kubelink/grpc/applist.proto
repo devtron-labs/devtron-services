@@ -24,7 +24,6 @@ message AppListRequest {
 service ApplicationService {
   rpc ListApplications(AppListRequest) returns (stream DeployedAppList){}
   rpc ListFluxApplications(AppListRequest) returns (stream FluxApplicationList){}
-  rpc GetHelmReleaseDetailWithDesiredManifest(AppConfigRequest) returns (GetReleaseDetailWithManifestResponse){}
   rpc GetAppDetail(AppDetailRequest) returns (AppDetail){}
   rpc GetAppStatus(AppDetailRequest) returns (AppStatus){}
   rpc Hibernate(HibernateRequest) returns (HibernateResponse){}
@@ -50,11 +49,34 @@ service ApplicationService {
   rpc GetResourceTreeForExternalResources(ExternalResourceTreeRequest) returns(ResourceTreeResponse){}
   rpc GetFluxAppDetail(FluxAppDetailRequest)returns(FluxAppDetail){}
   rpc GetReleaseDetails(ReleaseIdentifier) returns(DeployedAppDetail){}
+  rpc BuildResourceTreeUsingParentObjects(GetResourceTreeRequest) returns(ResourceTreeResponse){}
+}
+
+message GetResourceTreeRequest{
+  ClusterConfig clusterConfig = 1;
+  string namespace = 2;
+  string ReleaseName = 3;
+  // Map key cannot be float, double, bytes, message, or enum types (map<Gvk, Labels> could be a better option)
+  ResourceTreeFilter resourceTreeFilter = 4;
+  bool PreferCache = 5;
+  bool UseFallBack = 6;
+  CacheConfig cacheConfig = 7;
+  repeated ObjectIdentifier objectIdentifiers = 8;
+}
+
+message CacheConfig {
+  string serviceName = 1;
+  string namespace= 2;
+  string passKey= 3;
+  string port= 4;
 }
 
 message ExternalResourceTreeRequest{
   ClusterConfig clusterConfig = 1;
   repeated ExternalResourceDetail externalResourceDetail = 2;
+  CacheConfig cacheConfig = 3;
+  bool PreferCache = 4;
+  bool UseFallBack = 5;
 }
 
 message ExternalResourceDetail {
@@ -95,6 +117,9 @@ message FluxAppDetailRequest{
   string namespace = 2;
   string name = 3;
   bool IsKustomizeApp =4;
+  CacheConfig cacheConfig = 5;
+  bool PreferCache = 6;
+  bool UseFallBack = 7;
 }
 
 message FluxAppDetail{
@@ -135,6 +160,9 @@ message AppDetailRequest {
   string ReleaseName = 3;
   // Map key cannot be float, double, bytes, message, or enum types (map<Gvk, Labels> could be a better option)
   ResourceTreeFilter resourceTreeFilter = 4;
+  bool PreferCache = 5;
+  bool UseFallBack = 6;
+  CacheConfig cacheConfig = 7;
 }
 
 message AppDetail{
@@ -230,22 +258,6 @@ message EphemeralContainerData {
   string name = 1;
   bool isExternal = 2;
 }
-
-message AppConfigRequest {
-  ClusterConfig clusterConfig = 1;
-  string namespace = 2;
-  string ReleaseName = 3;
-}
-
-message GetReleaseDetailWithManifestResponse{
-  repeated ObjectIdentifier parentObjects = 1;
-  ReleaseStatus releaseStatus = 2;
-  google.protobuf.Timestamp lastDeployed = 3;
-  ChartMetadata chartMetadata = 4;
-  EnvironmentDetails environmentDetails = 5;
-  bool ReleaseExist = 6;
-}
-
 
 //--------hibernate
 

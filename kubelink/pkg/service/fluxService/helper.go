@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
+	client "github.com/devtron-labs/kubelink/grpc"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	//"github.com/devtron-labs/kubelink/pkg/service/fluxService"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -166,4 +167,22 @@ func getFluxAppStatus(obj map[string]interface{}, gvk schema.GroupVersionKind) (
 		Reason:  reason,
 		Message: message,
 	}, nil
+}
+
+func GetObjectIdentifiersForFluxK8s(externalResourceDetailList []*client.ExternalResourceDetail) []*client.ObjectIdentifier {
+	if len(externalResourceDetailList) == 0 {
+		return []*client.ObjectIdentifier{}
+	}
+	resp := make([]*client.ObjectIdentifier, len(externalResourceDetailList))
+	for _, externalResourceDetail := range externalResourceDetailList {
+		objectIdentifier := &client.ObjectIdentifier{
+			Group:     externalResourceDetail.Group,
+			Kind:      externalResourceDetail.Kind,
+			Version:   externalResourceDetail.Version,
+			Name:      externalResourceDetail.Name,
+			Namespace: externalResourceDetail.Namespace,
+		}
+		resp = append(resp, objectIdentifier)
+	}
+	return resp
 }

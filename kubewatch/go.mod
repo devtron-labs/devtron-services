@@ -101,7 +101,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.1 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
@@ -207,7 +207,7 @@ require (
 	k8s.io/kube-aggregator v0.29.6 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.29.6 // indirect
-	k8s.io/kubernetes v1.29.6 // indirect
+	k8s.io/kubernetes v1.29.10 // indirect
 	k8s.io/metrics v0.29.7 // indirect
 	oras.land/oras-go/v2 v2.3.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -238,7 +238,6 @@ replace (
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.29.7
 	k8s.io/kubectl => k8s.io/kubectl v0.29.7
 	k8s.io/kubelet => k8s.io/kubelet v0.29.7
-	k8s.io/kubernetes v1.27.13 => k8s.io/kubernetes v1.29.6
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.29.7
 	k8s.io/metrics => k8s.io/metrics v0.29.7
 	k8s.io/mount-utils => k8s.io/mount-utils v0.29.7
@@ -246,4 +245,4 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241113070330-20fa20d13e0d
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241119050110-0757fe7be437
