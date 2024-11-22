@@ -543,7 +543,9 @@ func parseDockerFlagParam(param string, scriptEnvs map[string]string, preCiStage
 		if len(value) == 0 {
 			value = os.Getenv(key)
 		}
-		return ""
+		if len(value) == 0 {
+			return ""
+		}
 	}
 
 	return wrapSingleOrDoubleQuotedValue(value)
