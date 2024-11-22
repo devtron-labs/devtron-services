@@ -495,12 +495,18 @@ func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig, scriptEnvs map
 	dockerBuildArgsMap := dockerBuildConfig.Args
 	for k, v := range dockerBuildArgsMap {
 		flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
-		dockerBuildFlags[flagKey] = parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
+		parsedDockerFlagValue := parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
+		if len(parsedDockerFlagValue) > 0 {
+			dockerBuildFlags[flagKey] = parsedDockerFlagValue
+		}
 	}
 	dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
 	for k, v := range dockerBuildOptionsMap {
 		flagKey := "--" + k
-		dockerBuildFlags[flagKey] = parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
+		parsedDockerFlagValue := parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
+		if len(parsedDockerFlagValue) > 0 {
+			dockerBuildFlags[flagKey] = parsedDockerFlagValue
+		}
 	}
 	return dockerBuildFlags
 }
