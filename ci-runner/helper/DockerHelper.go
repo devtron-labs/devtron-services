@@ -275,9 +275,26 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
 }
 
+func (impl *DockerHelperImpl) sourceBashrc(ciContext cicxt.CiContext) error {
+	dockerTag := "source ~/.bashrc"
+	log.Println(" -----> " + dockerTag)
+	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
+	err := impl.cmdExecutor.RunCommand(ciContext, dockerTagCMD)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
+
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	err := impl.DockerLogin(ciContext, &DockerCredentials{
+	err := impl.sourceBashrc(ciContext)
+	if err != nil {
+		log.Println("Error while sourceBashrc", err)
+	}
+	err = impl.DockerLogin(ciContext, &DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
 		AwsRegion:          ciRequest.AwsRegion,

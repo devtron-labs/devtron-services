@@ -422,7 +422,7 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest, ciCdRequest.CommonWorkflowRequest)
 		} else {
 			// push to dest
-			log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
+			log.Println(util.DEVTRON, "Docker `push Artifact", "dest", dest)
 			err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded)
 			if err != nil {
 				return err
