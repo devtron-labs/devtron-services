@@ -64,7 +64,7 @@ const (
 type DockerHelper interface {
 	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
 	DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error
-	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
+	BuildArtifact(ciRequest *CommonWorkflowRequest, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) (string, error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
 	ExtractDigestForBuildx(dest string, ciRequest *CommonWorkflowRequest) (string, error)
@@ -287,14 +287,10 @@ func (impl *DockerHelperImpl) sourceBashrc(ciContext cicxt.CiContext) error {
 	return nil
 }
 
-func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
+func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) (string, error) {
 
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	err := impl.sourceBashrc(ciContext)
-	if err != nil {
-		log.Println("Error while sourceBashrc", err)
-	}
-	err = impl.DockerLogin(ciContext, &DockerCredentials{
+	err := impl.DockerLogin(ciContext, &DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
 		DockerPassword:     ciRequest.DockerPassword,
 		AwsRegion:          ciRequest.AwsRegion,
@@ -340,7 +336,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			}
 
 		}
-		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
+
+		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig, scriptEnvs, preCiStageOutVariable)
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
@@ -493,25 +490,53 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	return dest, nil
 }
 
-func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
+func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) map[string]string {
 	dockerBuildFlags := make(map[string]string)
 	dockerBuildArgsMap := dockerBuildConfig.Args
 	for k, v := range dockerBuildArgsMap {
 		flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
-		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+		dockerBuildFlags[flagKey] = parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
 	}
 	dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
 	for k, v := range dockerBuildOptionsMap {
 		flagKey := "--" + k
-		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+		dockerBuildFlags[flagKey] = parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
 	}
 	return dockerBuildFlags
 }
 
-func parseDockerFlagParam(param string) string {
+func parseDockerFlagParam(param string, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) string {
 	value := param
+	log.Println("--- parseDockerFlagParam scriptEnvs", scriptEnvs)
+	log.Println("--- parseDockerFlagParam preCiStageOutVariable", preCiStageOutVariable)
 	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
-		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
+		key := strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX)
+
+		if preCiStageOutVariable != nil {
+			for k, task := range preCiStageOutVariable {
+				if _, ok := preCiStageOutVariable[k]; ok {
+					for variable, details := range task {
+						if variable == key {
+							outputVariableEnv := details.Value
+							if len(outputVariableEnv) > 0 {
+								value = outputVariableEnv
+							}
+						}
+
+					}
+				}
+			}
+		}
+		if len(value) == 0 && scriptEnvs != nil {
+			scriptEnvVal, ok := scriptEnvs[key]
+			if ok {
+				value = scriptEnvVal
+			}
+		}
+
+		if len(value) == 0 {
+			value = os.Getenv(key)
+		}
 	}
 
 	return wrapSingleOrDoubleQuotedValue(value)
