@@ -543,7 +543,7 @@ func parseDockerFlagParam(param string, scriptEnvs map[string]string, preCiStage
 		if len(value) == 0 {
 			value = os.Getenv(key)
 		}
-		if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
+		if strings.HasPrefix(value, DEVTRON_ENV_VAR_PREFIX) {
 			return ""
 		}
 	}
