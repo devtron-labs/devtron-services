@@ -229,11 +229,10 @@ func (impl *HelmRepoManagerImpl) LoadChartFromOCIRepo(client *registry.Client, r
 }
 
 func TrimSchemeFromURL(registryUrl string) string {
-	parsedUrl, err := url.Parse(registryUrl)
-	if err != nil {
-		return registryUrl
+	// checking if the input URL has a scheme
+	if strings.Contains(registryUrl, "://") {
+		// We remove everything before the first "://" (the scheme part)
+		registryUrl = strings.SplitN(registryUrl, "://", 2)[1]
 	}
-	urlWithoutScheme := parsedUrl.Host + parsedUrl.Path
-	urlWithoutScheme = strings.TrimPrefix(urlWithoutScheme, "/")
-	return urlWithoutScheme
+	return registryUrl
 }
