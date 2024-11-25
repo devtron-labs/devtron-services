@@ -601,8 +601,8 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 			log.Println(" -----> custom-tag push " + tmpDockerTag)
 			ciContext := cicxt.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
 			err = impl.dockerHelper.PushArtifact(ciContext, tmpDockerTag)
-			if err == nil {
-				break
+			if err != nil {
+				log.Println("Error in pushing artifact", "artifact", tmpDockerTag, "err", err)
 			}
 			log.Println("Error in pushing artifact", "artifact", tmpDockerTag, "err", err)
 		}

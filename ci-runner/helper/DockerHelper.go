@@ -401,6 +401,27 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, sc
 			multiNodeK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
 			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport && multiNodeK8sDriver
 			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+			multiDockerTagsValue := GetMultiDockerTagsValue(scriptEnvs, preCiStageOutVariable)
+			if len(multiDockerTagsValue) > 0 {
+				tags := strings.Split(multiDockerTagsValue, `,`)
+				for _, tmpDockerTag := range tags {
+					tmpDockerTag = strings.TrimSpace(tmpDockerTag)
+					if !strings.Contains(tmpDockerTag, ":") {
+						fullImageUrl, err := BuildDockerImagePathForCustomTag(ciRequest, tmpDockerTag)
+						if err != nil {
+							log.Println("Error in building docker image", "err", err)
+							return "", err
+						}
+						tmpDockerTag = fullImageUrl
+					}
+					log.Println(" -----> custom-tag " + tmpDockerTag)
+					dockerBuildxForMultiTag, _ := impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, tmpDockerTag, dockerBuildConfig, dockerfilePath)
+					err = impl.executeCmd(ciContext, dockerBuildxForMultiTag)
+					if err != nil {
+						return "", err
+					}
+				}
+			}
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
