@@ -118,14 +118,21 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	//variables with empty value
 	var emptyVariableList []string
 	scriptEnvs := make(map[string]string)
+	inputFileMount := make(map[string]string)
+	// global scope definition
+	for key, value := range globalEnvironmentVariables {
+		scriptEnvs[key] = value
+	}
+	// stage scope definition
+	// will override global scope if same key is present
 	for _, v := range step.InputVars {
+		if v.Format == commonBean.FormatTypeFile {
+			inputFileMount[v.Value] = v.Value
+		}
 		scriptEnvs[v.Name] = v.Value
 		if len(v.Value) == 0 {
 			emptyVariableList = append(emptyVariableList, v.Name)
 		}
-	}
-	for key, value := range globalEnvironmentVariables {
-		scriptEnvs[key] = value
 	}
 	if stepType == helper.STEP_TYPE_PRE || stepType == helper.STEP_TYPE_POST {
 		log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
@@ -219,6 +226,12 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				workDirectory:     util.Output_path,
 				OutputDirMount:    outputDirMount,
 			}
+			if len(inputFileMount) != 0 {
+				for fileSrc, fileDst := range inputFileMount {
+					fileMountPaths := &helper.MountPath{SrcPath: fileSrc, DstPath: fileDst}
+					executionConf.ExtraVolumeMounts = append(executionConf.ExtraVolumeMounts, fileMountPaths)
+				}
+			}
 			if executionConf.SourceCodeMount != nil {
 				executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
 			}
@@ -240,13 +253,23 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	} else if step.StepType == helper.STEP_TYPE_REF_PLUGIN.String() {
 		steps := refStageMap[step.RefPluginId]
 		stepIndexVarNameValueMap := make(map[int]map[string]string)
+		stepIndexFileMountMap := make(map[int]map[string]*fileContentDto)
 		for _, inVar := range step.InputVars {
+			// TODO Asutosh: here
+			if inVar.Format == commonBean.FormatTypeFile {
+				fileContent := newFileContentDto(inVar.FileContent, inVar.Value)
+				if fileMap, ok := stepIndexFileMountMap[inVar.VariableStepIndexInPlugin]; ok {
+					fileMap[inVar.Name] = fileContent
+					stepIndexFileMountMap[inVar.VariableStepIndexInPlugin] = fileMap
+				} else {
+					stepIndexFileMountMap[inVar.VariableStepIndexInPlugin] = map[string]*fileContentDto{inVar.Name: fileContent}
+				}
+			}
 			if varMap, ok := stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin]; ok {
 				varMap[inVar.Name] = inVar.Value
 				stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = varMap
 			} else {
-				varMap := map[string]string{inVar.Name: inVar.Value}
-				stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = varMap
+				stepIndexVarNameValueMap[inVar.VariableStepIndexInPlugin] = map[string]string{inVar.Name: inVar.Value}
 			}
 		}
 		for _, step := range steps {
@@ -254,6 +277,14 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				for _, inVar := range step.InputVars {
 					if value, ok := varMap[inVar.Name]; ok {
 						inVar.Value = value
+					}
+				}
+			}
+			if fileMap, ok := stepIndexFileMountMap[step.Index]; ok {
+				for _, inVar := range step.InputVars {
+					if fileContent, ok := fileMap[inVar.Name]; ok {
+						inVar.Value = fileContent.filePath
+						inVar.FileContent = fileContent.content
 					}
 				}
 			}

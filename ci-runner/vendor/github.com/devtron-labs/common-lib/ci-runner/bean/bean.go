@@ -1,8 +1,11 @@
 package bean
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path"
 	"strconv"
 )
 
@@ -20,6 +23,8 @@ const (
 	FormatTypeBool Format = "BOOL"
 	// FormatTypeDate is the date type
 	FormatTypeDate Format = "DATE"
+	// FormatTypeFile is the file type
+	FormatTypeFile Format = "FILE"
 )
 
 func NewFormat(format string) (Format, error) {
@@ -35,6 +40,8 @@ func (d Format) ValuesOf(format string) (Format, error) {
 		return FormatTypeString, nil
 	} else if format == "DATE" || format == "date" {
 		return FormatTypeDate, nil
+	} else if format == "FILE" || format == "file" {
+		return FormatTypeFile, nil
 	}
 	return FormatTypeString, fmt.Errorf("invalid Format: %s", format)
 }
@@ -71,6 +78,15 @@ func (d Format) Convert(value string) (interface{}, error) {
 		return strconv.ParseBool(value)
 	case FormatTypeDate:
 		return value, nil
+	case FormatTypeFile:
+		filePath := path.Clean(value)
+		fileMountDir := path.Dir(filePath)
+		err := os.MkdirAll(fileMountDir, os.ModePerm)
+		if err != nil {
+			return nil, err
+		}
+		// filePath is the path to the file
+		return filePath, nil
 	default:
 		return nil, fmt.Errorf("unsupported datatype")
 	}
@@ -149,7 +165,8 @@ type VariableObject struct {
 	ReferenceVariableName      string       `json:"referenceVariableName"`
 	ReferenceVariableStepIndex int          `json:"referenceVariableStepIndex"`
 	VariableStepIndexInPlugin  int          `json:"variableStepIndexInPlugin"`
-	TypedValue                 interface{}  `json:"-"` // TypedValue is the formatted value of the variable after type conversion
+	FileContent                string       `json:"fileContent"` // FileContent is the base64 encoded content of the file
+	TypedValue                 interface{}  `json:"-"`           // TypedValue is the formatted value of the variable after type conversion
 }
 
 // TypeCheck converts the VariableObject.Value to the VariableObject.Format type
@@ -160,6 +177,31 @@ func (v *VariableObject) TypeCheck() error {
 	if err != nil {
 		return err
 	}
+	err = v.SetFileContent(v.Value)
+	if err != nil {
+		return err
+	}
 	v.TypedValue = typedValue
+	return nil
+}
+
+// SetFileContent decodes the base64 encoded file content and writes it to the file at filePath
+func (v *VariableObject) SetFileContent(filePath string) error {
+	if v.Format != FormatTypeFile {
+		return nil
+	}
+	file, fileErr := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if fileErr != nil {
+		return fileErr
+	}
+	defer file.Close()
+	fileBytes, fileErr := base64.StdEncoding.DecodeString(v.FileContent)
+	if fileErr != nil {
+		return fileErr
+	}
+	_, wErr := file.Write(fileBytes)
+	if wErr != nil {
+		return wErr
+	}
 	return nil
 }
