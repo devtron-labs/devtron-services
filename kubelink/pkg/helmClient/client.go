@@ -49,6 +49,7 @@ const (
 	DefaultCachePath            = "/home/devtron/devtroncd/.helmcache"
 	DefaultRepositoryConfigPath = "/home/devtron/devtroncd/.helmrepo"
 	DefaultTempDirectory        = "/tmp/dir/"
+	TemHelmChartDirectory       = "helmDependencyChart"
 )
 
 // NewClientFromRestConf returns a new Helm client constructed with the provided REST config options
@@ -57,7 +58,7 @@ func NewClientFromRestConf(options *RestConfClientOptions) (Client, error) {
 
 	clientGetter := NewRESTClientGetter(options.Namespace, nil, options.RestConfig)
 
-	err := SetEnvSettings(options.Options, settings)
+	err := setEnvSettings(options.Options, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,7 @@ func NewClientFromRestConf(options *RestConfClientOptions) (Client, error) {
 
 // newClient returns a new Helm client via the provided options and REST config
 func newClient(options *Options, clientGetter genericclioptions.RESTClientGetter, settings *cli.EnvSettings) (Client, error) {
-	err := SetEnvSettings(options, settings)
+	err := setEnvSettings(options, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +101,8 @@ func newClient(options *Options, clientGetter genericclioptions.RESTClientGetter
 	}, nil
 }
 
-// SetEnvSettings sets the client's environment settings based on the provided client configuration
-func SetEnvSettings(options *Options, settings *cli.EnvSettings) error {
+// setEnvSettings sets the client's environment settings based on the provided client configuration
+func setEnvSettings(options *Options, settings *cli.EnvSettings) error {
 	if options == nil {
 		options = &Options{
 			RepositoryConfig: DefaultRepositoryConfigPath,
@@ -800,11 +801,13 @@ func GetChartBytes(helmChart *chart.Chart) ([]byte, error) {
 
 	absFilePath, err := GetChartSavedDir(helmChart)
 	if err != nil {
-		fmt.Println("error in getting saved chart data directory path", "err", err)
+		fmt.Errorf("error in getting saved chart data directory path %w", err)
+		return nil, err
 	}
 	chartBytes, err := os.ReadFile(absFilePath)
 	if err != nil {
-		fmt.Println("error in reading chartdata from the file ", " filePath : ", absFilePath, " err : ", err)
+		fmt.Errorf("error in reading chartdata from the file filePath : %s  err : %w", absFilePath, err)
+		return nil, err
 	}
 
 	return chartBytes, nil
@@ -820,12 +823,12 @@ func GetChartSavedDir(helmChart *chart.Chart) (string, error) {
 	defer func() {
 		err := os.RemoveAll(outputChartPathDir)
 		if err != nil {
-			fmt.Println("error in deleting dir", " dir: ", outputChartPathDir, " err: ", err)
+			fmt.Errorf("error in deleting dir, %s, err: %w", outputChartPathDir, err)
 		}
 	}()
 	absFilePath, err := chartutil.Save(helmChart, outputChartPathDir)
 	if err != nil {
-		fmt.Println("error in saving chartdata in the destination dir ", " dir : ", outputChartPathDir, " err : ", err)
+		fmt.Errorf("error in saving chartdata in the destination dir %s, err: %w", outputChartPathDir, err)
 		return "", err
 	}
 
