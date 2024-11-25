@@ -582,6 +582,7 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 			impl.logger.Infow("Dependencies listed in Chart.yaml, performing dependency update before upgrading", "dependencies", helmRelease.Chart.Metadata.Dependencies)
 			err = impl.updateChartDependencies(helmClientObj.GetProviders(), helmRelease, registryClient)
 			if err != nil {
+				impl.logger.Errorw("error in updating chart Dependencies", "err", err)
 				return nil, err
 			}
 		}
