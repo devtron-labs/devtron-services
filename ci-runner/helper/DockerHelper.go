@@ -59,6 +59,7 @@ const (
 	BUILDX_K8S_DRIVER_NAME   = "devtron-buildx-builder"
 	BUILDX_NODE_NAME         = "devtron-buildx-node-"
 	DOCKERD_OUTPUT_FILE_PATH = "/usr/local/bin/nohup.out"
+	MULTI_TAG_ENV            = "docker_env_multi_tags"
 )
 
 type DockerHelper interface {
@@ -440,7 +441,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, sc
 		}
 
 		if !useBuildx {
-			err = impl.tagDockerBuild(ciContext, ciRequest.DockerRepository, dest)
+			err = impl.tagDockerBuild(ciContext, ciRequest, dest, scriptEnvs, preCiStageOutVariable)
 			if err != nil {
 				return "", err
 			}
@@ -773,16 +774,70 @@ func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, dockerBuild 
 	return err
 }
 
-func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, dockerRepository string, dest string) error {
-	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
-	log.Println(" -----> " + dockerTag)
+func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, ciRequest *CommonWorkflowRequest, dest string, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) error {
+	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
 	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
 	err := impl.cmdExecutor.RunCommand(ciContext, dockerTagCMD)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+
+	log.Println(" -----> " + dockerTag)
+	multiDockerTagsValue := GetMultiDockerTagsValue(scriptEnvs, preCiStageOutVariable)
+	if len(multiDockerTagsValue) > 0 {
+		tags := strings.Split(multiDockerTagsValue, `,`)
+		for _, tmpDockerTag := range tags {
+			tmpDockerTag = strings.TrimSpace(tmpDockerTag)
+			if !strings.Contains(tmpDockerTag, ":") {
+				fullImageUrl, err := BuildDockerImagePath(ciRequest)
+				if err != nil {
+					log.Println("Error in building docker image", "err", err)
+					return err
+				}
+				tmpDockerTag = fullImageUrl
+			}
+			tmpDockerTagCommand := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + tmpDockerTag
+			tmpDockerTagCMD := impl.GetCommandToExecute(tmpDockerTagCommand)
+			err := impl.cmdExecutor.RunCommand(ciContext, tmpDockerTagCMD)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		}
+
+	}
+
 	return nil
+}
+
+func GetMultiDockerTagsValue(scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) string {
+	multiDockerTagsValue := ""
+	log.Println("--- GetMultiDockerTagsValue scriptEnvs", scriptEnvs)
+	log.Println("--- GetMultiDockerTagsValue preCiStageOutVariable", preCiStageOutVariable)
+	if preCiStageOutVariable != nil {
+		for k, task := range preCiStageOutVariable {
+			if _, ok := preCiStageOutVariable[k]; ok {
+				for variable, details := range task {
+					if variable == MULTI_TAG_ENV {
+						outputVariableEnv := details.Value
+						if len(outputVariableEnv) > 0 {
+							multiDockerTagsValue = outputVariableEnv
+						}
+					}
+
+				}
+			}
+		}
+	}
+	if len(multiDockerTagsValue) == 0 && scriptEnvs != nil {
+		scriptEnvVal, ok := scriptEnvs[MULTI_TAG_ENV]
+		if ok {
+			multiDockerTagsValue = scriptEnvVal
+		}
+	}
+	log.Println("--- GetMultiDockerTagsValue multiDockerTagsValue", multiDockerTagsValue)
+	return multiDockerTagsValue
 }
 
 func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, localCachePath string, oldCacheBuildxPath string) error {
