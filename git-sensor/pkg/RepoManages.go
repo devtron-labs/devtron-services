@@ -497,7 +497,7 @@ func (impl RepoManagerImpl) FetchChanges(pipelineMaterialId int, from string, to
 func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial, showAll bool) (*git.MaterialChangeResp, error) {
 	response := &git.MaterialChangeResp{}
 	response.LastFetchTime = gitMaterial.LastFetchTime
-	if impl.CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial, gitMaterial, response) {
+	if impl.CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial, gitMaterial, response, false) {
 		return response, nil
 	}
 	commits := make([]*git.GitCommitBase, 0)
@@ -527,7 +527,7 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 	return response, nil
 }
 
-func (impl RepoManagerImpl) CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial, response *git.MaterialChangeResp) bool {
+func (impl RepoManagerImpl) CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial, response *git.MaterialChangeResp, isWebhook bool) bool {
 	if pipelineMaterial.Errored {
 		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "gitMaterialId", gitMaterial.Id, "fetchErrorMessage", gitMaterial.FetchErrorMessage, "checkoutMsgAny", gitMaterial.CheckoutMsgAny, "errMsg", pipelineMaterial.ErrorMsg)
 		if !gitMaterial.CheckoutStatus {
@@ -538,6 +538,9 @@ func (impl RepoManagerImpl) CheckAndSetErrorTypeAndMsgInResponse(pipelineMateria
 			} else {
 				response.RepoErrorMsg = gitMaterial.FetchErrorMessage
 			}
+		} else if isWebhook {
+			// this is done as old data has been saved in db for tag/pr/webhook and only checkoutStatus is relevant for these types
+			return false
 		} else if !gitMaterial.FetchStatus {
 			response.IsRepoError = true
 			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
@@ -553,7 +556,7 @@ func (impl RepoManagerImpl) CheckAndSetErrorTypeAndMsgInResponse(pipelineMateria
 func (impl RepoManagerImpl) FetchGitCommitsForWebhookTypePipeline(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial) (*git.MaterialChangeResp, error) {
 	response := &git.MaterialChangeResp{}
 	response.LastFetchTime = gitMaterial.LastFetchTime
-	if impl.CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial, gitMaterial, response) {
+	if impl.CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial, gitMaterial, response, true) {
 		return response, nil
 	}
 
