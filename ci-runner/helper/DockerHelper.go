@@ -790,13 +790,14 @@ func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, ciReques
 		for _, tmpDockerTag := range tags {
 			tmpDockerTag = strings.TrimSpace(tmpDockerTag)
 			if !strings.Contains(tmpDockerTag, ":") {
-				fullImageUrl, err := BuildDockerImagePath(ciRequest)
+				fullImageUrl, err := BuildDockerImagePathForCustomTag(ciRequest, tmpDockerTag)
 				if err != nil {
 					log.Println("Error in building docker image", "err", err)
 					return err
 				}
 				tmpDockerTag = fullImageUrl
 			}
+			log.Println(" -----> custom-tag " + tmpDockerTag)
 			tmpDockerTagCommand := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + tmpDockerTag
 			tmpDockerTagCMD := impl.GetCommandToExecute(tmpDockerTagCommand)
 			err := impl.cmdExecutor.RunCommand(ciContext, tmpDockerTagCMD)
@@ -916,6 +917,17 @@ func (impl *DockerHelperImpl) checkAndCreateDirectory(ciContext cicxt.CiContext,
 func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	return utils.BuildDockerImagePath(bean.DockerRegistryInfo{
 		DockerImageTag:     ciRequest.DockerImageTag,
+		DockerRegistryId:   ciRequest.DockerRegistryId,
+		DockerRegistryType: ciRequest.DockerRegistryType,
+		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
+		DockerRepository:   ciRequest.DockerRepository,
+	})
+
+}
+
+func BuildDockerImagePathForCustomTag(ciRequest *CommonWorkflowRequest, dockerTag string) (string, error) {
+	return utils.BuildDockerImagePath(bean.DockerRegistryInfo{
+		DockerImageTag:     dockerTag,
 		DockerRegistryId:   ciRequest.DockerRegistryId,
 		DockerRegistryType: ciRequest.DockerRegistryType,
 		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,

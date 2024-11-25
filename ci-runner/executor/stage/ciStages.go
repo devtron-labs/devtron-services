@@ -591,13 +591,14 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 		tags := strings.Split(multiDockerTagsValue, `,`)
 		for _, tmpDockerTag := range tags {
 			if !strings.Contains(tmpDockerTag, ":") {
-				fullImageUrl, err := helper.BuildDockerImagePath(ciCdRequest.CommonWorkflowRequest)
+				fullImageUrl, err := helper.BuildDockerImagePathForCustomTag(ciCdRequest.CommonWorkflowRequest, tmpDockerTag)
 				if err != nil {
 					log.Println("Error in building docker image", "err", err)
 					return err
 				}
 				tmpDockerTag = fullImageUrl
 			}
+			log.Println(" -----> custom-tag push " + tmpDockerTag)
 			ciContext := cicxt.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
 			err = impl.dockerHelper.PushArtifact(ciContext, tmpDockerTag)
 			if err == nil {
