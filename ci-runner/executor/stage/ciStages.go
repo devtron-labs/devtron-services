@@ -604,7 +604,6 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 			if err != nil {
 				log.Println("Error in pushing artifact", "artifact", tmpDockerTag, "err", err)
 			}
-			log.Println("Error in pushing artifact", "artifact", tmpDockerTag, "err", err)
 		}
 
 	}
