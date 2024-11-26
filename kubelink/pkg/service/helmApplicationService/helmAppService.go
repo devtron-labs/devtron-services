@@ -29,6 +29,7 @@ import (
 	error2 "github.com/devtron-labs/kubelink/error"
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/commonHelmService"
+	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	downloader2 "helm.sh/helm/v3/pkg/downloader"
@@ -577,12 +578,17 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 			return nil, err
 		}
 		// perform Dependency Update in case we detect any dependency listed in chart.Metadata
-		if len(helmRelease.Chart.Metadata.Dependencies) != 0 {
-			impl.logger.Infow("Dependencies listed in Chart.yaml, performing dependency update before upgrading", "dependencies", helmRelease.Chart.Metadata.Dependencies)
-			err = impl.updateChartDependencies(helmClientObj, helmRelease, registryClient)
-			if err != nil {
-				impl.logger.Errorw("error in updating chart Dependencies", "err", err)
-				return nil, err
+		if req := helmRelease.Chart.Metadata.Dependencies; req != nil {
+			if err := action.CheckDependencies(helmRelease.Chart, req); err != nil {
+				impl.logger.Errorw("An error occurred while checking for chart dependencies. You may need to run `helm dependency build` to fetch missing dependencies", "err", err)
+				if len(helmRelease.Chart.Metadata.Dependencies) != 0 {
+					impl.logger.Infow("Dependencies listed in Chart.yaml, performing dependency update before upgrading", "dependencies", helmRelease.Chart.Metadata.Dependencies)
+					err = impl.updateChartDependencies(helmClientObj, helmRelease, registryClient)
+					if err != nil {
+						impl.logger.Errorw("error in updating chart Dependencies", "err", err)
+						return nil, err
+					}
+				}
 			}
 		}
 
