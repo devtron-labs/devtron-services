@@ -148,4 +148,9 @@ func GetProjectName(url string) string {
 	return projectName
 }
 
+func GetGitRepoNameFromGitRepoUrl(gitRepoUrl string) string {
+	gitRepoUrl = gitRepoUrl[strings.LastIndex(gitRepoUrl, "/")+1:]
+	return strings.TrimSuffix(gitRepoUrl, ".git")
+}
+
 const DEVTRON = "DEVTRON"
