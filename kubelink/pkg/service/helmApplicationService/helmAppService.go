@@ -32,7 +32,6 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	downloader2 "helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"net/url"
@@ -580,7 +579,7 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 		// perform Dependency Update in case we detect any dependency listed in chart.Metadata
 		if len(helmRelease.Chart.Metadata.Dependencies) != 0 {
 			impl.logger.Infow("Dependencies listed in Chart.yaml, performing dependency update before upgrading", "dependencies", helmRelease.Chart.Metadata.Dependencies)
-			err = impl.updateChartDependencies(helmClientObj.GetProviders(), helmRelease, registryClient)
+			err = impl.updateChartDependencies(helmClientObj, helmRelease, registryClient)
 			if err != nil {
 				impl.logger.Errorw("error in updating chart Dependencies", "err", err)
 				return nil, err
@@ -1934,7 +1933,7 @@ func podMetadataAdapter(podmetadatas []*commonBean.PodMetadata) []*client.PodMet
 	return podMetadatas
 }
 
-func (impl *HelmAppServiceImpl) updateChartDependencies(providers getter.Providers, helmRelease *release.Release, registry *registry.Client) error {
+func (impl *HelmAppServiceImpl) updateChartDependencies(client helmClient.Client, helmRelease *release.Release, registry *registry.Client) error {
 	// Step 1: Update chart dependencies
 	outputChartPathDir := fmt.Sprintf("%s", helmClient.DefaultTempDirectory)
 	err := os.MkdirAll(outputChartPathDir, os.ModePerm)
@@ -1967,9 +1966,9 @@ func (impl *HelmAppServiceImpl) updateChartDependencies(providers getter.Provide
 	manager := &downloader2.Manager{
 		ChartPath:        outputChartPathDir,
 		Out:              outputBuffer,
-		Getters:          providers,
-		RepositoryConfig: helmClient.DefaultRepositoryConfigPath,
-		RepositoryCache:  helmClient.DefaultCachePath,
+		Getters:          client.GetProviders(),
+		RepositoryConfig: client.GetRepositoryConfig(),
+		RepositoryCache:  client.GetRepositoryCache(),
 		RegistryClient:   registry,
 	}
 	err = manager.Update()

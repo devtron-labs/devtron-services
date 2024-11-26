@@ -42,4 +42,6 @@ type Client interface {
 	TemplateChart(spec *ChartSpec, options *HelmTemplateOptions, chartData []byte, returnChartBytes bool) ([]byte, []byte, error)
 	GetNotes(spec *ChartSpec, options *HelmTemplateOptions) ([]byte, error)
 	GetProviders() getter.Providers
+	GetRepositoryConfig() string
+	GetRepositoryCache() string
 }

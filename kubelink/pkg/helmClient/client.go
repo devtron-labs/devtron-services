@@ -105,9 +105,9 @@ func newClient(options *Options, clientGetter genericclioptions.RESTClientGetter
 func setEnvSettings(options *Options, settings *cli.EnvSettings) error {
 	if options == nil {
 		options = &Options{
-			RepositoryConfig: DefaultRepositoryConfigPath,
-			RepositoryCache:  DefaultCachePath,
-			Linting:          true,
+			//RepositoryConfig: DefaultRepositoryConfigPath,
+			//RepositoryCache:  DefaultCachePath,
+			Linting: true,
 		}
 	}
 
@@ -837,4 +837,12 @@ func GetChartSavedDir(helmChart *chart.Chart) (string, error) {
 
 func (c *HelmClient) GetProviders() getter.Providers {
 	return c.Providers
+}
+
+func (c *HelmClient) GetRepositoryConfig() string {
+	return c.Settings.RepositoryConfig
+}
+
+func (c *HelmClient) GetRepositoryCache() string {
+	return c.Settings.RepositoryCache
 }
