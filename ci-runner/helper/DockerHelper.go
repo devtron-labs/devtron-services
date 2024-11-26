@@ -400,28 +400,13 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, sc
 
 			multiNodeK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
 			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport && multiNodeK8sDriver
-			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+
 			multiDockerTagsValue := GetMultiDockerTagsValue(scriptEnvs, preCiStageOutVariable)
+			dockerTags := []string{}
 			if len(multiDockerTagsValue) > 0 {
-				tags := strings.Split(multiDockerTagsValue, `,`)
-				for _, tmpDockerTag := range tags {
-					tmpDockerTag = strings.TrimSpace(tmpDockerTag)
-					if !strings.Contains(tmpDockerTag, ":") {
-						fullImageUrl, err := BuildDockerImagePathForCustomTag(ciRequest, tmpDockerTag)
-						if err != nil {
-							log.Println("Error in building docker image", "err", err)
-							return "", err
-						}
-						tmpDockerTag = fullImageUrl
-					}
-					log.Println(" -----> custom-tag " + tmpDockerTag)
-					dockerBuildxForMultiTag, _ := impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, tmpDockerTag, dockerBuildConfig, dockerfilePath)
-					err = impl.executeCmd(ciContext, dockerBuildxForMultiTag)
-					if err != nil {
-						return "", err
-					}
-				}
+				dockerTags = strings.Split(multiDockerTagsValue, `,`)
 			}
+			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, dockerTags)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -651,7 +636,7 @@ func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
 	return strings.Join(allCachePaths, " ")
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, additionalImageTags []string) (string, func() error) {
 	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
 	exportCacheCmds := make(map[string]string)
 
@@ -673,18 +658,26 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext,
 	}
 
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
+	dockerBuild = fmt.Sprintf("%s %s --push --metadata-file %s", dockerBuild, GetTagArgumentFlagForBuildx(dest, additionalImageTags), manifestLocation)
 
 	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+func GetTagArgumentFlagForBuildx(dest string, additionalTags []string) string {
+	flagCmd := fmt.Sprintf("-t %s", dest)
+	for _, tag := range additionalTags {
+		flagCmd = fmt.Sprintf("%s -t %s", flagCmd, tag)
+	}
+	return flagCmd
+}
+
+func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, additionalImageTags []string) (string, func() error) {
 
 	cacheMode := CacheModeMax
 	if useCacheMin {
 		cacheMode = CacheModeMin
 	}
-	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
+	dockerBuild = fmt.Sprintf("%s -f %s %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, GetTagArgumentFlagForBuildx(dest, additionalImageTags), dockerBuildConfig.BuildContext)
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
 	}
@@ -702,11 +695,11 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 	return dockerBuild, nil
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, additionalImageTags []string) (string, func() error) {
 	if exportBuildxCacheAfterBuild {
-		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, additionalImageTags)
 	}
-	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, additionalImageTags)
 }
 
 func (impl *DockerHelperImpl) handleLanguageVersion(ciContext cicxt.CiContext, projectPath string, buildpackConfig *BuildPackConfig) {
