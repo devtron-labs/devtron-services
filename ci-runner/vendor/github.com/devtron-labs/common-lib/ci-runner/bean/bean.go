@@ -98,7 +98,7 @@ func (d Format) Convert(value string) (interface{}, error) {
 	case FormatTypeBool:
 		return strconv.ParseBool(value)
 	case FormatTypeDate:
-		if isValidDateInput(value) {
+		if !isValidDateInput(value) {
 			return nil, fmt.Errorf("invalid date value '%s'", value)
 		}
 		return value, nil
