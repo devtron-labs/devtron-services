@@ -79,7 +79,7 @@ func isValidDateInput(v string) bool {
 	}
 	isValid := false
 	for _, f := range formats {
-		_, err := protocol.ParseTime(v, f)
+		_, err := protocol.ParseTime(f, v)
 		// if err is nil, the time string is valid
 		if err == nil {
 			isValid = true
