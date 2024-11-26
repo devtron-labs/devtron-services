@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/private/protocol"
 	"os"
 	"path"
 	"strconv"
@@ -68,6 +69,26 @@ func (d *Format) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// isValidDateInput tries to parse the time string with multiple formats\
+// and returns true if the time string is valid
+func isValidDateInput(v string) bool {
+	formats := []string{
+		protocol.RFC822TimeFormatName,
+		protocol.ISO8601TimeFormatName,
+		protocol.UnixTimeFormatName,
+	}
+	isValid := false
+	for _, f := range formats {
+		_, err := protocol.ParseTime(v, f)
+		// if err is nil, the time string is valid
+		if err == nil {
+			isValid = true
+			break
+		}
+	}
+	return isValid
+}
+
 func (d Format) Convert(value string) (interface{}, error) {
 	switch d {
 	case FormatTypeString:
@@ -77,6 +98,9 @@ func (d Format) Convert(value string) (interface{}, error) {
 	case FormatTypeBool:
 		return strconv.ParseBool(value)
 	case FormatTypeDate:
+		if isValidDateInput(value) {
+			return nil, fmt.Errorf("invalid date value '%s'", value)
+		}
 		return value, nil
 	case FormatTypeFile:
 		filePath := path.Clean(value)
