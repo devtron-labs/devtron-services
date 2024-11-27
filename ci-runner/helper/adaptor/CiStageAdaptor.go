@@ -18,6 +18,7 @@ func NewCiCompleteEvent(ciRequest *helper.CommonWorkflowRequest) *helper.CiCompl
 		PluginArtifactStage:           ciRequest.PluginArtifactStage,
 		IsScanEnabled:                 ciRequest.ScanEnabled,
 		MaterialType:                  util.ArtifactMaterialType,
+		DockerRegistryId:              ciRequest.DockerRegistryId,
 	}
 	return event
 }
