@@ -118,6 +118,7 @@ func (impl *ResourceTreeServiceImpl) getLiveManifestsForGVKList(restConfig *rest
 			desiredManifest.SetGroupVersionKind(*gvk)
 			desiredManifest.SetName(resource.Name)
 			desiredManifest.SetNamespace(resource.Namespace)
+			desiredManifest.SetAnnotations(resource.Annotations)
 			desiredOrLiveManifest := &bean.DesiredOrLiveManifest{
 				Manifest: desiredManifest,
 				// using deep copy as it replaces item in manifest in loop
