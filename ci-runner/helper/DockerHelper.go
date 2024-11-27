@@ -276,18 +276,6 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
 }
 
-func (impl *DockerHelperImpl) sourceBashrc(ciContext cicxt.CiContext) error {
-	dockerTag := "source ~/.bashrc"
-	log.Println(" -----> " + dockerTag)
-	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
-	err := impl.cmdExecutor.RunCommand(ciContext, dockerTagCMD)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) (string, error) {
 
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
@@ -410,7 +398,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, sc
 					if !strings.Contains(tmpDockerTag, ":") {
 						fullImageUrl, err := BuildDockerImagePathForCustomTag(ciRequest, tmpDockerTag)
 						if err != nil {
-							log.Println("Error in building docker image multiple tags", "err", err)
+							log.Println("Error in building docker image multiple tags", "fullImageUrl", fullImageUrl, "err", err)
 							return "", err
 						}
 						tmpDockerTag = fullImageUrl
@@ -532,8 +520,6 @@ func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig, scriptEnvs map
 
 func parseDockerFlagParam(param string, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) string {
 	value := param
-	log.Println("--- parseDockerFlagParam scriptEnvs", scriptEnvs)
-	log.Println("--- parseDockerFlagParam preCiStageOutVariable", preCiStageOutVariable)
 	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
 		key := strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX)
 
@@ -840,8 +826,6 @@ func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, ciReques
 
 func GetMultiDockerTagsValue(scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) string {
 	multiDockerTagsValue := ""
-	log.Println("--- GetMultiDockerTagsValue scriptEnvs", scriptEnvs)
-	log.Println("--- GetMultiDockerTagsValue preCiStageOutVariable", preCiStageOutVariable)
 	if preCiStageOutVariable != nil {
 		for k, task := range preCiStageOutVariable {
 			if _, ok := preCiStageOutVariable[k]; ok {
@@ -863,7 +847,6 @@ func GetMultiDockerTagsValue(scriptEnvs map[string]string, preCiStageOutVariable
 			multiDockerTagsValue = scriptEnvVal
 		}
 	}
-	log.Println("--- GetMultiDockerTagsValue multiDockerTagsValue", multiDockerTagsValue)
 	return multiDockerTagsValue
 }
 

@@ -422,7 +422,7 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 			digest, err = impl.dockerHelper.ExtractDigestForBuildx(dest, ciCdRequest.CommonWorkflowRequest)
 		} else {
 			// push to dest
-			log.Println(util.DEVTRON, "Docker `push Artifact", "dest", dest)
+			log.Println(util.DEVTRON, "Docker push Artifact", "dest", dest)
 			err = impl.pushArtifact(ciCdRequest, dest, digest, metrics, artifactUploaded, scriptEnvs, preCiStageOutVariable)
 			if err != nil {
 				return err
@@ -593,7 +593,7 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 			if !strings.Contains(tmpDockerTag, ":") {
 				fullImageUrl, err := helper.BuildDockerImagePathForCustomTag(ciCdRequest.CommonWorkflowRequest, tmpDockerTag)
 				if err != nil {
-					log.Println("Error in building docker image", "err", err)
+					log.Println("Error in building docker image", "fullImageUrl", fullImageUrl, "err", err)
 					return err
 				}
 				tmpDockerTag = fullImageUrl
