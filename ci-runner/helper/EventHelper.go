@@ -370,6 +370,7 @@ type CiCompleteEvent struct {
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
+	DockerRegistryId              string              `json:"dockerRegistryId"`
 }
 
 func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {
