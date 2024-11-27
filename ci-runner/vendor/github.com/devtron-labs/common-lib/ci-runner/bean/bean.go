@@ -146,18 +146,18 @@ func (t VariableType) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshal a JSON string into a VariableType
 // Note: Json.Unmarshal will call this function internally for custom type unmarshalling
 func (t *VariableType) UnmarshalJSON(data []byte) error {
-	var variableType VariableType
+	var variableType string
 	err := json.Unmarshal(data, &variableType)
 	if err != nil {
 		return err
 	}
 	switch variableType {
-	case VariableTypeValue,
-		VariableTypeRefPreCi,
-		VariableTypeRefPostCi,
-		VariableTypeRefGlobal,
-		VariableTypeRefPlugin:
-		*t = variableType
+	case VariableTypeValue.String(),
+		VariableTypeRefPreCi.String(),
+		VariableTypeRefPostCi.String(),
+		VariableTypeRefGlobal.String(),
+		VariableTypeRefPlugin.String():
+		*t = VariableType(variableType)
 		return nil
 	default:
 		// If the variableType is not one of the above, return an error
