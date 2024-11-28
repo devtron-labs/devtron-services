@@ -358,6 +358,10 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, globalVars map[st
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
 		case commonBean.VariableTypeValue:
+			err := desired.TypeCheck()
+			if err != nil {
+				return nil, err
+			}
 			inputVars = append(inputVars, desired)
 		case commonBean.VariableTypeRefPreCi:
 			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
