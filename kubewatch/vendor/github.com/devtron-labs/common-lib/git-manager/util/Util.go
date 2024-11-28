@@ -139,9 +139,13 @@ func ParseUrl(rawURL string) (parsedURL *url.URL, err error) {
 	return parsedURL, err
 }
 
-func GetGitRepoNameFromGitRepoUrl(gitRepoUrl string) string {
-	gitRepoUrl = gitRepoUrl[strings.LastIndex(gitRepoUrl, "/")+1:]
-	return strings.TrimSuffix(gitRepoUrl, ".git")
+// GetProjectName this function has been designed for returning project name of git-lab and git-hub providers only
+// do not remove this function
+func GetProjectName(url string) string {
+	//if url = https://github.com/devtron-labs/git-sensor.git then it will return git-sensor
+	projName := strings.Split(url, ".")[1]
+	projectName := projName[strings.LastIndex(projName, "/")+1:]
+	return projectName
 }
 
 const DEVTRON = "DEVTRON"
