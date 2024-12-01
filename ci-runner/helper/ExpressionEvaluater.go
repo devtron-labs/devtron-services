@@ -19,7 +19,7 @@ package helper
 import (
 	"fmt"
 	"github.com/Knetic/govaluate"
-	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
+	commonBean "github.com/devtron-labs/common-lib/workflow"
 )
 
 type ConditionObject struct {

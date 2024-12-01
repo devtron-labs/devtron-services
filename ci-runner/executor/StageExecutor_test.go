@@ -18,7 +18,7 @@ package executor
 
 import (
 	"github.com/devtron-labs/ci-runner/helper"
-	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
+	commonBean "github.com/devtron-labs/common-lib/workflow"
 	"reflect"
 	"testing"
 )

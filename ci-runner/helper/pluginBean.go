@@ -19,7 +19,7 @@ package helper
 import (
 	"encoding/json"
 	"fmt"
-	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
+	commonBean "github.com/devtron-labs/common-lib/workflow"
 )
 
 type RefPluginObject struct {

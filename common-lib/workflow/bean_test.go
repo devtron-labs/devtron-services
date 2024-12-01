@@ -1,6 +1,8 @@
-package bean
+package workflow
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestIsValidDateInput_ValidDates(t *testing.T) {
 	validDates := []string{

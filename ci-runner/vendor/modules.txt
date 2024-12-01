@@ -121,7 +121,7 @@ github.com/davecgh/go-spew/spew
 # github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241127223755-566a5d36412e
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/blob-storage
-github.com/devtron-labs/common-lib/ci-runner/bean
+github.com/devtron-labs/common-lib/workflow
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/git-manager
 github.com/devtron-labs/common-lib/git-manager/util

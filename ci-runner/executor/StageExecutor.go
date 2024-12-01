@@ -23,8 +23,8 @@ import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/util"
-	commonBean "github.com/devtron-labs/common-lib/ci-runner/bean"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
+	commonBean "github.com/devtron-labs/common-lib/workflow"
 	copylib "github.com/otiai10/copy"
 	"log"
 	"os"
@@ -226,11 +226,10 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				workDirectory:     util.Output_path,
 				OutputDirMount:    outputDirMount,
 			}
-			if len(inputFileMount) != 0 {
-				for fileSrc, fileDst := range inputFileMount {
-					fileMountPaths := &helper.MountPath{SrcPath: fileSrc, DstPath: fileDst}
-					executionConf.ExtraVolumeMounts = append(executionConf.ExtraVolumeMounts, fileMountPaths)
-				}
+
+			for fileSrc, fileDst := range inputFileMount {
+				fileMountPaths := &helper.MountPath{SrcPath: fileSrc, DstPath: fileDst}
+				executionConf.ExtraVolumeMounts = append(executionConf.ExtraVolumeMounts, fileMountPaths)
 			}
 			if executionConf.SourceCodeMount != nil {
 				executionConf.SourceCodeMount.SrcPath = util.WORKINGDIR
@@ -255,7 +254,6 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		stepIndexVarNameValueMap := make(map[int]map[string]string)
 		stepIndexFileMountMap := make(map[int]map[string]*fileContentDto)
 		for _, inVar := range step.InputVars {
-			// TODO Asutosh: here
 			if inVar.Format == commonBean.FormatTypeFile {
 				fileContent := newFileContentDto(inVar.FileContent, inVar.Value)
 				if fileMap, ok := stepIndexFileMountMap[inVar.VariableStepIndexInPlugin]; ok {
