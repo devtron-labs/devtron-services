@@ -12,11 +12,12 @@ func GetObjectIdentifierFromHelmManifest(manifest *unstructured.Unstructured, na
 		namespaceManifest = namespace
 	}
 	return &client.ObjectIdentifier{
-		Group:     gvk.Group,
-		Version:   gvk.Version,
-		Kind:      gvk.Kind,
-		Name:      manifest.GetName(),
-		Namespace: namespaceManifest,
+		Group:       gvk.Group,
+		Version:     gvk.Version,
+		Kind:        gvk.Kind,
+		Name:        manifest.GetName(),
+		Namespace:   namespaceManifest,
+		Annotations: manifest.GetAnnotations(),
 	}
 }
 
