@@ -1,5 +1,5 @@
 
-TARGET_BRANCH?=main
+TARGET_BRANCH?=release-candidate-v0.24.0
 # TARGET_BRANCH=feature-branch make dep-update-oss
 
 all: build
