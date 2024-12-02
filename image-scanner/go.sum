@@ -280,8 +280,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba/go.mod h1:dV8lFg6daOBZbT6/BDGIz6Y3WFGn8juu6G+CQ6LHtl0=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241127070215-76c4a4abfeca h1:WXh3S0n1Bu26lWEB05CvH9Lc3NzUlqa9gbWeVCVGkhE=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241127070215-76c4a4abfeca/go.mod h1:NJSMdv+zTUK3p7rML12RZSeAUKHeLaoY3sR/oK0xhwo=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241202083047-d726745ee21f h1:Rw/PBejnZJIKj01tjcPSd1yhUUoAiWeGio/BOGeT0k0=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241202083047-d726745ee21f/go.mod h1:NJSMdv+zTUK3p7rML12RZSeAUKHeLaoY3sR/oK0xhwo=
 github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
