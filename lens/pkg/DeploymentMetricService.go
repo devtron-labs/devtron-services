@@ -125,7 +125,7 @@ func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *MetricRequ
 		}
 		lastRelease = nil
 	}
-	metrics, err := impl.populateMetrics(releases, materials, leadTimes, lastRelease)
+	metrics, err := impl.populateMetrics(materials, leadTimes, lastRelease)
 	if err != nil {
 		return nil, err
 	}
