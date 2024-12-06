@@ -23,6 +23,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 type GitOptions struct {
@@ -99,8 +100,14 @@ func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 	}
 }
 
+func ChangeOrderOfExecutionOfMaterialForCloning(ciProjectDetails []CiProjectDetails) {
+	// changing the order of execution to handle cases where git does not clone for cases like a/b and a/b/c if a/b/c is cloned before and git clone cmd will fail as it requires an empty directory
+	sort.Slice(ciProjectDetails, func(i, j int) bool { return ciProjectDetails[i].CheckoutPath < ciProjectDetails[j].CheckoutPath })
+}
+
 func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	cloneAndCheckoutGitMaterials := func() error {
+		ChangeOrderOfExecutionOfMaterialForCloning(ciProjectDetails)
 		for index, prj := range ciProjectDetails {
 			// git clone
 			log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
