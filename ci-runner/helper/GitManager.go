@@ -22,6 +22,7 @@ import (
 	"github.com/devtron-labs/ci-runner/util"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 )
@@ -102,7 +103,9 @@ func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 
 func ChangeOrderOfExecutionOfMaterialForCloning(ciProjectDetails []CiProjectDetails) {
 	// changing the order of execution to handle cases where git does not clone for cases like a/b and a/b/c if a/b/c is cloned before and git clone cmd will fail as it requires an empty directory
-	sort.Slice(ciProjectDetails, func(i, j int) bool { return ciProjectDetails[i].CheckoutPath < ciProjectDetails[j].CheckoutPath })
+	sort.Slice(ciProjectDetails, func(i, j int) bool {
+		return path.Clean(ciProjectDetails[i].CheckoutPath) < path.Clean(ciProjectDetails[j].CheckoutPath)
+	})
 }
 
 func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
