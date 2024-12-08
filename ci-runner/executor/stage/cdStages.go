@@ -178,15 +178,18 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 	}
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
-
+	if err != nil {
+		log.Println(util.DEVTRON, "error while getting global envs", err)
+		return nil, err
+	}
 	allPluginArtifacts := helper.NewPluginArtifact()
 	if len(ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
 		refStageMap := make(map[int][]*helper.StepObject)
 		for _, ref := range ciCdRequest.CommonWorkflowRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
-		scriptEnvs["DEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
-		scriptEnvs["DIGEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
+		scriptEnvs.SystemEnv["DEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
+		scriptEnvs.SystemEnv["DIGEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
 		var stage = helper.StepType(ciCdRequest.CommonWorkflowRequest.StageType)
 		pluginArtifacts, _, step, err := impl.stageExecutorManager.RunCiCdSteps(stage, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil)
 		if err != nil {

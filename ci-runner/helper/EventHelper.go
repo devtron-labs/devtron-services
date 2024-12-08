@@ -144,7 +144,8 @@ type CommonWorkflowRequest struct {
 	IgnoreDockerCachePull          bool                             `json:"ignoreDockerCachePull"`
 	CacheInvalidate                bool                             `json:"cacheInvalidate"`
 	IsPvcMounted                   bool                             `json:"IsPvcMounted"`
-	ExtraEnvironmentVariables      map[string]string                `json:"extraEnvironmentVariables"`
+	RuntimeEnvironmentVariables    map[string]string                `json:"runtimeEnvironmentVariables"`
+	SystemEnvironmentVariables     map[string]string                `json:"systemEnvironmentVariables"`
 	EnableBuildContext             bool                             `json:"enableBuildContext"`
 	AppId                          int                              `json:"appId"`
 	EnvironmentId                  int                              `json:"environmentId"`

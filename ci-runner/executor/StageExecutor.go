@@ -37,8 +37,8 @@ type StageExecutorImpl struct {
 }
 
 type StageExecutor interface {
-	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *helper.StepObject, err error)
-	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string, stageType helper.PipelineType) error
+	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *helper.StepObject, err error)
+	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvVariables *util2.ScriptEnvVariables, stageType helper.PipelineType) error
 }
 
 func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor ScriptExecutor) *StageExecutorImpl {
@@ -48,7 +48,7 @@ func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor Scr
 	}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (*helper.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *helper.StepObject, error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (*helper.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *helper.StepObject, error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
@@ -65,7 +65,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		)
 
 		executeStep := func() error {
-			refPluginArtifacts, failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, globalEnvironmentVariables, preCiStageVariable, stageVariable)
+			refPluginArtifacts, failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, scriptEnvVariables, preCiStageVariable, stageVariable)
 			if err != nil {
 				return err
 			}
@@ -96,18 +96,17 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 }
 
 func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
-	refStageMap map[int][]*helper.StepObject, globalEnvironmentVariables map[string]string,
-	preCiStageVariable map[int]map[string]*commonBean.VariableObject,
+	refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject,
 	stageVariable map[int]map[string]*commonBean.VariableObject) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
 	var vars []*commonBean.VariableObject
 	if stepType == helper.STEP_TYPE_REF_PLUGIN {
-		vars, err = deduceVariables(step.InputVars, globalEnvironmentVariables, nil, nil, stageVariable)
+		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
 	} else {
 		log.Printf("running step : %s\n", step.Name)
 		if stepType == helper.STEP_TYPE_PRE {
-			vars, err = deduceVariables(step.InputVars, globalEnvironmentVariables, stageVariable, nil, nil)
+			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, stageVariable, nil, nil)
 		} else if stepType == helper.STEP_TYPE_POST {
-			vars, err = deduceVariables(step.InputVars, globalEnvironmentVariables, preCiStageVariable, stageVariable, nil)
+			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, preCiStageVariable, stageVariable, nil)
 		}
 	}
 	if err != nil {
@@ -120,7 +119,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	scriptEnvs := make(map[string]string)
 	inputFileMount := make(map[string]string)
 	// global scope definition
-	for key, value := range globalEnvironmentVariables {
+	for key, value := range scriptEnvVariables.RuntimeEnv {
 		scriptEnvs[key] = value
 	}
 	// stage scope definition
@@ -133,6 +132,11 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		if len(v.Value) == 0 {
 			emptyVariableList = append(emptyVariableList, v.Name)
 		}
+	}
+	// system scope definition
+	// will override global and stage scope if the same key is present
+	for key, value := range scriptEnvVariables.SystemEnv {
+		scriptEnvs[key] = value
 	}
 	if stepType == helper.STEP_TYPE_PRE || stepType == helper.STEP_TYPE_POST {
 		log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
@@ -287,7 +291,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				}
 			}
 		}
-		refPluginArtifacts, opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, globalEnvironmentVariables, nil)
+		refPluginArtifacts, opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, scriptEnvVariables, nil)
 		if err != nil {
 			fmt.Println(err)
 			return nil, step, err
@@ -351,7 +355,7 @@ func populateOutVars(outData map[string]string, desired []*commonBean.VariableOb
 	return finalOutVars, nil
 }
 
-func deduceVariables(desiredVars []*commonBean.VariableObject, globalVars map[string]string, preeCiStageVariable map[int]map[string]*commonBean.VariableObject, postCiStageVariables map[int]map[string]*commonBean.VariableObject, refPluginStageVariables map[int]map[string]*commonBean.VariableObject) ([]*commonBean.VariableObject, error) {
+func deduceVariables(desiredVars []*commonBean.VariableObject, scriptEnvVars *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, postCiStageVariables map[int]map[string]*commonBean.VariableObject, refPluginStageVariables map[int]map[string]*commonBean.VariableObject) ([]*commonBean.VariableObject, error) {
 	var inputVars []*commonBean.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
@@ -362,7 +366,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, globalVars map[st
 			}
 			inputVars = append(inputVars, desired)
 		case commonBean.VariableTypeRefPreCi:
-			if v, found := preeCiStageVariable[desired.ReferenceVariableStepIndex]; found {
+			if v, found := preCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
 					err := desired.TypeCheck()
@@ -392,7 +396,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, globalVars map[st
 				return nil, fmt.Errorf("RUNTIME_ERROR_%s_not_found ", desired.Name)
 			}
 		case commonBean.VariableTypeRefGlobal:
-			desired.Value = globalVars[desired.ReferenceVariableName]
+			desired.Value = scriptEnvVars.SystemEnv[desired.ReferenceVariableName]
 			err := desired.TypeCheck()
 			if err != nil {
 				return nil, err
@@ -419,7 +423,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, globalVars map[st
 
 }
 
-func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvs map[string]string, stageType helper.PipelineType) error {
+func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvVariables *util2.ScriptEnvVariables, stageType helper.PipelineType) error {
 	log.Println(util.DEVTRON, " cd-stage-processing")
 	//cleaning the directory
 	err := os.RemoveAll(util.Output_path)
@@ -433,6 +437,16 @@ func (impl *StageExecutorImpl) RunCdStageTasks(ciContext cictx.CiContext, tasks 
 		return err
 	}
 	taskMap := make(map[string]*helper.Task)
+	scriptEnvs := make(map[string]string)
+	// global scope definition
+	for key, value := range scriptEnvVariables.RuntimeEnv {
+		scriptEnvs[key] = value
+	}
+	// system scope definition
+	// will override global scope if same key is present
+	for key, value := range scriptEnvVariables.SystemEnv {
+		scriptEnvs[key] = value
+	}
 	for i, task := range tasks {
 		if _, ok := taskMap[task.Name]; ok {
 			log.Println("duplicate task found in yaml, already run so ignoring")
