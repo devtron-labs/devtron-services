@@ -19,7 +19,7 @@ package helper
 import (
 	"fmt"
 	"github.com/Knetic/govaluate"
-	"strconv"
+	commonBean "github.com/devtron-labs/common-lib/workflow"
 )
 
 type ConditionObject struct {
@@ -30,7 +30,7 @@ type ConditionObject struct {
 	typecastConditionalValue interface{}
 }
 
-func ShouldTriggerStage(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+func ShouldTriggerStage(conditions []*ConditionObject, variables []*commonBean.VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
 	status := true
 	for _, condition := range conditions {
@@ -47,7 +47,7 @@ func ShouldTriggerStage(conditions []*ConditionObject, variables []*VariableObje
 	}
 }
 
-func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) (bool, error) {
+func StageIsSuccess(conditions []*ConditionObject, variables []*commonBean.VariableObject) (bool, error) {
 	conditionType := conditions[0].ConditionType //assuming list has min 1
 	status := true
 	for _, condition := range conditions {
@@ -64,20 +64,20 @@ func StageIsSuccess(conditions []*ConditionObject, variables []*VariableObject) 
 	}
 }
 
-func evaluateExpression(condition *ConditionObject, variables []*VariableObject) (status bool, err error) {
-	variableMap := make(map[string]*VariableObject)
+func evaluateExpression(condition *ConditionObject, variables []*commonBean.VariableObject) (status bool, err error) {
+	variableMap := make(map[string]*commonBean.VariableObject)
 	for _, variable := range variables {
 		variableMap[variable.Name] = variable
 	}
 	variableOperand := variableMap[condition.ConditionOnVariable]
 	if variableOperand.TypedValue == nil {
-		converted, err := TypeConverter(variableOperand.Value, variableOperand.Format)
+		converted, err := variableOperand.Format.Convert(variableOperand.Value)
 		if err != nil {
 			return false, err
 		}
 		variableOperand.TypedValue = converted
 	}
-	refOperand, err := TypeConverter(condition.ConditionalValue, variableOperand.Format)
+	refOperand, err := variableOperand.Format.Convert(condition.ConditionalValue)
 	if err != nil {
 		return false, err
 	}
@@ -94,19 +94,4 @@ func evaluateExpression(condition *ConditionObject, variables []*VariableObject)
 	}
 	status = result.(bool)
 	return status, nil
-}
-
-func TypeConverter(value string, format Format) (interface{}, error) {
-	switch format {
-	case STRING:
-		return value, nil
-	case NUMBER:
-		return strconv.ParseFloat(value, 8)
-	case BOOL:
-		return strconv.ParseBool(value)
-	case DATE:
-		return value, nil
-	default:
-		return nil, fmt.Errorf("unsupported datatype")
-	}
 }

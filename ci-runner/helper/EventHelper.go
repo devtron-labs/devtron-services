@@ -144,7 +144,8 @@ type CommonWorkflowRequest struct {
 	IgnoreDockerCachePull          bool                             `json:"ignoreDockerCachePull"`
 	CacheInvalidate                bool                             `json:"cacheInvalidate"`
 	IsPvcMounted                   bool                             `json:"IsPvcMounted"`
-	ExtraEnvironmentVariables      map[string]string                `json:"extraEnvironmentVariables"`
+	RuntimeEnvironmentVariables    map[string]string                `json:"runtimeEnvironmentVariables"`
+	SystemEnvironmentVariables     map[string]string                `json:"systemEnvironmentVariables"`
 	EnableBuildContext             bool                             `json:"enableBuildContext"`
 	AppId                          int                              `json:"appId"`
 	EnvironmentId                  int                              `json:"environmentId"`
@@ -775,11 +776,3 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 	event.PipelineType = stage
 	return event
 }
-
-type StepType string
-
-const (
-	STEP_TYPE_PRE        StepType = "PRE"
-	STEP_TYPE_POST       StepType = "POST"
-	STEP_TYPE_REF_PLUGIN StepType = "REF_PLUGIN"
-)

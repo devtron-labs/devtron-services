@@ -30,6 +30,7 @@ import (
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
+	commonBean "github.com/devtron-labs/common-lib/workflow"
 	"io/ioutil"
 	"log"
 	"os"
@@ -209,9 +210,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	if err != nil {
 		return artifactUploaded, err
 	}
-	ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables = extraEnvVars
+	ciCdRequest.CommonWorkflowRequest.RuntimeEnvironmentVariables = extraEnvVars
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {
+		log.Println(util.DEVTRON, "error while getting global envs", err)
 		return artifactUploaded, err
 	}
 	// Get devtron-ci yaml
@@ -234,7 +236,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		refStageMap[ref.Id] = ref.Steps
 	}
 
-	var preCiStageOutVariable map[int]map[string]*helper.VariableObject
+	var preCiStageOutVariable map[int]map[string]*commonBean.VariableObject
 	start = time.Now()
 	metrics.PreCiStartTime = start
 	var resultsFromPlugin json.RawMessage
@@ -292,14 +294,14 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
 	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
 	// imageDigest and ciProjectDetails are optional fields
-	if scriptEnvs["externalCiArtifact"] != "" {
+	if scriptEnvs.RuntimeEnv["externalCiArtifact"] != "" {
 		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
-		dest = scriptEnvs["externalCiArtifact"]
-		digest = scriptEnvs["imageDigest"]
+		dest = scriptEnvs.RuntimeEnv["externalCiArtifact"]
+		digest = scriptEnvs.RuntimeEnv["imageDigest"]
 		if len(digest) == 0 {
 			var useAppDockerConfigForPrivateRegistries bool
 			var err error
-			useAppDockerConfig, ok := ciCdRequest.CommonWorkflowRequest.ExtraEnvironmentVariables["useAppDockerConfig"]
+			useAppDockerConfig, ok := ciCdRequest.CommonWorkflowRequest.RuntimeEnvironmentVariables["useAppDockerConfig"]
 			if ok && len(useAppDockerConfig) > 0 {
 				useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
 				if err != nil {
@@ -321,7 +323,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			digest = imgDigest
 		}
 		var tempDetails []*helper.CiProjectDetailsMin
-		err := json.Unmarshal([]byte(scriptEnvs["ciProjectDetails"]), &tempDetails)
+		err := json.Unmarshal([]byte(scriptEnvs.RuntimeEnv["ciProjectDetails"]), &tempDetails)
 		if err != nil {
 			fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
 			fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
@@ -355,7 +357,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
 	buildSkipEnabled bool, refStageMap map[int][]*helper.StepObject,
-	scriptEnvs map[string]string, artifactUploaded bool) (json.RawMessage, map[int]map[string]*helper.VariableObject, error) {
+	scriptEnvs *util2.ScriptEnvVariables, artifactUploaded bool) (json.RawMessage, map[int]map[string]*commonBean.VariableObject, error) {
 	start := time.Now()
 	metrics.PreCiStartTime = start
 	if !buildSkipEnabled {
@@ -382,8 +384,8 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 }
 
 func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
-	refStageMap map[int][]*helper.StepObject, scriptEnvs map[string]string, artifactUploaded bool,
-	preCiStageOutVariable map[int]map[string]*helper.VariableObject) (string, error) {
+	refStageMap map[int][]*helper.StepObject, scriptEnvs *util2.ScriptEnvVariables, artifactUploaded bool,
+	preCiStageOutVariable map[int]map[string]*commonBean.VariableObject) (string, error) {
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
@@ -396,7 +398,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 		if len(postCiStepsToTriggerOnCiFail) > 0 {
 			log.Println("Running POST-CI steps which are enabled to RUN even on CI FAIL")
 			// build success will always be false
-			scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
+			scriptEnvs.SystemEnv[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
 			impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
 		}
@@ -436,12 +438,12 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 	return digest, err
 }
 
-func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) (*helper.PluginArtifacts, json.RawMessage, error) {
+func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) (*helper.PluginArtifacts, json.RawMessage, error) {
 	log.Println("running POST-CI steps")
 	// sending build success as true always as post-ci triggers only if ci gets success
-	scriptEnvs[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
-	scriptEnvs["DEST"] = dest
-	scriptEnvs["DIGEST"] = digest
+	scriptEnvs.SystemEnv[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
+	scriptEnvs.SystemEnv["DEST"] = dest
+	scriptEnvs.SystemEnv["DIGEST"] = digest
 	// run post artifact processing
 	pluginArtifactsFromFile, _, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable)
 	if err != nil {
@@ -491,7 +493,7 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
 }
 
-func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs map[string]string, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*helper.VariableObject, artifactUploaded bool) (string, string, error) {
+func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, artifactUploaded bool) (string, string, error) {
 	dest, err := impl.runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
 	if err != nil {
 		return "", "", err
@@ -589,9 +591,9 @@ func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest str
 }
 
 func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *helper.CommonWorkflowRequest) (map[string]string, error) {
-	if len(ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]) > 0 {
+	if len(ciRequest.RuntimeEnvironmentVariables["externalCiArtifact"]) > 0 {
 		var err error
-		image := ciRequest.ExtraEnvironmentVariables["externalCiArtifact"]
+		image := ciRequest.RuntimeEnvironmentVariables["externalCiArtifact"]
 		if !strings.Contains(image, ":") {
 			//check for tag name
 			if utils.IsValidDockerTagName(image) {
@@ -601,7 +603,7 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 					log.Println("Error in building docker image", "err", err)
 					return nil, err
 				}
-				ciRequest.ExtraEnvironmentVariables["externalCiArtifact"] = image
+				ciRequest.RuntimeEnvironmentVariables["externalCiArtifact"] = image
 			} else {
 				return nil, errors.New("external-ci-artifact image is neither a url nor a tag name")
 			}
@@ -610,12 +612,12 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 		if ciRequest.ShouldPullDigest {
 			var useAppDockerConfigForPrivateRegistries bool
 			var err error
-			useAppDockerConfig, ok := ciRequest.ExtraEnvironmentVariables["useAppDockerConfig"]
+			useAppDockerConfig, ok := ciRequest.RuntimeEnvironmentVariables["useAppDockerConfig"]
 			if ok && len(useAppDockerConfig) > 0 {
 				useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
 				if err != nil {
 					fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
-					return ciRequest.ExtraEnvironmentVariables, err
+					return ciRequest.RuntimeEnvironmentVariables, err
 				}
 			}
 			var dockerAuthConfig *bean.DockerAuthConfig
@@ -628,12 +630,12 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(image, ciRequest.UseDockerApiToGetDigest, dockerAuthConfig)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
-				return ciRequest.ExtraEnvironmentVariables, err
+				return ciRequest.RuntimeEnvironmentVariables, err
 			}
 			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
 			log.Println(fmt.Sprintf("image:- %s , image digest:- %s", image, imgDigest))
-			ciRequest.ExtraEnvironmentVariables["imageDigest"] = imgDigest
+			ciRequest.RuntimeEnvironmentVariables["imageDigest"] = imgDigest
 		}
 	}
-	return ciRequest.ExtraEnvironmentVariables, nil
+	return ciRequest.RuntimeEnvironmentVariables, nil
 }
