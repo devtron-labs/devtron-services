@@ -101,8 +101,8 @@ func NewGitManagerImpl(gitCliManager GitCliManager) *GitManager {
 	}
 }
 
-func ChangeOrderOfExecutionOfMaterialForCloning(ciProjectDetails []CiProjectDetails) {
-	// changing the order of execution to handle cases where git does not clone for cases like a/b and a/b/c if a/b/c is cloned before and git clone cmd will fail as it requires an empty directory
+// SortProjectDetailsByCheckoutPath sorts the project details by checkout path with path cleaning which handles extra slashes
+func SortProjectDetailsByCheckoutPath(ciProjectDetails []CiProjectDetails) {
 	sort.Slice(ciProjectDetails, func(i, j int) bool {
 		return path.Clean(ciProjectDetails[i].CheckoutPath) < path.Clean(ciProjectDetails[j].CheckoutPath)
 	})
@@ -110,7 +110,9 @@ func ChangeOrderOfExecutionOfMaterialForCloning(ciProjectDetails []CiProjectDeta
 
 func (impl *GitManager) CloneAndCheckout(ciProjectDetails []CiProjectDetails) error {
 	cloneAndCheckoutGitMaterials := func() error {
-		ChangeOrderOfExecutionOfMaterialForCloning(ciProjectDetails)
+		// changing the order of execution(sorting by checkout path) to handle cases where git does not clone for
+		// cases like a/b and a/b/c if a/b/c is cloned before and git clone cmd will fail as it requires an empty directory
+		SortProjectDetailsByCheckoutPath(ciProjectDetails)
 		for index, prj := range ciProjectDetails {
 			// git clone
 			log.Println("-----> git " + prj.CloningMode + " cloning " + prj.GitRepository)
