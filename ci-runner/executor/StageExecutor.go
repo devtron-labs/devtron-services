@@ -117,7 +117,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	//variables with empty value
 	var emptyVariableList []string
 	scriptEnvs := make(map[string]string)
-	inputFileMount := make(map[string]string)
+	variableFileMount := make(map[string]string)
 	// global scope definition
 	for key, value := range scriptEnvVariables.RuntimeEnv {
 		scriptEnvs[key] = value
@@ -126,11 +126,17 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	// will override global scope if same key is present
 	for _, v := range step.InputVars {
 		if v.Format == commonBean.FormatTypeFile {
-			inputFileMount[v.Value] = v.Value
+			variableFileMount[v.Value] = v.Value
 		}
 		scriptEnvs[v.Name] = v.Value
 		if len(v.Value) == 0 {
 			emptyVariableList = append(emptyVariableList, v.Name)
+		}
+	}
+
+	for _, v := range step.OutputVars {
+		if v.Format == commonBean.FormatTypeFile {
+			variableFileMount[v.Value] = v.Value
 		}
 	}
 	// system scope definition
@@ -231,7 +237,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				OutputDirMount:    outputDirMount,
 			}
 
-			for fileSrc, fileDst := range inputFileMount {
+			for fileSrc, fileDst := range variableFileMount {
 				fileMountPaths := &helper.MountPath{SrcPath: fileSrc, DstPath: fileDst}
 				executionConf.ExtraVolumeMounts = append(executionConf.ExtraVolumeMounts, fileMountPaths)
 			}
