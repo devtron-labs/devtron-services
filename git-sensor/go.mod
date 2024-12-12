@@ -4,7 +4,7 @@ go 1.21
 
 toolchain go1.22.4
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241121092824-79be1ba0e3da
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241127070215-76c4a4abfeca
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -88,3 +88,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	mellium.im/sasl v0.3.1 // indirect
 )
+
+replace github.com/devtron-labs/git-sensor => github.com/devtron-labs/devtron-services/git-sensor v0.0.0-20241103151131-e0ee0068cae4
