@@ -151,6 +151,14 @@ func GetSystemEnvVariables() map[string]string {
 	envVars := os.Environ()
 	for _, envVar := range envVars {
 		subs := strings.SplitN(envVar, "=", 2)
+		if len(subs) != 2 {
+			// skip invalid env variables for panic handling
+			continue
+		}
+		if subs[0] == util.CiCdEventEnvKey {
+			// skip CI_CD_EVENT env variable as it is internal to the system
+			continue
+		}
 		envs[subs[0]] = subs[1]
 	}
 	return envs

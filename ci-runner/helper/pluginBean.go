@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	commonBean "github.com/devtron-labs/common-lib/workflow"
+	"strings"
 )
 
 type RefPluginObject struct {
@@ -65,6 +66,20 @@ type StepObject struct {
 type MountPath struct {
 	SrcPath string `json:"sourcePath"`
 	DstPath string `json:"destinationPath"`
+}
+
+func NewMountPath(srcPath, dstPath string) *MountPath {
+	return &MountPath{
+		SrcPath: sanitiseMountPath(srcPath),
+		DstPath: sanitiseMountPath(dstPath),
+	}
+}
+
+func sanitiseMountPath(pathString string) string {
+	// trim leading and trailing single quotes, if any
+	strings.Trim(pathString, "'")
+	// add single quotes to sanitize the src/ dst path
+	return fmt.Sprintf("'%s'", pathString)
 }
 
 // ----------

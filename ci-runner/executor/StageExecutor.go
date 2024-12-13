@@ -218,7 +218,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 					log.Println(util.DEVTRON, err)
 					return nil, step, err
 				}
-				path := &helper.MountPath{DstPath: artifact, SrcPath: filepath.Join(stepArtifact, artifact)}
+				path := helper.NewMountPath(filepath.Join(stepArtifact, artifact), artifact)
 				outputDirMount = append(outputDirMount, path)
 			}
 			executionConf := &executionConf{
@@ -238,7 +238,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			}
 
 			for fileSrc, fileDst := range variableFileMount {
-				fileMountPaths := &helper.MountPath{SrcPath: fileSrc, DstPath: fileDst}
+				fileMountPaths := helper.NewMountPath(fileSrc, fileDst)
 				executionConf.ExtraVolumeMounts = append(executionConf.ExtraVolumeMounts, fileMountPaths)
 			}
 			if executionConf.SourceCodeMount != nil {
@@ -361,13 +361,23 @@ func populateOutVars(outData map[string]string, desired []*commonBean.VariableOb
 	return finalOutVars, nil
 }
 
+func validateVariableObject(variableObject *commonBean.VariableObject) error {
+	if len(variableObject.Value) == 0 {
+		return nil
+	}
+	err := variableObject.TypeCheck()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func deduceVariables(desiredVars []*commonBean.VariableObject, scriptEnvVars *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, postCiStageVariables map[int]map[string]*commonBean.VariableObject, refPluginStageVariables map[int]map[string]*commonBean.VariableObject) ([]*commonBean.VariableObject, error) {
 	var inputVars []*commonBean.VariableObject
 	for _, desired := range desiredVars {
 		switch desired.VariableType {
 		case commonBean.VariableTypeValue:
-			err := desired.TypeCheck()
-			if err != nil {
+			if err := validateVariableObject(desired); err != nil {
 				return nil, err
 			}
 			inputVars = append(inputVars, desired)
@@ -375,8 +385,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, scriptEnvVars *ut
 			if v, found := preCiStageVariable[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
-					err := desired.TypeCheck()
-					if err != nil {
+					if err := validateVariableObject(desired); err != nil {
 						return nil, err
 					}
 					inputVars = append(inputVars, desired)
@@ -390,8 +399,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, scriptEnvVars *ut
 			if v, found := postCiStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
-					err := desired.TypeCheck()
-					if err != nil {
+					if err := validateVariableObject(desired); err != nil {
 						return nil, err
 					}
 					inputVars = append(inputVars, desired)
@@ -403,8 +411,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, scriptEnvVars *ut
 			}
 		case commonBean.VariableTypeRefGlobal:
 			desired.Value = scriptEnvVars.SystemEnv[desired.ReferenceVariableName]
-			err := desired.TypeCheck()
-			if err != nil {
+			if err := validateVariableObject(desired); err != nil {
 				return nil, err
 			}
 			inputVars = append(inputVars, desired)
@@ -412,8 +419,7 @@ func deduceVariables(desiredVars []*commonBean.VariableObject, scriptEnvVars *ut
 			if v, found := refPluginStageVariables[desired.ReferenceVariableStepIndex]; found {
 				if d, foundD := v[desired.ReferenceVariableName]; foundD {
 					desired.Value = d.Value
-					err := desired.TypeCheck()
-					if err != nil {
+					if err := validateVariableObject(desired); err != nil {
 						return nil, err
 					}
 					inputVars = append(inputVars, desired)
