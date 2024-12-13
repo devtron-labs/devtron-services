@@ -46,11 +46,20 @@ func GetFromUrlWithRetry(baseurl string, absoluteUrl string, username string, pa
 	}
 
 	for retries > 0 {
-		response, errInGetUrl = client.Get(absoluteUrl,
-			getter.WithURL(baseurl),
-			getter.WithInsecureSkipVerifyTLS(allowInsecureConnection),
-			getter.WithBasicAuth(username, password),
-		)
+
+		var options []getter.Option
+
+		if allowInsecureConnection {
+			options = append(options, getter.WithInsecureSkipVerifyTLS(allowInsecureConnection))
+		}
+		if len(username) > 0 && len(password) > 0 {
+			options = append(options, getter.WithBasicAuth(username, password))
+		}
+		if len(baseurl)>0{
+			options = append(options,)getter.WithURL(baseurl)
+		}
+
+		response, errInGetUrl = client.Get(absoluteUrl, options...)
 
 		if errInGetUrl != nil {
 			retries -= 1
