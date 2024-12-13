@@ -55,8 +55,8 @@ func GetFromUrlWithRetry(baseurl string, absoluteUrl string, username string, pa
 		if len(username) > 0 && len(password) > 0 {
 			options = append(options, getter.WithBasicAuth(username, password))
 		}
-		if len(baseurl)>0{
-			options = append(options,)getter.WithURL(baseurl)
+		if len(baseurl) > 0 {
+			options = append(options, getter.WithURL(baseurl))
 		}
 
 		response, errInGetUrl = client.Get(absoluteUrl, options...)
