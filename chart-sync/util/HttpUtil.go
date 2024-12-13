@@ -19,60 +19,26 @@ package util
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/devtron-labs/chart-sync/internals/sql"
 	"github.com/pkg/errors"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/getter"
-	"io/ioutil"
-	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 )
 
-func GetFromPublicUrlWithRetry(url string) (*bytes.Buffer, error) {
-	var (
-		err      error
-		response *http.Response
-		retries  = 3
-	)
-
-	for retries > 0 {
-		response, err = http.Get(url)
-		if err != nil {
-			retries -= 1
-			time.Sleep(1 * time.Second)
-		} else {
-			break
-		}
-	}
-	if response != nil {
-		defer response.Body.Close()
-		statusCode := response.StatusCode
-		if statusCode != http.StatusOK {
-			return nil, errors.New(fmt.Sprintf("Error in getting content from url - %s. Status code : %s", url, strconv.Itoa(statusCode)))
-		}
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return nil, err
-		}
-		return bytes.NewBuffer(body), nil
-	}
-	return nil, err
-}
-
-func GetFromPrivateUrlWithRetry(baseurl string, absoluteUrl string, username string, password string, allowInsecureConnection bool) (*bytes.Buffer, error) {
+func GetFromUrlWithRetry(baseurl string, absoluteUrl string, username string, password string, allowInsecureConnection bool) (*bytes.Buffer, error) {
 	var (
 		err, errInGetUrl error
 		response         *bytes.Buffer
 		retries          = 3
 	)
 	getters := getter.All(&cli.EnvSettings{})
-	u, err := url.Parse(baseurl)
+	u, err := url.Parse(absoluteUrl)
 	if err != nil {
 		return nil, errors.Errorf("invalid chart URL format: %s", baseurl)
 	}
+
 	client, err := getters.ByScheme(u.Scheme)
 
 	if err != nil {

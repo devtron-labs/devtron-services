@@ -79,12 +79,7 @@ func (impl *HelmRepoManagerImpl) ValuesJson(repoUrl string, version *repo.ChartV
 	}
 
 	var byteBuffer *bytes.Buffer
-	if len(username) > 0 && len(password) > 0 {
-		byteBuffer, err = util.GetFromPrivateUrlWithRetry(repoUrl, absoluteChartURL, username, password, allowInsecureConnection)
-	} else {
-		byteBuffer, err = util.GetFromPublicUrlWithRetry(absoluteChartURL)
-	}
-
+	byteBuffer, err = util.GetFromUrlWithRetry(repoUrl, absoluteChartURL, username, password, allowInsecureConnection)
 	if err != nil {
 		fmt.Println("err", err)
 		return "", "", "", "", err
