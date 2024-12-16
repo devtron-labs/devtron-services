@@ -155,10 +155,12 @@ func GetSystemEnvVariables() map[string]string {
 			// skip invalid env variables for panic handling
 			continue
 		}
-		if subs[0] == util.CiCdEventEnvKey {
-			// skip CI_CD_EVENT env variable as it is internal to the system
-			continue
-		}
+		// TODO: We're currently using CI_CD_EVENT in our pre-defined Plugins.
+		//  Remove this dependency and then remove add this check
+		//if subs[0] == util.CiCdEventEnvKey {
+		//	// skip CI_CD_EVENT env variable as it is internal to the system
+		//	continue
+		//}
 		envs[subs[0]] = subs[1]
 	}
 	return envs
