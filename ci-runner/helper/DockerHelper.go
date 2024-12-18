@@ -1030,14 +1030,7 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
 	// add driver options for app labels
-	if len(labels) > 0 {
-		driverOpts["driverOptions"] += "\"labels="
-		for k, v := range labels {
-			driverOpts["driverOptions"] += fmt.Sprintf("%s=%s,", k, v)
-		}
-		driverOpts["driverOptions"] = strings.TrimSuffix(driverOpts["driverOptions"], ",")
-		driverOpts["driverOptions"] += "\""
-	}
+	driverOpts["driverOptions"] = getBuildXDriverOptionsWithLabels(labels, driverOpts["driverOptions"])
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
@@ -1061,6 +1054,27 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 		}
 	}
 	return driverOptions
+}
+
+func getBuildXDriverOptionsWithLabels(labels map[string]string, driverOptions string) string {
+	if len(labels) > 0 {
+		// creating label options
+		labelOptions := ""
+		labelOptions += "\"labels="
+		for k, v := range labels {
+			labelOptions += fmt.Sprintf("%s=%s,", k, v)
+		}
+		labelOptions = strings.TrimSuffix(labelOptions, ",")
+		labelOptions += "\""
+
+		if len(driverOptions) > 0 {
+			driverOptions += fmt.Sprintf(",%s", labelOptions)
+		} else {
+			driverOptions = labelOptions
+		}
+	}
+	return driverOptions
+
 }
 
 func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
