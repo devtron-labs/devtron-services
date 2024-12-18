@@ -205,6 +205,9 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				scriptEnvs[k] = v
 			}
 		}
+		// set the script env variables to the existing script env variables
+		// this is required to pass the existing script env variables to the next recursive call
+		scriptEnvVariables.ExistingScriptEnv = scriptEnvs
 		if step.ExecutorType == helper.SHELL {
 			stageOutputVars, err := impl.scriptExecutor.RunScripts(ciContext, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
