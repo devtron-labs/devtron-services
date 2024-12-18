@@ -1029,14 +1029,16 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildxCreate += " --platform=%s "
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
-	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
 	// add driver options for app labels
 	if len(labels) > 0 {
-		driverOpts["driverOptions"] += ",labels="
+		driverOpts["driverOptions"] += "\"labels="
 		for k, v := range labels {
 			driverOpts["driverOptions"] += fmt.Sprintf("%s=%s,", k, v)
 		}
+		driverOpts["driverOptions"] = strings.TrimSuffix(driverOpts["driverOptions"], ",")
+		driverOpts["driverOptions"] += "\""
 	}
+	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
