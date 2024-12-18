@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/executor"
+	adaptor2 "github.com/devtron-labs/ci-runner/executor/adaptor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
@@ -467,18 +468,8 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageScanningStage := func() error {
 		log.Println("Image Scanning Started for digest", digest)
-		scanEvent := &helper.ScanEvent{
-			Image:               dest,
-			ImageDigest:         digest,
-			PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
-			UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
-			DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
-			DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
-			DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
-			ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
-			ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
-		}
-		err := helper.SendEventToClairUtility(scanEvent)
+		scanEvent := adaptor2.GetImageScanEvent(dest, digest, ciCdRequest.CommonWorkflowRequest)
+		err := helper.ExecuteImageScanningViaRest(scanEvent)
 		if err != nil {
 			log.Println("error in running Image Scan", "err", err)
 			return helper.NewCiStageError(err).

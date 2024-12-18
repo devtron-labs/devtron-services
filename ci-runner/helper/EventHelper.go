@@ -597,7 +597,7 @@ func PublishEventsOnRest(jsonBody []byte, topic string, cdRequest *ExtEnvRequest
 	return nil
 }
 
-func SendEventToClairUtility(event *ScanEvent) error {
+func ExecuteImageScanningViaRest(event *ScanEvent) error {
 	jsonBody, err := json.Marshal(event)
 	if err != nil {
 		log.Println(util.DEVTRON, "err", err)
@@ -641,23 +641,37 @@ func SendEventToClairUtility(event *ScanEvent) error {
 	return nil
 }
 
+type ResourceScanSourceType int
+
+const (
+	SourceTypeImage ResourceScanSourceType = 1
+)
+
+type ResourceScanSourceSubType int
+
+const (
+	SourceSubTypeCi ResourceScanSourceSubType = 1 // ci built image(1,1)
+)
+
 type ScanEvent struct {
-	Image               string `json:"image"`
-	ImageDigest         string `json:"imageDigest"`
-	AppId               int    `json:"appId"`
-	EnvId               int    `json:"envId"`
-	PipelineId          int    `json:"pipelineId"`
-	CiArtifactId        int    `json:"ciArtifactId"`
-	UserId              int    `json:"userId"`
-	AccessKey           string `json:"accessKey"`
-	SecretKey           string `json:"secretKey"`
-	Token               string `json:"token"`
-	AwsRegion           string `json:"awsRegion"`
-	DockerRegistryId    string `json:"dockerRegistryId"`
-	DockerConnection    string `json:"dockerConnection"`
-	DockerCert          string `json:"dockerCert"`
-	ImageScanMaxRetries int    `json:"imageScanMaxRetries,omitempty"`
-	ImageScanRetryDelay int    `json:"imageScanRetryDelay,omitempty"`
+	Image               string                    `json:"image"`
+	ImageDigest         string                    `json:"imageDigest"`
+	AppId               int                       `json:"appId"`
+	EnvId               int                       `json:"envId"`
+	PipelineId          int                       `json:"pipelineId"`
+	CiArtifactId        int                       `json:"ciArtifactId"`
+	UserId              int                       `json:"userId"`
+	AccessKey           string                    `json:"accessKey"`
+	SecretKey           string                    `json:"secretKey"`
+	Token               string                    `json:"token"`
+	AwsRegion           string                    `json:"awsRegion"`
+	DockerRegistryId    string                    `json:"dockerRegistryId"`
+	DockerConnection    string                    `json:"dockerConnection"`
+	DockerCert          string                    `json:"dockerCert"`
+	ImageScanMaxRetries int                       `json:"imageScanMaxRetries,omitempty"`
+	ImageScanRetryDelay int                       `json:"imageScanRetryDelay,omitempty"`
+	SourceType          ResourceScanSourceType    `json:"sourceType"`
+	SourceSubType       ResourceScanSourceSubType `json:"sourceSubType"`
 }
 
 func (dockerBuildConfig *DockerBuildConfig) GetProvenanceFlag() string {
