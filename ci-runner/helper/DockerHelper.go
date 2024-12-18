@@ -344,7 +344,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, ciRequest.AppLabels, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
@@ -938,14 +938,14 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, dockerConnection string, appLabels map[string]string, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	deploymentNames := make([]string, 0)
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, appLabels, ciPipelineId, ciWorkflowId)
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
 		if i == 0 {
@@ -1017,7 +1017,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
+func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts, labels map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1030,6 +1030,13 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
+	// add driver options for app labels
+	if len(labels) > 0 {
+		driverOpts["driverOptions"] += ",labels="
+		for k, v := range labels {
+			driverOpts["driverOptions"] += fmt.Sprintf("%s=%s,", k, v)
+		}
+	}
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])

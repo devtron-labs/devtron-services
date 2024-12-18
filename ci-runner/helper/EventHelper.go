@@ -137,6 +137,7 @@ type CommonWorkflowRequest struct {
 	PostCiSteps                    []*StepObject                    `json:"postCiSteps"`
 	RefPlugins                     []*RefPluginObject               `json:"refPlugins"`
 	AppName                        string                           `json:"appName"`
+	AppLabels                      map[string]string                `json:"appLabels"`
 	TriggerByAuthor                string                           `json:"triggerByAuthor"`
 	CiBuildConfig                  *CiBuildConfigBean               `json:"ciBuildConfig"`
 	CiBuildDockerMtuValue          int                              `json:"ciBuildDockerMtuValue"`
