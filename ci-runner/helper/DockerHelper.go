@@ -1092,7 +1092,9 @@ func parseKeyValuePairs(input string) map[string]string {
 		if len(line) > 0 {
 			kv := strings.SplitN(line, "=", 2)
 			if len(kv) == 2 {
-				keyValuePairs[kv[0]] = kv[1]
+				key := kv[0]
+				value := strings.Trim(kv[1], `"`)
+				keyValuePairs[key] = value
 			}
 		}
 	}
