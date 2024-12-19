@@ -344,7 +344,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, ciRequest.AppLabels, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
@@ -938,14 +938,14 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, dockerConnection string, appLabels map[string]string, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	deploymentNames := make([]string, 0)
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, appLabels, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
 		if i == 0 {
@@ -1017,7 +1017,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts, labels map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
+func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1029,8 +1029,9 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildxCreate += " --platform=%s "
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
-	// add driver options for app labels
-	driverOpts["driverOptions"] = getBuildXDriverOptionsWithLabels(labels, driverOpts["driverOptions"])
+	// add driver options for app labels and annotations
+	driverOpts["driverOptions"] = getBuildXDriverOptionsWithLabelsAndAnnotations(driverOpts["driverOptions"])
+
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
@@ -1056,25 +1057,64 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 	return driverOptions
 }
 
-func getBuildXDriverOptionsWithLabels(labels map[string]string, driverOptions string) string {
-	if len(labels) > 0 {
-		// creating label options
-		labelOptions := ""
-		labelOptions += "\"labels="
-		for k, v := range labels {
-			labelOptions += fmt.Sprintf("%s=%s,", k, v)
+func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string {
+	labels := make(map[string]string)
+	annotations := make(map[string]string)
+
+	// Read labels and annotations from files
+	labelsOut, err := os.ReadFile("/etc/podinfo/labels")
+	if err != nil {
+		log.Println(util.DEVTRON, "error in reading labels from podinfo, err:", err)
+	}
+	annotationsOut, err := os.ReadFile("/etc/podinfo/annotations")
+	if err != nil {
+		log.Println(util.DEVTRON, "error in reading annotations from podinfo, err:", err)
+	}
+
+	// Parse labels and annotations
+	if len(labelsOut) > 0 {
+		labels = parseKeyValuePairs(string(labelsOut))
+	}
+	if len(annotationsOut) > 0 {
+		annotations = parseKeyValuePairs(string(annotationsOut))
+	}
+
+	// Combine driver options
+	driverOptions = getBuildXDriverOptions("labels", labels, driverOptions)
+	driverOptions = getBuildXDriverOptions("annotations", annotations, driverOptions)
+	return driverOptions
+}
+
+func parseKeyValuePairs(input string) map[string]string {
+	keyValuePairs := make(map[string]string)
+	lines := strings.Split(input, "\n")
+	for _, line := range lines {
+		if len(line) > 0 {
+			kv := strings.SplitN(line, "=", 2)
+			if len(kv) == 2 {
+				keyValuePairs[kv[0]] = kv[1]
+			}
 		}
-		labelOptions = strings.TrimSuffix(labelOptions, ",")
-		labelOptions += "\""
+	}
+	return keyValuePairs
+}
+
+func getBuildXDriverOptions(optionType string, options map[string]string, driverOptions string) string {
+	if len(options) > 0 {
+		optionStr := fmt.Sprintf("\"%s=", optionType)
+		for k, v := range options {
+			optionStr += fmt.Sprintf("%s=%s,", k, v)
+		}
+		optionStr = strings.TrimSuffix(optionStr, ",")
+		optionStr += "\""
 
 		if len(driverOptions) > 0 {
-			driverOptions += fmt.Sprintf(",%s", labelOptions)
+			driverOptions += fmt.Sprintf(",%s", optionStr)
 		} else {
-			driverOptions = labelOptions
+			driverOptions = optionStr
 		}
 	}
 	return driverOptions
-
 }
 
 func (impl *DockerHelperImpl) StopDocker(ciContext cicxt.CiContext) error {
