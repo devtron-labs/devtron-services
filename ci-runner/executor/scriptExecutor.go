@@ -177,6 +177,18 @@ type executionConf struct {
 	RunCommandFileName  string // system generated
 }
 
+type fileContentDto struct {
+	content  string
+	filePath string
+}
+
+func newFileContentDto(content, filePath string) *fileContentDto {
+	return &fileContentDto{
+		content:  content,
+		filePath: filePath,
+	}
+}
+
 func RunScriptsInDocker(ciContext cictx.CiContext, impl *StageExecutorImpl, executionConf *executionConf) (map[string]string, error) {
 	envInputFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_in.env", executionConf.scriptFileName))
 	entryScriptFileName := filepath.Join(executionConf.workDirectory, fmt.Sprintf("%s_entry.sh", executionConf.scriptFileName))
