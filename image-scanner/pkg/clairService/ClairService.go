@@ -105,7 +105,7 @@ func (impl *ClairServiceImpl) ScanImage(scanEvent *common.ImageScanEvent, tool *
 	scanEventResponse := &common.ScanEventResponse{
 		RequestData: scanEvent,
 	}
-	_, isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image, false)
+	_, isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image)
 	if err != nil && err != pg.ErrNoRows {
 		impl.Logger.Errorw("error in fetching scan history ", "err", err, "image", scanEvent.Image)
 		return nil, err
