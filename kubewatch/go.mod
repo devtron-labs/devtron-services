@@ -245,4 +245,4 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241219031102-d5eb208ee11b
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241216142105-66f72d747b61
