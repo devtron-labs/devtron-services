@@ -1029,6 +1029,9 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildxCreate += " --platform=%s "
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
+	// add driver options for app labels and annotations
+	driverOpts["driverOptions"] = getBuildXDriverOptionsWithLabelsAndAnnotations(driverOpts["driverOptions"])
+
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
@@ -1049,6 +1052,70 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 			driverOptions += fmt.Sprintf(",%s", driverImageOption)
 		} else {
 			driverOptions = driverImageOption
+		}
+	}
+	return driverOptions
+}
+
+func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string {
+	labels := make(map[string]string)
+	annotations := make(map[string]string)
+
+	// Read labels and annotations from files
+	labelsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/labels"
+	labelsOut, err := os.ReadFile(labelsPath)
+	if err != nil {
+		log.Println(util.DEVTRON, "error in reading labels from podinfo, err:", err)
+	}
+	annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/annotations"
+	annotationsOut, err := os.ReadFile(annotationsPath)
+	if err != nil {
+		log.Println(util.DEVTRON, "error in reading annotations from podinfo, err:", err)
+	}
+
+	// Parse labels and annotations
+	if len(labelsOut) > 0 {
+		labels = parseKeyValuePairs(string(labelsOut))
+	}
+	if len(annotationsOut) > 0 {
+		annotations = parseKeyValuePairs(string(annotationsOut))
+	}
+
+	// Combine driver options
+	driverOptions = getBuildXDriverOptions("labels", labels, driverOptions)
+	driverOptions = getBuildXDriverOptions("annotations", annotations, driverOptions)
+	return driverOptions
+}
+
+func parseKeyValuePairs(input string) map[string]string {
+	keyValuePairs := make(map[string]string)
+	lines := strings.Split(input, "\n")
+	for _, line := range lines {
+		if len(line) > 0 {
+			kv := strings.SplitN(line, "=", 2)
+			if len(kv) == 2 {
+				key := kv[0]
+				value := strings.Trim(kv[1], `"`)
+				keyValuePairs[key] = value
+			}
+		}
+	}
+	return keyValuePairs
+}
+
+func getBuildXDriverOptions(optionType string, options map[string]string, driverOptions string) string {
+	if len(options) > 0 {
+		optionStr := fmt.Sprintf("\"%s=", optionType)
+		for k, v := range options {
+			optionStr += fmt.Sprintf("%s=%s,", k, v)
+		}
+		optionStr = strings.TrimSuffix(optionStr, ",")
+		optionStr += "\""
+
+		if len(driverOptions) > 0 {
+			driverOptions += fmt.Sprintf(",%s", optionStr)
+		} else {
+			driverOptions = optionStr
 		}
 	}
 	return driverOptions
