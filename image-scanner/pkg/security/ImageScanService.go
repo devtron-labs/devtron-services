@@ -454,7 +454,7 @@ func (impl *ImageScanServiceImpl) ProcessScanStep(step repository.ScanToolStep, 
 	return output, nil
 }
 
-func (impl *ImageScanServiceImpl) SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, tool repository.ScanToolMetadata, userId int32) error {
+func (impl *ImageScanServiceImpl) SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error {
 	cvesToBeSaved := make([]*repository.CveStore, 0, len(vulnerabilities))
 	uniqueVulnerabilityMap := make(map[string]*bean.ImageScanOutputObject)
 	allCvesNames := make([]string, 0, len(vulnerabilities))
@@ -498,7 +498,7 @@ func (impl *ImageScanServiceImpl) SaveCvesAndImageScanExecutionResults(vulnerabi
 
 	imageScanExecutionResults := make([]*repository.ImageScanExecutionResult, 0, len(vulnerabilities))
 	for _, vul := range vulnerabilities {
-		imageScanExecutionResult := createImageScanExecutionResultObject(executionHistoryId, vul.Name, vul.Package, vul.PackageVersion, vul.FixedInVersion, vul.Class, vul.Type, vul.TargetName, tool.Id)
+		imageScanExecutionResult := createImageScanExecutionResultObject(executionHistoryId, vul.Name, vul.Package, vul.PackageVersion, vul.FixedInVersion, vul.Class, vul.Type, vul.TargetName, toolId)
 		imageScanExecutionResults = append(imageScanExecutionResults, imageScanExecutionResult)
 	}
 	tx, err := impl.CveStoreRepository.GetConnection().Begin()
@@ -553,7 +553,7 @@ func (impl *ImageScanServiceImpl) ConvertEndStepOutputAndSaveVulnerabilities(ste
 			return err
 		}
 	}
-	err = impl.SaveCvesAndImageScanExecutionResults(vulnerabilities, executionHistoryId, tool, userId)
+	err = impl.SaveCvesAndImageScanExecutionResults(vulnerabilities, executionHistoryId, tool.Id, userId)
 	if err != nil {
 		impl.Logger.Errorw("error, saveCvesAndImageScanExecutionResults", "executionHistoryId", executionHistoryId, "err", err)
 		return err
