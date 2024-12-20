@@ -61,7 +61,7 @@ type ImageScanService interface {
 	GetImageScanRenderDto(registryId string, scanEvent *common.ImageScanEvent) (*common.ImageScanRenderDto, error)
 	GetImageToBeScannedAndFetchCliEnv(scanEvent *common.ImageScanEvent) (string, error)
 	FetchProxyUrl(scanEvent *common.ImageScanEvent) (string, []name.Option, error)
-	SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, tool repository.ScanToolMetadata, userId int32) error
+	SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error
 }
 
 type ImageScanServiceImpl struct {
