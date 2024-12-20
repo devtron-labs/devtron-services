@@ -1062,11 +1062,13 @@ func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string
 	annotations := make(map[string]string)
 
 	// Read labels and annotations from files
-	labelsOut, err := os.ReadFile("/etc/podinfo/labels")
+	labelsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/labels"
+	labelsOut, err := os.ReadFile(labelsPath)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in reading labels from podinfo, err:", err)
 	}
-	annotationsOut, err := os.ReadFile("/etc/podinfo/annotations")
+	annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/annotations"
+	annotationsOut, err := os.ReadFile(annotationsPath)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in reading annotations from podinfo, err:", err)
 	}
