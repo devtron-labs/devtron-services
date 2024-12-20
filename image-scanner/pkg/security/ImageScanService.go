@@ -453,23 +453,7 @@ func (impl *ImageScanServiceImpl) ProcessScanStep(step repository.ScanToolStep, 
 	return output, nil
 }
 
-func (impl *ImageScanServiceImpl) ConvertEndStepOutputAndSaveVulnerabilities(stepOutput []byte, executionHistoryId int, tool repository.ScanToolMetadata, step repository.ScanToolStep, userId int32) error {
-	var vulnerabilities []*bean.ImageScanOutputObject
-	var err error
-	if isV1Template(tool.ResultDescriptorTemplate) { // result descriptor template is go template, go with v1 logic
-		vulnerabilities, err = impl.getImageScanOutputObjectsV1(stepOutput, tool.ResultDescriptorTemplate)
-		if err != nil {
-			impl.Logger.Errorw("error, getImageScanOutputObjectsV1", "stepOutput", stepOutput, "resultDescriptorTemplate", tool.ResultDescriptorTemplate, "err", err)
-			return err
-		}
-	} else { //not go template, go with v2 logic
-		vulnerabilities, err = impl.getImageScanOutputObjectsV2(stepOutput, tool.ResultDescriptorTemplate)
-		if err != nil {
-			impl.Logger.Errorw("error, getImageScanOutputObjectsV2", "stepOutput", stepOutput, "resultDescriptorTemplate", tool.ResultDescriptorTemplate, "err", err)
-			return err
-		}
-	}
-
+func (impl *ImageScanServiceImpl) saveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, tool repository.ScanToolMetadata, userId int32) error {
 	cvesToBeSaved := make([]*repository.CveStore, 0, len(vulnerabilities))
 	uniqueVulnerabilityMap := make(map[string]*bean.ImageScanOutputObject)
 	allCvesNames := make([]string, 0, len(vulnerabilities))
@@ -547,6 +531,30 @@ func (impl *ImageScanServiceImpl) ConvertEndStepOutputAndSaveVulnerabilities(ste
 	err = tx.Commit()
 	if err != nil {
 		impl.Logger.Errorw("error in committing transaction", "err", err)
+		return err
+	}
+	return nil
+}
+
+func (impl *ImageScanServiceImpl) ConvertEndStepOutputAndSaveVulnerabilities(stepOutput []byte, executionHistoryId int, tool repository.ScanToolMetadata, step repository.ScanToolStep, userId int32) error {
+	var vulnerabilities []*bean.ImageScanOutputObject
+	var err error
+	if isV1Template(tool.ResultDescriptorTemplate) { // result descriptor template is go template, go with v1 logic
+		vulnerabilities, err = impl.getImageScanOutputObjectsV1(stepOutput, tool.ResultDescriptorTemplate)
+		if err != nil {
+			impl.Logger.Errorw("error, getImageScanOutputObjectsV1", "stepOutput", stepOutput, "resultDescriptorTemplate", tool.ResultDescriptorTemplate, "err", err)
+			return err
+		}
+	} else { //not go template, go with v2 logic
+		vulnerabilities, err = impl.getImageScanOutputObjectsV2(stepOutput, tool.ResultDescriptorTemplate)
+		if err != nil {
+			impl.Logger.Errorw("error, getImageScanOutputObjectsV2", "stepOutput", stepOutput, "resultDescriptorTemplate", tool.ResultDescriptorTemplate, "err", err)
+			return err
+		}
+	}
+	err = impl.saveCvesAndImageScanExecutionResults(vulnerabilities, executionHistoryId, tool, userId)
+	if err != nil {
+		impl.Logger.Errorw("error, saveCvesAndImageScanExecutionResults", "executionHistoryId", executionHistoryId, "err", err)
 		return err
 	}
 	return nil
