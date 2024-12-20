@@ -29,8 +29,9 @@ import (
 )
 
 type ScriptEnvVariables struct {
-	SystemEnv  map[string]string
-	RuntimeEnv map[string]string
+	SystemEnv         map[string]string
+	RuntimeEnv        map[string]string
+	ExistingScriptEnv map[string]string
 }
 
 func getRuntimeEnvVariables(ciCdRequest *helper.CiCdTriggerEvent) map[string]string {
