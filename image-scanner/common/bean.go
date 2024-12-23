@@ -96,6 +96,10 @@ func (r *ImageScanEvent) IsManifest() bool {
 	return r.SourceType == SourceTypeCode && r.SourceSubType == SourceSubTypeManifest
 }
 
+func (r *ImageScanEvent) IsManifestImage() bool {
+	return r.SourceType == SourceTypeImage && r.SourceSubType == SourceSubTypeManifest
+}
+
 type ScanEventResponse struct {
 	RequestData         *ImageScanEvent            `json:"requestData"`
 	ResponseDataClairV4 []*claircore.Vulnerability `json:"responseDataClairV4"`
