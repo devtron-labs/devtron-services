@@ -285,6 +285,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	if scriptEnvs.RuntimeEnv["externalCiArtifact"] != "" {
 		runtimeImage, runtimeDigest, err := impl.handleRuntimeParametersForCiJob(scriptEnvs.RuntimeEnv, ciCdRequest)
 		if err != nil {
+			log.Println(util.DEVTRON, "error in handling runtime parameters for ci job and getting runtime image and digest")
 			return artifactUploaded, err
 		}
 		if len(runtimeImage) > 0 {
@@ -612,6 +613,7 @@ func (impl *CiStage) handleRuntimeParametersForCiJob(runtimeEnv map[string]strin
 			useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
+				// would use default val of useAppDockerConfigForPrivateRegistries i.e false in case error arises
 			}
 		}
 		var dockerAuthConfig *bean.DockerAuthConfig

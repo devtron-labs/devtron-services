@@ -1,6 +1,9 @@
 package adaptor
 
-import "github.com/devtron-labs/ci-runner/helper"
+import (
+	"github.com/devtron-labs/ci-runner/bean"
+	"github.com/devtron-labs/ci-runner/helper"
+)
 
 func GetImageScanEvent(dest, digest string, commonWorkflowRequest *helper.CommonWorkflowRequest) *helper.ScanEvent {
 	if commonWorkflowRequest == nil {
@@ -16,7 +19,7 @@ func GetImageScanEvent(dest, digest string, commonWorkflowRequest *helper.Common
 		DockerCert:          commonWorkflowRequest.DockerCert,
 		ImageScanMaxRetries: commonWorkflowRequest.ImageScanMaxRetries,
 		ImageScanRetryDelay: commonWorkflowRequest.ImageScanRetryDelay,
-		SourceType:          helper.SourceTypeImage,
-		SourceSubType:       helper.SourceSubTypeCi,
+		SourceType:          bean.SourceTypeImage,
+		SourceSubType:       bean.SourceSubTypeCi,
 	}
 }
