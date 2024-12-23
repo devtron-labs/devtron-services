@@ -59,12 +59,13 @@ const (
 	BUILDX_K8S_DRIVER_NAME   = "devtron-buildx-builder"
 	BUILDX_NODE_NAME         = "devtron-buildx-node-"
 	DOCKERD_OUTPUT_FILE_PATH = "/usr/local/bin/nohup.out"
+	MULTI_TAG_ENV            = "docker_env_multi_tags"
 )
 
 type DockerHelper interface {
 	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
 	DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error
-	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
+	BuildArtifact(ciRequest *CommonWorkflowRequest, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) (string, error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
 	ExtractDigestForBuildx(dest string, ciRequest *CommonWorkflowRequest) (string, error)
@@ -275,7 +276,8 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
 }
 
-func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
+func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) (string, error) {
+
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	err := impl.DockerLogin(ciContext, &DockerCredentials{
 		DockerUsername:     ciRequest.DockerUsername,
@@ -323,7 +325,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			}
 
 		}
-		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
+
+		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig, scriptEnvs, preCiStageOutVariable)
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
@@ -385,7 +388,25 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 
 			multiNodeK8sDriver := useBuildxK8sDriver && len(eligibleK8sDriverNodes) > 1
 			exportBuildxCacheAfterBuild := ciRequest.AsyncBuildxCacheExport && multiNodeK8sDriver
-			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+
+			multiDockerTagsValue := GetMultiDockerTagsValue(scriptEnvs, preCiStageOutVariable)
+			fullUrlDockerTags := []string{}
+			if len(multiDockerTagsValue) > 0 {
+				dockerTags := strings.Split(multiDockerTagsValue, `,`)
+				for _, tmpDockerTag := range dockerTags {
+					tmpDockerTag = strings.TrimSpace(tmpDockerTag)
+					if !strings.Contains(tmpDockerTag, ":") {
+						fullImageUrl, err := BuildDockerImagePathForCustomTag(ciRequest, tmpDockerTag)
+						if err != nil {
+							log.Println("Error in building docker image multiple tags", "fullImageUrl", fullImageUrl, "err", err)
+							return "", err
+						}
+						tmpDockerTag = fullImageUrl
+					}
+					fullUrlDockerTags = append(fullUrlDockerTags, tmpDockerTag)
+				}
+			}
+			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, fullUrlDockerTags)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
@@ -426,7 +447,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if !useBuildx {
-			err = impl.tagDockerBuild(ciContext, ciRequest.DockerRepository, dest)
+			err = impl.tagDockerBuild(ciContext, ciRequest, dest, scriptEnvs, preCiStageOutVariable)
 			if err != nil {
 				return "", err
 			}
@@ -476,25 +497,60 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	return dest, nil
 }
 
-func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
+func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) map[string]string {
 	dockerBuildFlags := make(map[string]string)
 	dockerBuildArgsMap := dockerBuildConfig.Args
 	for k, v := range dockerBuildArgsMap {
 		flagKey := fmt.Sprintf("%s %s", BUILD_ARG_FLAG, k)
-		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+		parsedDockerFlagValue := parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
+		if len(parsedDockerFlagValue) > 0 {
+			dockerBuildFlags[flagKey] = parsedDockerFlagValue
+		}
 	}
 	dockerBuildOptionsMap := dockerBuildConfig.DockerBuildOptions
 	for k, v := range dockerBuildOptionsMap {
 		flagKey := "--" + k
-		dockerBuildFlags[flagKey] = parseDockerFlagParam(v)
+		parsedDockerFlagValue := parseDockerFlagParam(v, scriptEnvs, preCiStageOutVariable)
+		if len(parsedDockerFlagValue) > 0 {
+			dockerBuildFlags[flagKey] = parsedDockerFlagValue
+		}
 	}
 	return dockerBuildFlags
 }
 
-func parseDockerFlagParam(param string) string {
+func parseDockerFlagParam(param string, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) string {
 	value := param
 	if strings.HasPrefix(param, DEVTRON_ENV_VAR_PREFIX) {
-		value = os.Getenv(strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX))
+		key := strings.TrimPrefix(param, DEVTRON_ENV_VAR_PREFIX)
+
+		if preCiStageOutVariable != nil {
+			for k, task := range preCiStageOutVariable {
+				if _, ok := preCiStageOutVariable[k]; ok {
+					for variable, details := range task {
+						if variable == key {
+							outputVariableEnv := details.Value
+							if len(outputVariableEnv) > 0 {
+								value = outputVariableEnv
+							}
+						}
+
+					}
+				}
+			}
+		}
+		if len(value) == 0 && scriptEnvs != nil {
+			scriptEnvVal, ok := scriptEnvs[key]
+			if ok {
+				value = scriptEnvVal
+			}
+		}
+
+		if len(value) == 0 {
+			value = os.Getenv(key)
+		}
+		if strings.HasPrefix(value, DEVTRON_ENV_VAR_PREFIX) {
+			return ""
+		}
 	}
 
 	return wrapSingleOrDoubleQuotedValue(value)
@@ -578,7 +634,7 @@ func getSourceCaches(targetPlatforms, oldCachePathLocation string) string {
 	return strings.Join(allCachePaths, " ")
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, additionalImageTags []string) (string, func() error) {
 	dockerBuild = fmt.Sprintf("%s %s -f %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerBuildConfig.BuildContext, dockerfilePath)
 	exportCacheCmds := make(map[string]string)
 
@@ -600,18 +656,26 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext,
 	}
 
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
+	dockerBuild = fmt.Sprintf("%s %s --push --metadata-file %s", dockerBuild, GetTagArgumentFlagForBuildx(dest, additionalImageTags), manifestLocation)
 
 	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+func GetTagArgumentFlagForBuildx(dest string, additionalTags []string) string {
+	flagCmd := fmt.Sprintf("-t %s", dest)
+	for _, tag := range additionalTags {
+		flagCmd = fmt.Sprintf("%s -t %s", flagCmd, tag)
+	}
+	return flagCmd
+}
+
+func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, additionalImageTags []string) (string, func() error) {
 
 	cacheMode := CacheModeMax
 	if useCacheMin {
 		cacheMode = CacheModeMin
 	}
-	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
+	dockerBuild = fmt.Sprintf("%s -f %s %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, GetTagArgumentFlagForBuildx(dest, additionalImageTags), dockerBuildConfig.BuildContext)
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
 	}
@@ -629,11 +693,11 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 	return dockerBuild, nil
 }
 
-func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string) (string, func() error) {
+func (impl *DockerHelperImpl) getBuildxBuildCommand(ciContext cicxt.CiContext, exportBuildxCacheAfterBuild bool, cacheEnabled bool, useCacheMin bool, dockerBuild, oldCacheBuildxPath, localCachePath, dest string, dockerBuildConfig *DockerBuildConfig, dockerfilePath string, additionalImageTags []string) (string, func() error) {
 	if exportBuildxCacheAfterBuild {
-		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+		return impl.getBuildxBuildCommandV2(ciContext, cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, additionalImageTags)
 	}
-	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
+	return impl.getBuildxBuildCommandV1(cacheEnabled, useCacheMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath, additionalImageTags)
 }
 
 func (impl *DockerHelperImpl) handleLanguageVersion(ciContext cicxt.CiContext, projectPath string, buildpackConfig *BuildPackConfig) {
@@ -722,16 +786,68 @@ func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, dockerBuild 
 	return err
 }
 
-func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, dockerRepository string, dest string) error {
-	dockerTag := "docker tag " + dockerRepository + ":latest" + " " + dest
-	log.Println(" -----> " + dockerTag)
+func (impl *DockerHelperImpl) tagDockerBuild(ciContext cicxt.CiContext, ciRequest *CommonWorkflowRequest, dest string, scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) error {
+	dockerTag := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + dest
 	dockerTagCMD := impl.GetCommandToExecute(dockerTag)
 	err := impl.cmdExecutor.RunCommand(ciContext, dockerTagCMD)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+
+	log.Println(" -----> " + dockerTag)
+	multiDockerTagsValue := GetMultiDockerTagsValue(scriptEnvs, preCiStageOutVariable)
+	if len(multiDockerTagsValue) > 0 {
+		tags := strings.Split(multiDockerTagsValue, `,`)
+		for _, tmpDockerTag := range tags {
+			tmpDockerTag = strings.TrimSpace(tmpDockerTag)
+			if !strings.Contains(tmpDockerTag, ":") {
+				fullImageUrl, err := BuildDockerImagePathForCustomTag(ciRequest, tmpDockerTag)
+				if err != nil {
+					log.Println("Error in building docker image", "err", err)
+					return err
+				}
+				tmpDockerTag = fullImageUrl
+			}
+			log.Println(" -----> custom-tag " + tmpDockerTag)
+			tmpDockerTagCommand := "docker tag " + ciRequest.DockerRepository + ":latest" + " " + tmpDockerTag
+			tmpDockerTagCMD := impl.GetCommandToExecute(tmpDockerTagCommand)
+			err := impl.cmdExecutor.RunCommand(ciContext, tmpDockerTagCMD)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		}
+
+	}
+
 	return nil
+}
+
+func GetMultiDockerTagsValue(scriptEnvs map[string]string, preCiStageOutVariable map[int]map[string]*VariableObject) string {
+	multiDockerTagsValue := ""
+	if preCiStageOutVariable != nil {
+		for k, task := range preCiStageOutVariable {
+			if _, ok := preCiStageOutVariable[k]; ok {
+				for variable, details := range task {
+					if variable == MULTI_TAG_ENV {
+						outputVariableEnv := details.Value
+						if len(outputVariableEnv) > 0 {
+							multiDockerTagsValue = outputVariableEnv
+						}
+					}
+
+				}
+			}
+		}
+	}
+	if len(multiDockerTagsValue) == 0 && scriptEnvs != nil {
+		scriptEnvVal, ok := scriptEnvs[MULTI_TAG_ENV]
+		if ok {
+			multiDockerTagsValue = scriptEnvVal
+		}
+	}
+	return multiDockerTagsValue
 }
 
 func (impl *DockerHelperImpl) setupCacheForBuildx(ciContext cicxt.CiContext, localCachePath string, oldCacheBuildxPath string) error {
@@ -810,6 +926,17 @@ func (impl *DockerHelperImpl) checkAndCreateDirectory(ciContext cicxt.CiContext,
 func BuildDockerImagePath(ciRequest *CommonWorkflowRequest) (string, error) {
 	return utils.BuildDockerImagePath(bean.DockerRegistryInfo{
 		DockerImageTag:     ciRequest.DockerImageTag,
+		DockerRegistryId:   ciRequest.DockerRegistryId,
+		DockerRegistryType: ciRequest.DockerRegistryType,
+		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
+		DockerRepository:   ciRequest.DockerRepository,
+	})
+
+}
+
+func BuildDockerImagePathForCustomTag(ciRequest *CommonWorkflowRequest, dockerTag string) (string, error) {
+	return utils.BuildDockerImagePath(bean.DockerRegistryInfo{
+		DockerImageTag:     dockerTag,
 		DockerRegistryId:   ciRequest.DockerRegistryId,
 		DockerRegistryType: ciRequest.DockerRegistryType,
 		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
