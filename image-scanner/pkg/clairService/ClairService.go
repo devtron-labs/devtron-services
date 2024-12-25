@@ -26,7 +26,6 @@ import (
 	"github.com/devtron-labs/image-scanner/pkg/roundTripper"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
-	"github.com/go-pg/pg"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -105,8 +104,8 @@ func (impl *ClairServiceImpl) ScanImage(scanEvent *common.ImageScanEvent, tool *
 	scanEventResponse := &common.ScanEventResponse{
 		RequestData: scanEvent,
 	}
-	_, isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image)
-	if err != nil && err != pg.ErrNoRows {
+	isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image)
+	if err != nil {
 		impl.Logger.Errorw("error in fetching scan history ", "err", err, "image", scanEvent.Image)
 		return nil, err
 	}

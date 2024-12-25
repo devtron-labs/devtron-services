@@ -145,6 +145,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	return
 }
 
+// TODO: take as tech debt and break this function into parts for better code readability
 func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	metrics := &helper.CIMetrics{}

@@ -27,7 +27,6 @@ import (
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/bean"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
-	"github.com/go-pg/pg"
 	"strings"
 
 	"errors"
@@ -99,8 +98,8 @@ func (impl *KlarServiceImpl) Process(scanEvent *common.ImageScanEvent, execution
 		impl.logger.Errorw("error in getting docker registry by id", "err", err, "id", scanEvent.DockerRegistryId)
 		return nil, err
 	}
-	_, scanned, err := impl.imageScanService.IsImageScanned(scanEvent.Image)
-	if err != nil && err != pg.ErrNoRows {
+	scanned, err := impl.imageScanService.IsImageScanned(scanEvent.Image)
+	if err != nil {
 		impl.logger.Errorw("error in fetching scan history ", "err", err)
 		return nil, err
 	}
