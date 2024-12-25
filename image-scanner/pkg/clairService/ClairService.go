@@ -105,7 +105,7 @@ func (impl *ClairServiceImpl) ScanImage(scanEvent *bean.ImageScanEvent, tool *re
 	scanEventResponse := &common.ScanEventResponse{
 		RequestData: scanEvent,
 	}
-	isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image)
+	_, isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image)
 	if err != nil {
 		impl.Logger.Errorw("error in fetching scan history ", "err", err, "image", scanEvent.Image)
 		return nil, err

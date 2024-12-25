@@ -53,7 +53,7 @@ type ImageScanService interface {
 	ScanImage(scanEvent *bean2.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory, executionHistoryDirPath string) error
 	CreateScanExecutionRegistryForClairV4(vs []*claircore.Vulnerability, event *bean2.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*claircore.Vulnerability, error)
 	CreateScanExecutionRegistryForClairV2(vs []*clair.Vulnerability, event *bean2.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*clair.Vulnerability, error)
-	IsImageScanned(image string) (bool, error)
+	IsImageScanned(image string) (int, bool, error)
 	ScanImageForTool(tool *repository.ScanToolMetadata, executionHistoryId int, executionHistoryDirPathCopy string, wg *sync.WaitGroup, userId int32, ctx context.Context, imageScanRenderDto *common.ImageScanRenderDto) (string, string, error)
 	CreateFolderForOutputData(executionHistoryModelId int) string
 	HandleProgressingScans()
@@ -170,7 +170,7 @@ func (impl *ImageScanServiceImpl) ScanImage(scanEvent *bean2.ImageScanEvent, too
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(impl.ImageScanConfig.ScanImageTimeout)*time.Minute)
 	defer cancel()
 	//checking if image is already scanned or not
-	isImageScanned, err := impl.IsImageScanned(scanEvent.Image)
+	_, isImageScanned, err := impl.IsImageScanned(scanEvent.Image)
 	if err != nil {
 		impl.Logger.Errorw("error in fetching scan history ", "image", scanEvent.Image, "err", err)
 		return err
@@ -854,14 +854,14 @@ func (impl *ImageScanServiceImpl) CreateScanExecutionRegistryForClairV2(vs []*cl
 	return vs, nil
 }
 
-func (impl *ImageScanServiceImpl) IsImageScanned(image string) (bool, error) {
+func (impl *ImageScanServiceImpl) IsImageScanned(image string) (int, bool, error) {
 	scanned := false
 	scanHistory, err := impl.ScanHistoryRepository.FindByImage(image)
 	if err != nil && !util.IsErrNoRows(err) {
 		impl.Logger.Errorw("error in fetching scan history ", "err", err)
-		return false, err
+		return 0, false, err
 	} else if util.IsErrNoRows(err) {
-		return false, nil
+		return 0, false, nil
 	}
 	scanHistoryId := 0
 	if scanHistory != nil {
@@ -871,9 +871,9 @@ func (impl *ImageScanServiceImpl) IsImageScanned(image string) (bool, error) {
 		scanHistoryMappings, err := impl.ScanToolExecutionHistoryMappingRepository.GetAllScanHistoriesByExecutionHistoryIdAndStates(scanHistoryId, []bean.ScanExecutionProcessState{bean.ScanExecutionProcessStateRunning, bean.ScanExecutionProcessStateCompleted})
 		if err != nil && !util.IsErrNoRows(err) {
 			impl.Logger.Errorw("error in getting history mappings", "err", err)
-			return false, err
+			return 0, false, err
 		} else if util.IsErrNoRows(err) {
-			return false, err
+			return 0, false, err
 		}
 
 		if len(scanHistoryMappings) > 0 {
@@ -881,7 +881,7 @@ func (impl *ImageScanServiceImpl) IsImageScanned(image string) (bool, error) {
 		}
 	}
 
-	return scanned, err
+	return 0, scanned, err
 }
 
 func (impl *ImageScanServiceImpl) CheckConditionsForAStep(step repository.ScanToolStep, stepOutput []byte) (bool, error) {
