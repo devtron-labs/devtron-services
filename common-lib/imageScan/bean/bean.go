@@ -39,6 +39,6 @@ func (r *ImageScanEvent) IsManifest() bool {
 	return r.SourceType == constants.SourceTypeCode && r.SourceSubType == constants.SourceSubTypeManifest
 }
 
-func (r *ImageScanEvent) IsManifestImage() bool {
+func (r *ImageScanEvent) IsImageFromManifest() bool {
 	return r.SourceType == constants.SourceTypeImage && r.SourceSubType == constants.SourceSubTypeManifest
 }

@@ -240,11 +240,11 @@ func (impl *ImageScanServiceImpl) ScanImageForTool(tool *repository.ScanToolMeta
 	}
 	updateErr := impl.ScanToolExecutionHistoryMappingRepository.UpdateStateByToolAndExecutionHistoryId(executionHistoryId, toolCopy.Id, processedState, time.Now(), errorMessage)
 	if updateErr != nil {
-		impl.Logger.Errorw("error in UpdateStateByToolAndExecutionHistoryId", "err", err)
-		err = updateErr
+		impl.Logger.Errorw("error in UpdateStateByToolAndExecutionHistoryId", "err", updateErr)
+		return "", "", updateErr
 	}
 	wg.Done()
-	return "", "", err
+	return "", "", nil
 }
 func (impl *ImageScanServiceImpl) CreateFolderForOutputData(executionHistoryModelId int) string {
 	executionHistoryModelIdStr := strconv.Itoa(executionHistoryModelId)
