@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/Knetic/govaluate"
 	"github.com/caarlos0/env"
+	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	cliUtil "github.com/devtron-labs/image-scanner/internals/step-lib/util/cli-util"
 	commonUtil "github.com/devtron-labs/image-scanner/internals/step-lib/util/common-util"
@@ -49,18 +50,18 @@ import (
 )
 
 type ImageScanService interface {
-	ScanImage(scanEvent *common.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory, executionHistoryDirPath string) error
-	CreateScanExecutionRegistryForClairV4(vs []*claircore.Vulnerability, event *common.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*claircore.Vulnerability, error)
-	CreateScanExecutionRegistryForClairV2(vs []*clair.Vulnerability, event *common.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*clair.Vulnerability, error)
+	ScanImage(scanEvent *bean2.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory, executionHistoryDirPath string) error
+	CreateScanExecutionRegistryForClairV4(vs []*claircore.Vulnerability, event *bean2.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*claircore.Vulnerability, error)
+	CreateScanExecutionRegistryForClairV2(vs []*clair.Vulnerability, event *bean2.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*clair.Vulnerability, error)
 	IsImageScanned(image string) (bool, error)
 	ScanImageForTool(tool *repository.ScanToolMetadata, executionHistoryId int, executionHistoryDirPathCopy string, wg *sync.WaitGroup, userId int32, ctx context.Context, imageScanRenderDto *common.ImageScanRenderDto) (string, string, error)
 	CreateFolderForOutputData(executionHistoryModelId int) string
 	HandleProgressingScans()
 	GetActiveTool() (*repository.ScanToolMetadata, error)
 	RegisterScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory, tool *repository.ScanToolMetadata) (*repository.ImageScanExecutionHistory, string, error)
-	GetImageScanRenderDto(registryId string, scanEvent *common.ImageScanEvent) (*common.ImageScanRenderDto, error)
-	GetImageToBeScannedAndFetchCliEnv(scanEvent *common.ImageScanEvent) (string, error)
-	FetchProxyUrl(scanEvent *common.ImageScanEvent) (string, []name.Option, error)
+	GetImageScanRenderDto(registryId string, scanEvent *bean2.ImageScanEvent) (*common.ImageScanRenderDto, error)
+	GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error)
+	FetchProxyUrl(scanEvent *bean2.ImageScanEvent) (string, []name.Option, error)
 	SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error
 }
 
@@ -112,7 +113,7 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 	return imageScanService
 }
 
-func (impl *ImageScanServiceImpl) GetImageToBeScannedAndFetchCliEnv(scanEvent *common.ImageScanEvent) (string, error) {
+func (impl *ImageScanServiceImpl) GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error) {
 	impl.CliCommandEnv = append(os.Environ(), impl.CliCommandEnv...)
 	return scanEvent.Image, nil
 }
@@ -165,7 +166,7 @@ func (impl *ImageScanServiceImpl) CreateCaCertFile(cert string) (string, error) 
 	return caCertFilePath, nil
 }
 
-func (impl *ImageScanServiceImpl) ScanImage(scanEvent *common.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory, executionHistoryDirPath string) error {
+func (impl *ImageScanServiceImpl) ScanImage(scanEvent *bean2.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory, executionHistoryDirPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(impl.ImageScanConfig.ScanImageTimeout)*time.Minute)
 	defer cancel()
 	//checking if image is already scanned or not
@@ -205,7 +206,7 @@ func (impl *ImageScanServiceImpl) ScanImage(scanEvent *common.ImageScanEvent, to
 	return err
 }
 
-func (impl *ImageScanServiceImpl) GetImageScanRenderDto(registryId string, scanEvent *common.ImageScanEvent) (*common.ImageScanRenderDto, error) {
+func (impl *ImageScanServiceImpl) GetImageScanRenderDto(registryId string, scanEvent *bean2.ImageScanEvent) (*common.ImageScanRenderDto, error) {
 	dockerRegistry, err := impl.DockerArtifactStoreRepository.FindById(registryId)
 	if err == pg.ErrNoRows {
 		dockerRegistry = &repository.DockerArtifactStore{}
@@ -729,7 +730,7 @@ func (impl *ImageScanServiceImpl) RenderInputDataForAStep(inputPayloadTmpl strin
 	return buf.Bytes(), nil
 }
 
-func (impl *ImageScanServiceImpl) CreateScanExecutionRegistryForClairV4(vs []*claircore.Vulnerability, event *common.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*claircore.Vulnerability, error) {
+func (impl *ImageScanServiceImpl) CreateScanExecutionRegistryForClairV4(vs []*claircore.Vulnerability, event *bean2.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*claircore.Vulnerability, error) {
 
 	imageScanExecutionResultsToBeSaved := make([]*repository.ImageScanExecutionResult, 0, len(vs))
 	cvesToUpdate := make([]*repository.CveStore, 0, len(vs))
@@ -791,7 +792,7 @@ func (impl *ImageScanServiceImpl) CreateScanExecutionRegistryForClairV4(vs []*cl
 	return vs, nil
 }
 
-func (impl *ImageScanServiceImpl) CreateScanExecutionRegistryForClairV2(vs []*clair.Vulnerability, event *common.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*clair.Vulnerability, error) {
+func (impl *ImageScanServiceImpl) CreateScanExecutionRegistryForClairV2(vs []*clair.Vulnerability, event *bean2.ImageScanEvent, toolId int, executionHistory *repository.ImageScanExecutionHistory) ([]*clair.Vulnerability, error) {
 
 	imageScanExecutionResultsToBeSaved := make([]*repository.ImageScanExecutionResult, 0, len(vs))
 	cvesToUpdate := make([]*repository.CveStore, 0, len(vs))
@@ -973,7 +974,7 @@ func (impl *ImageScanServiceImpl) HandleProgressingScans() {
 
 	//System doing image scanning for all pending scans
 	for _, scanHistory := range scanHistories {
-		scanEvent := common.ImageScanEvent{}
+		scanEvent := bean2.ImageScanEvent{}
 		scanEventJson := imageScanExecutionHistoryMap[scanHistory.ImageScanExecutionHistoryId].SourceMetadataJson
 		if len(scanEventJson) == 0 {
 			return
@@ -1007,7 +1008,7 @@ func (impl *ImageScanServiceImpl) HandleProgressingScans() {
 
 }
 
-func (impl *ImageScanServiceImpl) FetchProxyUrl(scanEvent *common.ImageScanEvent) (string, []name.Option, error) {
+func (impl *ImageScanServiceImpl) FetchProxyUrl(scanEvent *bean2.ImageScanEvent) (string, []name.Option, error) {
 	return "", []name.Option{}, nil
 }
 

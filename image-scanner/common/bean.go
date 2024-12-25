@@ -17,6 +17,7 @@
 package common
 
 import (
+	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/optiopay/klar/clair"
 	"github.com/quay/claircore"
 	"strings"
@@ -67,7 +68,7 @@ type ImageScanRenderDto struct {
 }
 
 type ScanEventResponse struct {
-	RequestData         *ImageScanEvent            `json:"requestData"`
+	RequestData         *bean2.ImageScanEvent      `json:"requestData"`
 	ResponseDataClairV4 []*claircore.Vulnerability `json:"responseDataClairV4"`
 	ResponseDataClairV2 []*clair.Vulnerability     `json:"ResponseDataClairV2"`
 	CodeScanRes         interface{}                `json:"codeScanResponse"`
