@@ -20,7 +20,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	bean2 "github.com/devtron-labs/ci-runner/bean"
+	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"log"
 	"net/http"
@@ -643,24 +643,24 @@ func ExecuteImageScanningViaRest(event *ScanEvent) error {
 }
 
 type ScanEvent struct {
-	Image               string                          `json:"image"`
-	ImageDigest         string                          `json:"imageDigest"`
-	AppId               int                             `json:"appId"`
-	EnvId               int                             `json:"envId"`
-	PipelineId          int                             `json:"pipelineId"`
-	CiArtifactId        int                             `json:"ciArtifactId"`
-	UserId              int                             `json:"userId"`
-	AccessKey           string                          `json:"accessKey"`
-	SecretKey           string                          `json:"secretKey"`
-	Token               string                          `json:"token"`
-	AwsRegion           string                          `json:"awsRegion"`
-	DockerRegistryId    string                          `json:"dockerRegistryId"`
-	DockerConnection    string                          `json:"dockerConnection"`
-	DockerCert          string                          `json:"dockerCert"`
-	ImageScanMaxRetries int                             `json:"imageScanMaxRetries,omitempty"`
-	ImageScanRetryDelay int                             `json:"imageScanRetryDelay,omitempty"`
-	SourceType          bean2.ResourceScanSourceType    `json:"sourceType"`
-	SourceSubType       bean2.ResourceScanSourceSubType `json:"sourceSubType"`
+	Image               string                  `json:"image"`
+	ImageDigest         string                  `json:"imageDigest"`
+	AppId               int                     `json:"appId"`
+	EnvId               int                     `json:"envId"`
+	PipelineId          int                     `json:"pipelineId"`
+	CiArtifactId        int                     `json:"ciArtifactId"`
+	UserId              int                     `json:"userId"`
+	AccessKey           string                  `json:"accessKey"`
+	SecretKey           string                  `json:"secretKey"`
+	Token               string                  `json:"token"`
+	AwsRegion           string                  `json:"awsRegion"`
+	DockerRegistryId    string                  `json:"dockerRegistryId"`
+	DockerConnection    string                  `json:"dockerConnection"`
+	DockerCert          string                  `json:"dockerCert"`
+	ImageScanMaxRetries int                     `json:"imageScanMaxRetries,omitempty"`
+	ImageScanRetryDelay int                     `json:"imageScanRetryDelay,omitempty"`
+	SourceType          constants.SourceType    `json:"sourceType"`
+	SourceSubType       constants.SourceSubType `json:"sourceSubType"`
 }
 
 func (dockerBuildConfig *DockerBuildConfig) GetProvenanceFlag() string {

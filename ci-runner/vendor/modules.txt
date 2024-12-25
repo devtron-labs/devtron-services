@@ -118,7 +118,7 @@ github.com/cespare/xxhash/v2
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241225075145-4ad2ad5e355c
+# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241225075623-cfdb998f06d4
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/constants
@@ -842,4 +842,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241225075145-4ad2ad5e355c
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241225075623-cfdb998f06d4

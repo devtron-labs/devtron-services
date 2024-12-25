@@ -68,6 +68,11 @@ type ImageScanRenderDto struct {
 	DockerConnection   string       `json:"-"`
 }
 
+type ManifestData struct {
+	ChartData  []byte `json:"chartData"`
+	ValuesYaml []byte `json:"valuesYaml"`
+}
+
 type ImageScanEvent struct {
 	Image            string                  `json:"image"`
 	ImageDigest      string                  `json:"imageDigest"`
@@ -182,9 +187,4 @@ func RemoveTrailingComma(jsonString string) string {
 		return jsonString[:len(jsonString)-2] + jsonString[len(jsonString)-1:]
 	}
 	return jsonString
-}
-
-type ManifestData struct {
-	ChartData  []byte `json:"chartData"`
-	ValuesYaml []byte `json:"valuesYaml"`
 }
