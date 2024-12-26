@@ -863,14 +863,10 @@ func (impl *ImageScanServiceImpl) IsImageScanned(image string) (int, bool, error
 	} else if util.IsErrNoRows(err) {
 		return 0, false, nil
 	}
-	scanHistoryId := 0
-	if scanHistory != nil {
-		scanHistoryId = scanHistory.Id
-	}
-	if scanHistoryId > 0 {
-		scanHistoryMappings, err := impl.ScanToolExecutionHistoryMappingRepository.GetAllScanHistoriesByExecutionHistoryIdAndStates(scanHistoryId, []bean.ScanExecutionProcessState{bean.ScanExecutionProcessStateRunning, bean.ScanExecutionProcessStateCompleted})
+	if scanHistory.Id > 0 {
+		scanHistoryMappings, err := impl.ScanToolExecutionHistoryMappingRepository.GetAllScanHistoriesByExecutionHistoryIdAndStates(scanHistory.Id, []bean.ScanExecutionProcessState{bean.ScanExecutionProcessStateRunning, bean.ScanExecutionProcessStateCompleted})
 		if err != nil && !util.IsErrNoRows(err) {
-			impl.Logger.Errorw("error in getting history mappings", "err", err)
+			impl.Logger.Errorw("error in getting history mappings", "executionScanHistoryId", scanHistory.Id, "err", err)
 			return 0, false, err
 		} else if util.IsErrNoRows(err) {
 			return 0, false, err
