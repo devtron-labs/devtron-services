@@ -946,6 +946,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		fmt.Println(util.DEVTRON, " deployment Name : ", deploymentName)
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
 		if i == 0 {
@@ -963,7 +964,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 			return err
 		}
 	}
-
+	fmt.Println(util.DEVTRON, " deployment Names : ", deploymentNames)
 	patchK8sDriverNodes(deploymentNames)
 	return nil
 }
@@ -1020,6 +1021,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
+	fmt.Println(util.DEVTRON, "  driverOpts Node : ", nodeName)
 	if nodeName == "" {
 		nodeName = BUILDX_NODE_NAME + fmt.Sprintf("%v-%v-", ciPipelineId, ciWorkflowId) + util.Generate(3) // need this to generate unique name for builder node in same builder.
 	}
