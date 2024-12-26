@@ -686,6 +686,7 @@ func (dockerBuildConfig *DockerBuildConfig) CheckForBuildXK8sDriver() (bool, []m
 
 func (dockerBuildConfig *DockerBuildConfig) GetEligibleK8sDriverNodes() []map[string]string {
 	if dockerBuildConfig.TargetPlatform == "" {
+		fmt.Println(util.DEVTRON, "TargetPlatform is empty")
 		return findDefaultBuildxNodes(dockerBuildConfig.BuildxK8sDriverOptions)
 	}
 	return filterBuilderNodes(dockerBuildConfig.BuildxK8sDriverOptions, dockerBuildConfig.TargetPlatform)
@@ -711,6 +712,7 @@ func filterBuilderNodes(builderNodes []map[string]string, targetPlatformStr stri
 		fmt.Println(util.DEVTRON, " Docker k8s driver nodes required to build for these platforms ", targetPlatformStr, " are not present, so not using docker k8s driver for this build ")
 		return nil
 	}
+	fmt.Println(util.DEVTRON, "filteredBuilderNodes : ", filteredBuilderNodes)
 	return filteredBuilderNodes
 }
 

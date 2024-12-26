@@ -344,11 +344,13 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
+					log.Println(util.DEVTRON, "creating BuildxBuilderWithK8sDriver", "eligibleK8sDriverNodes : ", eligibleK8sDriverNodes)
 					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
+					log.Println(util.DEVTRON, "created BuildxBuilderWithK8sDriver")
 				} else {
 					err = impl.createBuildxBuilderForMultiArchBuild(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage)
 					if err != nil {
@@ -946,7 +948,6 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
-		fmt.Println(util.DEVTRON, " deployment Name : ", deploymentName)
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
 		if i == 0 {
@@ -963,9 +964,10 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
 			return err
 		}
+		fmt.Println(util.DEVTRON, " deploymentName : ", deploymentName)
 	}
-	fmt.Println(util.DEVTRON, " deployment Names : ", deploymentNames)
 	patchK8sDriverNodes(deploymentNames)
+	fmt.Println(util.DEVTRON, " deployment Names : ", deploymentNames)
 	return nil
 }
 
