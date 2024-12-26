@@ -58,3 +58,7 @@ func (r *ImageScanEvent) IsManifest() bool {
 func (r *ImageScanEvent) IsImageFromManifest() bool {
 	return r.SourceType == constants.SourceTypeImage && r.SourceSubType == constants.SourceSubTypeManifest
 }
+
+func (r *ImageScanEvent) IsBuiltImage() bool {
+	return r.SourceType == constants.SourceTypeImage && r.SourceSubType == constants.SourceSubTypeCi
+}
