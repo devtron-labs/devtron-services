@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/sirupsen/logrus v1.8.1
 	golang.org/x/crypto v0.31.0
-	golang.org/x/net v0.27.0
+	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.21.0
 	google.golang.org/grpc v1.56.3
 	gopkg.in/yaml.v3 v3.0.1
