@@ -1,12 +1,12 @@
 package sql
 
 import (
-	"reflect"
-	"time"
-
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
+	"reflect"
 )
 
 type Config struct {
@@ -46,17 +46,19 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	}
 	//--------------
 	if cfg.LogQuery {
-		dbConnection.OnQueryProcessed(func(event *pg.QueryProcessedEvent) {
-			query, err := event.FormattedQuery()
-			if err != nil {
-				panic(err)
-			}
-			logger.Infow("query time",
-				"duration", time.Since(event.StartTime),
-				"query", query)
-		})
+		dbConnection.OnQueryProcessed(utils.GetQueryProcessedFunction(getPgQueryConfig()))
 	}
 	return dbConnection, err
+}
+
+func getPgQueryConfig() bean.PgQueryConfig {
+	return bean.PgQueryConfig{
+		LogQuery:               true,
+		LogAllQuery:            false,
+		LogAllFailureQueries:   true,
+		ExportPromMetrics:      true,
+		QueryDurationThreshold: 5000,
+	}
 }
 
 func obfuscateSecretTags(cfg interface{}) interface{} {

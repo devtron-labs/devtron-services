@@ -77,6 +77,7 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 		logger.Infow("connected with db", "db", obfuscateSecretTags(cfg))
 	}
 	if cfg.LogQuery {
+		//TODO: need to use common-lib lens uses v10 go-pg and all other service uses v6.15.1+incompatible
 		dbConnection.AddQueryHook(dbLogger{})
 	}
 	return dbConnection, err
