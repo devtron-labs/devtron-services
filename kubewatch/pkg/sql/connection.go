@@ -17,12 +17,12 @@
 package sql
 
 import (
+	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/bean"
+	"github.com/go-pg/pg"
 	"go.uber.org/zap"
 	"reflect"
-	"time"
-
-	"github.com/caarlos0/env"
-	"github.com/go-pg/pg"
 )
 
 type Config struct {
@@ -65,23 +65,18 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	}
 
 	//--------------
-	dbConnection.OnQueryProcessed(func(event *pg.QueryProcessedEvent) {
-		queryDuration := time.Since(event.StartTime)
-		query, err := event.FormattedQuery()
-		if err != nil {
-			logger.Errorw("Error formatting query",
-				"err", err)
-			return
-		}
-
-		// Log pg query if enabled
-		if cfg.LogAllQuery || (cfg.LogQuery && queryDuration.Milliseconds() > cfg.QueryDurationThreshold) {
-			logger.Debugw("query time",
-				"duration", queryDuration.Seconds(),
-				"query", query)
-		}
-	})
+	dbConnection.OnQueryProcessed(utils.GetQueryProcessedFunction(getPgQueryConfig()))
 	return dbConnection, err
+}
+
+func getPgQueryConfig() bean.PgQueryConfig {
+	return bean.PgQueryConfig{
+		LogQuery:               true,
+		LogAllQuery:            false,
+		LogAllFailureQueries:   true,
+		ExportPromMetrics:      true,
+		QueryDurationThreshold: 5000,
+	}
 }
 
 func obfuscateSecretTags(cfg interface{}) interface{} {

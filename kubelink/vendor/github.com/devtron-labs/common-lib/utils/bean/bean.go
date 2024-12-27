@@ -61,3 +61,11 @@ type DockerRegistryInfo struct {
 	DockerRegistryURL  string `json:"dockerRegistryURL"`
 	DockerRepository   string `json:"dockerRepository"`
 }
+
+type PgQueryConfig struct {
+	LogQuery               bool
+	LogAllQuery            bool
+	LogAllFailureQueries   bool
+	ExportPromMetrics      bool
+	QueryDurationThreshold int64
+}
