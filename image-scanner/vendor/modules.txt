@@ -72,11 +72,12 @@ github.com/cespare/xxhash/v2
 github.com/coreos/clair/api/v3/clairpb
 github.com/coreos/clair/database
 github.com/coreos/clair/ext/versionfmt
-# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241216105957-d5a37695c2b2
+# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241227060804-88111b7d5ed4
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/git-manager
 github.com/devtron-labs/common-lib/git-manager/util
+github.com/devtron-labs/common-lib/imageScan/bean
 github.com/devtron-labs/common-lib/middlewares
 github.com/devtron-labs/common-lib/monitoring
 github.com/devtron-labs/common-lib/monitoring/pprof
@@ -438,4 +439,4 @@ google.golang.org/protobuf/types/known/wrapperspb
 # mellium.im/sasl v0.3.1
 ## explicit; go 1.18
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241216105957-d5a37695c2b2
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20241227060804-88111b7d5ed4
