@@ -95,29 +95,10 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 	return pluginArtifactsFromFile, stageVariable, nil, nil
 }
 
-func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
-	refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject,
-	stageVariable map[int]map[string]*commonBean.VariableObject) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
-	var vars []*commonBean.VariableObject
-	if stepType == helper.STEP_TYPE_REF_PLUGIN {
-		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
-	} else {
-		log.Printf("running step : %s\n", step.Name)
-		if stepType == helper.STEP_TYPE_PRE {
-			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, stageVariable, nil, nil)
-		} else if stepType == helper.STEP_TYPE_POST {
-			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, preCiStageVariable, stageVariable, nil)
-		}
-	}
-	if err != nil {
-		return nil, step, err
-	}
-	step.InputVars = vars
-
+func getScriptVariables(step *helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables) (emptyVariableList []string, scriptEnvs map[string]string, variableFileMount map[string]string) {
 	//variables with empty value
-	var emptyVariableList []string
-	scriptEnvs := make(map[string]string)
-	variableFileMount := make(map[string]string)
+	scriptEnvs = make(map[string]string)
+	variableFileMount = make(map[string]string)
 	// global scope definition
 	for key, value := range scriptEnvVariables.RuntimeEnv {
 		scriptEnvs[key] = value
@@ -144,6 +125,42 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	for key, value := range scriptEnvVariables.SystemEnv {
 		scriptEnvs[key] = value
 	}
+
+	// existing script env definition
+	// will override global, stage and system scope if the same key is present
+	// this is handled in case of ref plugin, which is performed recursively
+
+	// for recursive call the existing script env variables contain the script env variables of the parent step
+	// current step will contain the extra ref plugin variables
+	for key, value := range scriptEnvVariables.ExistingScriptEnv {
+		scriptEnvs[key] = value
+	}
+	return emptyVariableList, scriptEnvs, variableFileMount
+}
+
+func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
+	refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject,
+	stageVariable map[int]map[string]*commonBean.VariableObject) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
+	var vars []*commonBean.VariableObject
+	if stepType == helper.STEP_TYPE_REF_PLUGIN {
+		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
+	} else {
+		log.Printf("running step : %s\n", step.Name)
+		if stepType == helper.STEP_TYPE_PRE {
+			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, stageVariable, nil, nil)
+		} else if stepType == helper.STEP_TYPE_POST {
+			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, preCiStageVariable, stageVariable, nil)
+		}
+	}
+	if err != nil {
+		return nil, step, err
+	}
+	step.InputVars = vars
+	emptyVariableList, scriptEnvs, variableFileMount := getScriptVariables(step, scriptEnvVariables)
+	// set the script env variables to the existing script env variables
+	// this is required to pass the existing script env variables to the next recursive call
+	scriptEnvVariables.ExistingScriptEnv = scriptEnvs
+
 	if stepType == helper.STEP_TYPE_PRE || stepType == helper.STEP_TYPE_POST {
 		log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
 	}
@@ -188,6 +205,9 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				scriptEnvs[k] = v
 			}
 		}
+		// set the script env variables to the existing script env variables
+		// this is required to pass the existing script env variables to the next recursive call
+		scriptEnvVariables.ExistingScriptEnv = scriptEnvs
 		if step.ExecutorType == helper.SHELL {
 			stageOutputVars, err := impl.scriptExecutor.RunScripts(ciContext, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
