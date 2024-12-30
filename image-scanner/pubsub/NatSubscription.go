@@ -18,9 +18,9 @@ package pubsub
 
 import (
 	"encoding/json"
+	"github.com/devtron-labs/common-lib/imageScan/bean"
 	pubsub1 "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/pubsub-lib/model"
-	"github.com/devtron-labs/image-scanner/common"
 	"github.com/devtron-labs/image-scanner/pkg/clairService"
 	"go.uber.org/zap"
 )
@@ -64,7 +64,7 @@ func (impl *NatSubscriptionImpl) Subscribe() error {
 	callback := func(msg *model.PubSubMsg) {
 		impl.Logger.Debugw("received msg", "msg", msg)
 		// defer msg.Ack()
-		scanConfig := &common.ImageScanEvent{}
+		scanConfig := &bean.ImageScanEvent{}
 		err := json.Unmarshal([]byte(msg.Data), scanConfig)
 		if err != nil {
 			impl.Logger.Errorw("err in reading msg", "err", err, "msg", string(msg.Data))
@@ -82,7 +82,7 @@ func (impl *NatSubscriptionImpl) Subscribe() error {
 	}
 
 	var loggerFunc pubsub1.LoggerFunc = func(msg model.PubSubMsg) (string, []interface{}) {
-		deploymentEvent := &common.ImageScanEvent{}
+		deploymentEvent := &bean.ImageScanEvent{}
 		err := json.Unmarshal([]byte(msg.Data), &deploymentEvent)
 		if err != nil {
 			return "error while unmarshalling deploymentEvent object", []interface{}{"err", err, "msg", msg.Data}
