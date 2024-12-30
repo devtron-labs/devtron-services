@@ -17,28 +17,28 @@
 package repository
 
 import (
-	"github.com/devtron-labs/image-scanner/common"
+	"github.com/devtron-labs/common-lib/constants"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
 	"time"
 )
 
 type ImageScanExecutionHistory struct {
-	tableName                     struct{}             `sql:"image_scan_execution_history" pg:",discard_unknown_columns"`
-	Id                            int                  `sql:"id,pk"`
-	Image                         string               `sql:"image,notnull"`
-	ImageHash                     string               `sql:"image_hash,notnull"` // TODO Migrate to request metadata
-	ExecutionTime                 time.Time            `sql:"execution_time"`
-	ExecutedBy                    int                  `sql:"executed_by,notnull"`
-	SourceMetadataJson            string               `sql:"source_metadata_json"`             // to have relevant info to process a scan for a given source type and subtype
-	ExecutionHistoryDirectoryPath string               `sql:"execution_history_directory_path"` // Deprecated
-	SourceType                    common.SourceType    `sql:"source_type"`
-	SourceSubType                 common.SourceSubType `sql:"source_sub_type"`
-	ParentId                      int                  `sql:"parent_id"`
-	IsLatest                      bool                 `sql:"is_latest"`
+	tableName                     struct{}                `sql:"image_scan_execution_history" pg:",discard_unknown_columns"`
+	Id                            int                     `sql:"id,pk"`
+	Image                         string                  `sql:"image,notnull"`
+	ImageHash                     string                  `sql:"image_hash,notnull"` // TODO Migrate to request metadata
+	ExecutionTime                 time.Time               `sql:"execution_time"`
+	ExecutedBy                    int                     `sql:"executed_by,notnull"`
+	SourceMetadataJson            string                  `sql:"source_metadata_json"`             // to have relevant info to process a scan for a given source type and subtype
+	ExecutionHistoryDirectoryPath string                  `sql:"execution_history_directory_path"` // Deprecated
+	SourceType                    constants.SourceType    `sql:"source_type"`
+	SourceSubType                 constants.SourceSubType `sql:"source_sub_type"`
+	ParentId                      int                     `sql:"parent_id"`
+	IsLatest                      bool                    `sql:"is_latest"`
 }
 
-func (r *ImageScanExecutionHistory) IsSourceAndSubSourceTypeSame(sourceType common.SourceType, sourceSubType common.SourceSubType) bool {
+func (r *ImageScanExecutionHistory) IsSourceAndSubSourceTypeSame(sourceType constants.SourceType, sourceSubType constants.SourceSubType) bool {
 	return r.SourceType == sourceType && r.SourceSubType == sourceSubType
 }
 
