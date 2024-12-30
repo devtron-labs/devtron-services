@@ -23,7 +23,6 @@ import (
 	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/middlewares"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
-	"github.com/devtron-labs/common-lib/utils"
 	grpcUtil "github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/kubelink/api/router"
 	client "github.com/devtron-labs/kubelink/grpc"
@@ -122,7 +121,6 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-	defer utils.FlushOutMessages(app.Logger)
 	app.Logger.Infow("kubelink shutdown initiating")
 
 	timeoutContext, _ := context.WithTimeout(context.Background(), 5*time.Second)

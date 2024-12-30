@@ -24,7 +24,6 @@ import (
 	constants "github.com/devtron-labs/common-lib/constants"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
-	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/git-sensor/api"
 	"github.com/devtron-labs/git-sensor/bean"
 	"github.com/devtron-labs/git-sensor/internals/middleware"
@@ -164,7 +163,6 @@ func (app *App) initGrpcServer(port int) error {
 
 // Stop stops the grpcServer and cleans resources. Called during shutdown
 func (app *App) Stop() {
-	defer utils.FlushOutMessages(app.Logger)
 	app.Logger.Infow("orchestrator shutdown initiating")
 
 	app.Logger.Infow("stopping cron")

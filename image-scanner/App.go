@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
-	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/image-scanner/pkg/middleware"
 	"net/http"
 	"os"
@@ -82,7 +81,6 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-	defer utils.FlushOutMessages(app.Logger)
 	app.Logger.Infow("image scanner shutdown initiating")
 	timeoutContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

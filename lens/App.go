@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
-	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/lens/pkg/middleware"
 	"net/http"
 	"os"
@@ -70,7 +69,6 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-	defer utils.FlushOutMessages(app.Logger)
 	app.Logger.Infow("lens shutdown initiating")
 	timeoutContext, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
