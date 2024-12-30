@@ -68,6 +68,7 @@ func FlushOutMessages(logger *zap.SugaredLogger) {
 		logger.Infow("flushing all messages")
 		if err := logger.Sync(); err != nil {
 			logger.Errorw("error in flushing messages", "err", err)
+			return
 		}
 		logger.Infow("flushed all messages")
 	}
