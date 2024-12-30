@@ -18,11 +18,13 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
 	constants "github.com/devtron-labs/common-lib/constants"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
+	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/git-sensor/api"
 	"github.com/devtron-labs/git-sensor/bean"
 	"github.com/devtron-labs/git-sensor/internals/middleware"
@@ -90,7 +92,7 @@ func (app *App) Start() {
 	go func() {
 		// Start REST server
 		err = app.initRestServer(app.StartupConfig.RestPort)
-		if err != nil {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			app.Logger.Errorw("error starting rest server", "err", err)
 			os.Exit(2)
 		}
@@ -162,6 +164,7 @@ func (app *App) initGrpcServer(port int) error {
 
 // Stop stops the grpcServer and cleans resources. Called during shutdown
 func (app *App) Stop() {
+	defer utils.FlushOutMessages(app.Logger)
 	app.Logger.Infow("orchestrator shutdown initiating")
 
 	app.Logger.Infow("stopping cron")

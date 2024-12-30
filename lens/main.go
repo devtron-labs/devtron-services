@@ -29,16 +29,13 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+	go app.Start()
 	//     gracefulStop start
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
-	go func() {
-		sig := <-gracefulStop
-		fmt.Printf("caught term sig: %+v", sig)
-		app.Stop()
-		os.Exit(0)
-	}()
+	sig := <-gracefulStop
+	fmt.Printf("caught term sig: %+v", sig)
+	app.Stop()
 	//      gracefulStop end
-	app.Start()
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/caarlos0/env"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
+	"github.com/devtron-labs/common-lib/utils"
 	k8s1 "github.com/devtron-labs/common-lib/utils/k8s"
 	api "github.com/devtron-labs/kubewatch/api/router"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
@@ -98,7 +99,7 @@ func (app *App) getPubSubClientForInternalConfig() *pubsub.PubSubClientServiceIm
 }
 
 func (app *App) Stop() {
-
+	defer utils.FlushOutMessages(app.Logger)
 	app.Logger.Infow("kubewatch shutdown initiating")
 
 	timeoutContext, _ := context.WithTimeout(context.Background(), app.defaultTimeout)
