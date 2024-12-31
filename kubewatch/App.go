@@ -98,7 +98,6 @@ func (app *App) getPubSubClientForInternalConfig() *pubsub.PubSubClientServiceIm
 }
 
 func (app *App) Stop() {
-
 	app.Logger.Infow("kubewatch shutdown initiating")
 
 	timeoutContext, _ := context.WithTimeout(context.Background(), app.defaultTimeout)

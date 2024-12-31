@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/middlewares"
@@ -106,7 +107,7 @@ func (app *App) Start() {
 		app.server = &http.Server{Addr: fmt.Sprintf(":%d", httpPort), Handler: app.router.Router}
 		app.router.Router.Use(middlewares.Recovery)
 		err := app.server.ListenAndServe()
-		if err != nil {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal("error in starting http server", err)
 		}
 	}()
@@ -120,7 +121,6 @@ func (app *App) Start() {
 }
 
 func (app *App) Stop() {
-
 	app.Logger.Infow("kubelink shutdown initiating")
 
 	timeoutContext, _ := context.WithTimeout(context.Background(), 5*time.Second)
