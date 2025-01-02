@@ -358,6 +358,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		finalOutVarMap[out.Name] = out
 	}
 	stageVariable[step.Index] = finalOutVarMap
+	scriptEnvVariables = scriptEnvVariables.ResetExistingScriptEnv()
 	return pluginArtifacts, nil, nil
 }
 

@@ -34,6 +34,11 @@ type ScriptEnvVariables struct {
 	ExistingScriptEnv map[string]string
 }
 
+func (s *ScriptEnvVariables) ResetExistingScriptEnv() *ScriptEnvVariables {
+	s.ExistingScriptEnv = make(map[string]string)
+	return s
+}
+
 func getRuntimeEnvVariables(ciCdRequest *helper.CiCdTriggerEvent) map[string]string {
 	if ciCdRequest.CommonWorkflowRequest.RuntimeEnvironmentVariables == nil {
 		return make(map[string]string)
