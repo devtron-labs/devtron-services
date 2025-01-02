@@ -37,7 +37,7 @@ type StageExecutorImpl struct {
 }
 
 type StageExecutor interface {
-	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *helper.StepObject, err error)
+	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *helper.StepObject, err error)
 	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvVariables *util2.ScriptEnvVariables, stageType helper.PipelineType) error
 }
 
@@ -48,7 +48,7 @@ func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor Scr
 	}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject) (*helper.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *helper.StepObject, error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (*helper.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *helper.StepObject, error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
@@ -65,7 +65,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		)
 
 		executeStep := func() error {
-			refPluginArtifacts, failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, scriptEnvVariables, preCiStageVariable, stageVariable)
+			refPluginArtifacts, failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, scriptEnvVariables, preCiStageVariable, stageVariable, resetEnvVariable)
 			if err != nil {
 				return err
 			}
@@ -140,7 +140,7 @@ func getScriptVariables(step *helper.StepObject, scriptEnvVariables *util2.Scrip
 
 func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
 	refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject,
-	stageVariable map[int]map[string]*commonBean.VariableObject) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
+	stageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
 	var vars []*commonBean.VariableObject
 	if stepType == helper.STEP_TYPE_REF_PLUGIN {
 		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
@@ -317,7 +317,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				}
 			}
 		}
-		refPluginArtifacts, opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, scriptEnvVariables, nil)
+		refPluginArtifacts, opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, scriptEnvVariables, nil, false)
 		if err != nil {
 			fmt.Println(err)
 			return nil, step, err
@@ -358,7 +358,10 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		finalOutVarMap[out.Name] = out
 	}
 	stageVariable[step.Index] = finalOutVarMap
-	scriptEnvVariables = scriptEnvVariables.ResetExistingScriptEnv()
+	// TODO Prakhar: test and restructure
+	if resetEnvVariable {
+		scriptEnvVariables = scriptEnvVariables.ResetExistingScriptEnv()
+	}
 	return pluginArtifacts, nil, nil
 }
 
