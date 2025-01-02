@@ -197,6 +197,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 				WithFailureMessage(fmt.Sprintf(workFlow.CdStageTaskFailed.String(), ciCdRequest.CommonWorkflowRequest.GetCdStageType(), step.Name)).
 				WithArtifactUploaded(false)
 		}
+		scriptEnvs = scriptEnvs.ResetExistingScriptEnv()
 		allPluginArtifacts.MergePluginArtifact(pluginArtifacts)
 	} else {
 

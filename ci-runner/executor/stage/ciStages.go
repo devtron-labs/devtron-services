@@ -373,6 +373,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 			WithFailureMessage(fmt.Sprintf(workFlow.PreCiFailed.String(), step.Name)).
 			WithArtifactUploaded(artifactUploaded)
 	}
+	scriptEnvs = scriptEnvs.ResetExistingScriptEnv()
 	// considering pull images from Container repo Plugin in Pre ci steps only.
 	// making it non-blocking if results are not available (in case of err)
 	resultsFromPlugin, fileErr := extractOutResultsIfExists()
@@ -401,6 +402,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 			scriptEnvs.SystemEnv[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
 			impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable)
+			scriptEnvs = scriptEnvs.ResetExistingScriptEnv()
 		}
 		// code-block ends
 		err = helper.NewCiStageError(err).
@@ -453,6 +455,7 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 			WithFailureMessage(fmt.Sprintf(workFlow.PostCiFailed.String(), step.Name)).
 			WithArtifactUploaded(artifactUploaded)
 	}
+	scriptEnvs = scriptEnvs.ResetExistingScriptEnv()
 	//sent by orchestrator if copy container image v2 is configured
 
 	// considering pull images from Container repo Plugin in post ci steps also.
