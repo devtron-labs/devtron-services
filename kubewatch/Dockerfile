@@ -1,22 +1,19 @@
 FROM golang:1.21-alpine3.19  AS build-env
 
-RUN echo $GOPATH
+RUN echo $GOPATH && \
+    apk add --no-cache git gcc musl-dev && \
+    apk add --update make
 
-RUN apk add --no-cache git gcc musl-dev
-RUN apk add --update make
 WORKDIR /go/src/github.com/devtron-labs/kubewatch
 ADD . /go/src/github.com/devtron-labs/kubewatch
 RUN GOOS=linux make
 
 FROM alpine:3.19
 
-RUN apk add --update ca-certificates
+RUN apk add --update ca-certificates && \
+    adduser -D devtron
 
-RUN adduser -D devtron
-
-COPY --from=build-env  /go/src/github.com/devtron-labs/kubewatch/kubewatch .
-
-RUN chown devtron:devtron ./kubewatch
+COPY --chown=devtron:devtron --from=build-env  /go/src/github.com/devtron-labs/kubewatch/kubewatch .
 
 RUN chmod +x ./kubewatch
 
