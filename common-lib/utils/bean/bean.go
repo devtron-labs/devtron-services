@@ -68,4 +68,5 @@ type PgQueryConfig struct {
 	LogAllFailureQueries   bool
 	ExportPromMetrics      bool
 	QueryDurationThreshold int64
+	ServiceName            string
 }
