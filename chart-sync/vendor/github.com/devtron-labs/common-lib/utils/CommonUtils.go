@@ -108,7 +108,7 @@ func GetQueryProcessedFunction(cfg bean.PgQueryConfig) func(event *pg.QueryProce
 			} else {
 				status = "SUCCESS"
 			}
-			PgQueryDuration.WithLabelValues(status).Observe(queryDuration.Seconds())
+			PgQueryDuration.WithLabelValues(status, cfg.ServiceName).Observe(queryDuration.Seconds())
 		}
 
 		// Log pg query if enabled

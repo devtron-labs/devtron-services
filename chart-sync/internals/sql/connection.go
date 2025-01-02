@@ -10,13 +10,17 @@ import (
 )
 
 type Config struct {
-	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
-	Port            string `env:"PG_PORT" envDefault:"5432"`
-	User            string `env:"PG_USER" envDefault:"user"`
-	Password        string `env:"PG_PASSWORD" envDefault:"password" secretData:"-"`
-	Database        string `env:"PG_DATABASE" envDefault:"orchestrator"`
-	ApplicationName string `env:"APP" envDefault:"chart-sync"`
-	LogQuery        bool   `env:"PG_LOG_QUERY" envDefault:"false"`
+	Addr                   string `env:"PG_ADDR" envDefault:"127.0.0.1"`
+	Port                   string `env:"PG_PORT" envDefault:"5432"`
+	User                   string `env:"PG_USER" envDefault:"user"`
+	Password               string `env:"PG_PASSWORD" envDefault:"password" secretData:"-"`
+	Database               string `env:"PG_DATABASE" envDefault:"orchestrator"`
+	ApplicationName        string `env:"APP" envDefault:"chart-sync"`
+	LogQuery               bool   `env:"PG_LOG_QUERY" envDefault:"false"`
+	LogAllQuery            bool   `env:"PG_LOG_ALL_QUERY" envDefault:"false"`
+	LogAllFailureQueries   bool   `env:"PG_LOG_ALL_FAILURE_QUERIES" envDefault:"true"`
+	ExportPromMetrics      bool   `env:"PG_EXPORT_PROM_METRICS" envDefault:"true"`
+	QueryDurationThreshold int64  `env:"PG_QUERY_DUR_THRESHOLD" envDefault:"5000"`
 }
 
 func GetConfig() (*Config, error) {
@@ -46,18 +50,19 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	}
 	//--------------
 	if cfg.LogQuery {
-		dbConnection.OnQueryProcessed(utils.GetQueryProcessedFunction(getPgQueryConfig()))
+		dbConnection.OnQueryProcessed(utils.GetQueryProcessedFunction(getPgQueryConfig(cfg)))
 	}
 	return dbConnection, err
 }
 
-func getPgQueryConfig() bean.PgQueryConfig {
+func getPgQueryConfig(cfg *Config) bean.PgQueryConfig {
 	return bean.PgQueryConfig{
-		LogQuery:               true,
-		LogAllQuery:            false,
-		LogAllFailureQueries:   true,
-		ExportPromMetrics:      true,
-		QueryDurationThreshold: 5000,
+		LogQuery:               cfg.LogQuery,
+		LogAllQuery:            cfg.LogAllQuery,
+		LogAllFailureQueries:   cfg.LogAllFailureQueries,
+		ExportPromMetrics:      cfg.ExportPromMetrics,
+		QueryDurationThreshold: cfg.QueryDurationThreshold,
+		ServiceName:            cfg.ApplicationName,
 	}
 }
 
