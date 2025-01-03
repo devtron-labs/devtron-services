@@ -23,11 +23,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/bean"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
-	"github.com/go-pg/pg"
 	"strings"
 
 	"errors"
@@ -62,7 +62,7 @@ func GetKlarConfig() (*KlarConfig, error) {
 }
 
 type KlarService interface {
-	Process(scanEvent *common.ImageScanEvent, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error)
+	Process(scanEvent *bean2.ImageScanEvent, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error)
 }
 
 type KlarServiceImpl struct {
@@ -90,7 +90,7 @@ func NewKlarServiceImpl(logger *zap.SugaredLogger, klarConfig *KlarConfig, grafe
 	}
 }
 
-func (impl *KlarServiceImpl) Process(scanEvent *common.ImageScanEvent, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error) {
+func (impl *KlarServiceImpl) Process(scanEvent *bean2.ImageScanEvent, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error) {
 	scanEventResponse := &common.ScanEventResponse{
 		RequestData: scanEvent,
 	}
@@ -99,8 +99,8 @@ func (impl *KlarServiceImpl) Process(scanEvent *common.ImageScanEvent, execution
 		impl.logger.Errorw("error in getting docker registry by id", "err", err, "id", scanEvent.DockerRegistryId)
 		return nil, err
 	}
-	_, scanned, err := impl.imageScanService.IsImageScanned(scanEvent.Image, false)
-	if err != nil && err != pg.ErrNoRows {
+	_, scanned, err := impl.imageScanService.IsImageScanned(scanEvent.Image)
+	if err != nil {
 		impl.logger.Errorw("error in fetching scan history ", "err", err)
 		return nil, err
 	}

@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/devtron-labs/image-scanner/common"
+	"github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -36,7 +36,7 @@ import (
 )
 
 type RoundTripperService interface {
-	GetRoundTripper(scanEvent *common.ImageScanEvent) (http.RoundTripper, error)
+	GetRoundTripper(scanEvent *bean.ImageScanEvent) (http.RoundTripper, error)
 }
 type RoundTripperServiceImpl struct {
 	Logger                        *zap.SugaredLogger
@@ -66,7 +66,7 @@ const (
 	userAgent = `clairctl/1`
 )
 
-func (impl *RoundTripperServiceImpl) GetRoundTripper(scanEvent *common.ImageScanEvent) (http.RoundTripper, error) {
+func (impl *RoundTripperServiceImpl) GetRoundTripper(scanEvent *bean.ImageScanEvent) (http.RoundTripper, error) {
 	authenticator, dockerRegistry, err := impl.GetAuthenticatorByDockerRegistryId(scanEvent.DockerRegistryId)
 	if err != nil {
 		impl.Logger.Errorw("error, GetAuthenticatorByDockerRegistryId", "err", err, "dockerRegistryId", scanEvent.DockerRegistryId)
