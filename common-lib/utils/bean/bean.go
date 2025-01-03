@@ -20,6 +20,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/docker/cli/cli/config/types"
+	"github.com/go-pg/pg/orm"
+	"time"
 )
 
 const (
@@ -69,4 +71,11 @@ type PgQueryConfig struct {
 	ExportPromMetrics      bool
 	QueryDurationThreshold int64
 	ServiceName            string
+}
+
+type PgQueryEvent struct {
+	StartTime time.Time
+	Result    orm.Result
+	Error     error
+	Query     string
 }
