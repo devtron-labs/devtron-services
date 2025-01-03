@@ -22,7 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/executor"
+	adaptor2 "github.com/devtron-labs/ci-runner/executor/adaptor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
+	bean2 "github.com/devtron-labs/ci-runner/executor/stage/bean"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/helper/adaptor"
@@ -144,6 +146,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	return
 }
 
+// TODO: take as tech debt and break this function into parts for better code readability
 func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
 
 	metrics := &helper.CIMetrics{}
@@ -281,6 +284,18 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	if err != nil {
 		return artifactUploaded, err
 	}
+	if scriptEnvs.RuntimeEnv[bean2.ExternalCiArtifact] != "" {
+		runtimeImage, runtimeDigest, err := impl.handleRuntimeParametersForCiJob(scriptEnvs.RuntimeEnv, ciCdRequest)
+		if err != nil {
+			log.Println(util.DEVTRON, "error in handling runtime parameters for ci job and getting runtime image and digest")
+			return artifactUploaded, err
+		}
+		if len(runtimeImage) > 0 {
+			dest = runtimeImage
+			digest = runtimeDigest
+		}
+	}
+
 	// scan only if ci scan enabled
 	if helper.IsEventTypeEligibleToScanImage(ciCdRequest.Type) &&
 		ciCdRequest.CommonWorkflowRequest.ScanEnabled {
@@ -292,51 +307,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	log.Println(util.DEVTRON, " event")
 	metrics.TotalDuration = time.Since(metrics.TotalStartTime).Seconds()
-	// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
-	// imageDigest and ciProjectDetails are optional fields
-	if scriptEnvs.RuntimeEnv["externalCiArtifact"] != "" {
-		log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
-		dest = scriptEnvs.RuntimeEnv["externalCiArtifact"]
-		digest = scriptEnvs.RuntimeEnv["imageDigest"]
-		if len(digest) == 0 {
-			var useAppDockerConfigForPrivateRegistries bool
-			var err error
-			useAppDockerConfig, ok := ciCdRequest.CommonWorkflowRequest.RuntimeEnvironmentVariables["useAppDockerConfig"]
-			if ok && len(useAppDockerConfig) > 0 {
-				useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
-				if err != nil {
-					fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
-				}
-			}
-			var dockerAuthConfig *bean.DockerAuthConfig
-			if useAppDockerConfigForPrivateRegistries {
-				dockerAuthConfig = impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(ciCdRequest.CommonWorkflowRequest)
-			}
-			startTime := time.Now()
-			//user has not provided imageDigest in that case fetch from docker.
-			imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(dest, ciCdRequest.CommonWorkflowRequest.UseDockerApiToGetDigest, dockerAuthConfig)
-			if err != nil {
-				fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", dest), err)
-				return artifactUploaded, err
-			}
-			log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
-			digest = imgDigest
-		}
-		var tempDetails []*helper.CiProjectDetailsMin
-		err := json.Unmarshal([]byte(scriptEnvs.RuntimeEnv["ciProjectDetails"]), &tempDetails)
-		if err != nil {
-			fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
-			fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
-		}
 
-		if len(tempDetails) > 0 && len(ciCdRequest.CommonWorkflowRequest.CiProjectDetails) > 0 {
-			detail := tempDetails[0]
-			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitHash = detail.CommitHash
-			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Message = detail.Message
-			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Author = detail.Author
-			ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
-		}
-	}
 	event := adaptor.NewCiCompleteEvent(ciCdRequest.CommonWorkflowRequest).WithMetrics(*metrics).
 		WithDockerImage(dest).WithDigest(digest).WithIsArtifactUploaded(artifactUploaded).
 		WithImageDetailsFromCR(resultsFromPlugin).WithPluginArtifacts(pluginArtifacts)
@@ -467,18 +438,8 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageScanningStage := func() error {
 		log.Println("Image Scanning Started for digest", digest)
-		scanEvent := &helper.ScanEvent{
-			Image:               dest,
-			ImageDigest:         digest,
-			PipelineId:          ciCdRequest.CommonWorkflowRequest.PipelineId,
-			UserId:              ciCdRequest.CommonWorkflowRequest.TriggeredBy,
-			DockerRegistryId:    ciCdRequest.CommonWorkflowRequest.DockerRegistryId,
-			DockerConnection:    ciCdRequest.CommonWorkflowRequest.DockerConnection,
-			DockerCert:          ciCdRequest.CommonWorkflowRequest.DockerCert,
-			ImageScanMaxRetries: ciCdRequest.CommonWorkflowRequest.ImageScanMaxRetries,
-			ImageScanRetryDelay: ciCdRequest.CommonWorkflowRequest.ImageScanRetryDelay,
-		}
-		err := helper.SendEventToClairUtility(scanEvent)
+		scanEvent := adaptor2.GetImageScanEvent(dest, digest, ciCdRequest.CommonWorkflowRequest)
+		err := helper.ExecuteImageScanningViaRest(scanEvent)
 		if err != nil {
 			log.Println("error in running Image Scan", "err", err)
 			return helper.NewCiStageError(err).
@@ -638,4 +599,60 @@ func (impl *CiStage) AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciRequest *
 		}
 	}
 	return ciRequest.RuntimeEnvironmentVariables, nil
+}
+
+// When externalCiArtifact is provided (run time Env at time of build) then this image will be used further in the pipeline
+// imageDigest and ciProjectDetails are optional fields
+func (impl *CiStage) handleRuntimeParametersForCiJob(runtimeEnv map[string]string, ciCdRequest *helper.CiCdTriggerEvent) (string, string, error) {
+	log.Println(util.DEVTRON, "external ci artifact found! exiting now with success event")
+	dest := runtimeEnv[bean2.ExternalCiArtifact]
+	digest := runtimeEnv[bean2.ImageDigest]
+	var err error
+	if len(digest) == 0 {
+		digest, err = impl.extractDigestForCiJob(ciCdRequest.CommonWorkflowRequest, dest)
+		if err != nil {
+			log.Println(util.DEVTRON, " extract digest for ci job error", "dest", dest, "err", err)
+			return dest, digest, err
+		}
+	}
+	var tempDetails []*helper.CiProjectDetailsMin
+	err = json.Unmarshal([]byte(runtimeEnv[bean2.CiProjectDetails]), &tempDetails)
+	if err != nil {
+		fmt.Println("Error unmarshalling ciProjectDetails JSON:", err)
+		fmt.Println("ignoring the error and continuing without saving ciProjectDetails")
+	}
+	if len(tempDetails) > 0 && len(ciCdRequest.CommonWorkflowRequest.CiProjectDetails) > 0 {
+		detail := tempDetails[0]
+		ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitHash = detail.CommitHash
+		ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Message = detail.Message
+		ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].Author = detail.Author
+		ciCdRequest.CommonWorkflowRequest.CiProjectDetails[0].CommitTime = detail.CommitTime
+	}
+	return dest, digest, nil
+}
+
+func (impl *CiStage) extractDigestForCiJob(workflowRequest *helper.CommonWorkflowRequest, image string) (string, error) {
+	var useAppDockerConfigForPrivateRegistries bool
+	var err error
+	useAppDockerConfig, ok := workflowRequest.RuntimeEnvironmentVariables[bean2.UseAppDockerConfig]
+	if ok && len(useAppDockerConfig) > 0 {
+		useAppDockerConfigForPrivateRegistries, err = strconv.ParseBool(useAppDockerConfig)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("Error in parsing useAppDockerConfig runtime param to bool from string useAppDockerConfigForPrivateRegistries:- %s, err:", useAppDockerConfig), err)
+			// would use default val of useAppDockerConfigForPrivateRegistries i.e false in case error arises
+		}
+	}
+	var dockerAuthConfig *bean.DockerAuthConfig
+	if useAppDockerConfigForPrivateRegistries {
+		dockerAuthConfig = impl.dockerHelper.GetDockerAuthConfigForPrivateRegistries(workflowRequest)
+	}
+	startTime := time.Now()
+	//user has not provided imageDigest in that case fetch from docker.
+	imgDigest, err := impl.dockerHelper.ExtractDigestFromImage(image, workflowRequest.UseDockerApiToGetDigest, dockerAuthConfig)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Error in extracting digest from image %s, err:", image), err)
+		return "", err
+	}
+	log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
+	return imgDigest, nil
 }
