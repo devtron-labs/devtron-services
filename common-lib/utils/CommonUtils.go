@@ -101,7 +101,6 @@ func GetQueryProcessedFunction(cfg bean.PgQueryConfig) func(event *pg.QueryProce
 		}
 		ExecutePGQueryProcessor(cfg, bean.PgQueryEvent{
 			StartTime: event.StartTime,
-			Result:    event.Result,
 			Error:     event.Error,
 			Query:     query,
 		})
