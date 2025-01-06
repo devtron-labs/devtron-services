@@ -18,22 +18,27 @@ package sql
 
 import (
 	"context"
-	"reflect"
-
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/lens/internal/logger"
 	pg "github.com/go-pg/pg/v10"
 	"go.uber.org/zap"
+	"reflect"
 )
 
 type Config struct {
-	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
-	Port            string `env:"PG_PORT" envDefault:"5432"`
-	User            string `env:"PG_USER" envDefault:""`
-	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
-	Database        string `env:"PG_DATABASE" envDefault:"lens"`
-	ApplicationName string `env:"APP" envDefault:"lens"`
-	LogQuery        bool   `env:"PG_LOG_QUERY" envDefault:"true"`
+	Addr                   string `env:"PG_ADDR" envDefault:"127.0.0.1"`
+	Port                   string `env:"PG_PORT" envDefault:"5432"`
+	User                   string `env:"PG_USER" envDefault:""`
+	Password               string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
+	Database               string `env:"PG_DATABASE" envDefault:"lens"`
+	ApplicationName        string `env:"APP" envDefault:"lens"`
+	LogSlowQuery           bool   `env:"PG_LOG_SLOW_QUERY" envDefault:"true"`
+	LogAllQuery            bool   `env:"PG_LOG_ALL_QUERY" envDefault:"false"`
+	LogAllFailureQueries   bool   `env:"PG_LOG_ALL_FAILURE_QUERIES" envDefault:"true"`
+	ExportPromMetrics      bool   `env:"PG_EXPORT_PROM_METRICS" envDefault:"true"`
+	QueryDurationThreshold int64  `env:"PG_QUERY_DUR_THRESHOLD" envDefault:"2000"`
 }
 
 func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
@@ -42,6 +47,15 @@ func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Cont
 
 func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 	query, err := q.FormattedQuery()
+	if err != nil {
+		logger.NewSugardLogger().Debugw("error in formatted query", "event", q, "err", err)
+		return err
+	}
+	utils.ExecutePGQueryProcessor(getPgQueryConfig(d.DBConfig), bean.PgQueryEvent{
+		StartTime: q.StartTime,
+		Error:     q.Err,
+		Query:     string(query),
+	})
 	logger.NewSugardLogger().Debugw("Printing formatted query", "query", query)
 	return err
 }
@@ -49,6 +63,18 @@ func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 type dbLogger struct {
 	beforeQueryMethod func(context.Context, *pg.QueryEvent) (context.Context, error)
 	afterQueryMethod  func(context.Context, *pg.QueryEvent) error
+	DBConfig          *Config
+}
+
+func getPgQueryConfig(cfg *Config) bean.PgQueryConfig {
+	return bean.PgQueryConfig{
+		LogSlowQuery:           cfg.LogSlowQuery,
+		LogAllQuery:            cfg.LogAllQuery,
+		LogAllFailureQueries:   cfg.LogAllFailureQueries,
+		ExportPromMetrics:      cfg.ExportPromMetrics,
+		QueryDurationThreshold: cfg.QueryDurationThreshold,
+		ServiceName:            cfg.ApplicationName,
+	}
 }
 
 func GetConfig() (*Config, error) {
@@ -76,10 +102,7 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	} else {
 		logger.Infow("connected with db", "db", obfuscateSecretTags(cfg))
 	}
-	if cfg.LogQuery {
-		//TODO: need to use common-lib lens uses v10 go-pg and all other service uses v6.15.1+incompatible
-		dbConnection.AddQueryHook(dbLogger{})
-	}
+	dbConnection.AddQueryHook(dbLogger{DBConfig: cfg})
 	return dbConnection, err
 }
 

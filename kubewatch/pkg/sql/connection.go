@@ -32,11 +32,11 @@ type Config struct {
 	Password               string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
 	Database               string `env:"PG_DATABASE" envDefault:"orchestrator"`
 	ApplicationName        string `env:"APP" envDefault:"kubewatch"`
-	LogQuery               bool   `env:"PG_LOG_QUERY" envDefault:"true"`
+	LogSlowQuery           bool   `env:"PG_LOG_SLOW_QUERY" envDefault:"true"`
 	LogAllQuery            bool   `env:"PG_LOG_ALL_QUERY" envDefault:"false"`
 	LogAllFailureQueries   bool   `env:"PG_LOG_ALL_FAILURE_QUERIES" envDefault:"true"`
-	ExportPromMetrics      bool   `env:"PG_EXPORT_PROM_METRICS" envDefault:"false"`
-	QueryDurationThreshold int64  `env:"PG_QUERY_DUR_THRESHOLD" envDefault:"5000"`
+	ExportPromMetrics      bool   `env:"PG_EXPORT_PROM_METRICS" envDefault:"true"`
+	QueryDurationThreshold int64  `env:"PG_QUERY_DUR_THRESHOLD" envDefault:"2000"`
 }
 
 func GetConfig() (*Config, error) {
@@ -66,13 +66,13 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	}
 
 	//--------------
-	dbConnection.OnQueryProcessed(utils.GetQueryProcessedFunction(getPgQueryConfig(cfg)))
+	dbConnection.OnQueryProcessed(utils.GetPGPostQueryProcessor(getPgQueryConfig(cfg)))
 	return dbConnection, err
 }
 
 func getPgQueryConfig(cfg *Config) bean.PgQueryConfig {
 	return bean.PgQueryConfig{
-		LogQuery:               cfg.LogQuery,
+		LogSlowQuery:           cfg.LogSlowQuery,
 		LogAllQuery:            cfg.LogAllQuery,
 		LogAllFailureQueries:   cfg.LogAllFailureQueries,
 		ExportPromMetrics:      cfg.ExportPromMetrics,

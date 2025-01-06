@@ -4,7 +4,7 @@ go 1.21
 
 toolchain go1.22.4
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250102061955-9f169e5b2d2e
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250106062043-438cf8b4b346
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
