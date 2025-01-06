@@ -92,7 +92,7 @@ func BuildDockerImagePath(dockerInfo bean.DockerRegistryInfo) (string, error) {
 	return dest, nil
 }
 
-func GetQueryProcessedFunction(cfg bean.PgQueryConfig) func(event *pg.QueryProcessedEvent) {
+func GetPGPostQueryProcessor(cfg bean.PgQueryConfig) func(event *pg.QueryProcessedEvent) {
 	return func(event *pg.QueryProcessedEvent) {
 		query, err := event.FormattedQuery()
 		if err != nil {
@@ -126,15 +126,14 @@ func ExecutePGQueryProcessor(cfg bean.PgQueryConfig, event bean.PgQueryEvent) {
 	}
 
 	// Log pg query if enabled
-	logAllOrThresholdQueries := cfg.LogAllQuery || (cfg.LogQuery && queryDuration.Milliseconds() > cfg.QueryDurationThreshold)
+	logThresholdQueries := cfg.LogSlowQuery && queryDuration.Milliseconds() > cfg.QueryDurationThreshold
 	logFailureQuery := queryError && cfg.LogAllFailureQueries
-	if logAllOrThresholdQueries || logFailureQuery { //if both true, then preference will be for failed query else normal query will be printed. In all other cases simply show the query corresponding the condition.
-		if logFailureQuery {
-			logger.Errorw("PG_QUERY_FAIL - query time", "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
-		} else if logAllOrThresholdQueries {
-			logger.Debugw("query time", "duration", queryDuration.Seconds(), "query", event.Query)
-		}
-
+	if logFailureQuery {
+		logger.Errorw("PG_QUERY_FAIL - query time", "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
+	} else if logThresholdQueries {
+		logger.Debugw("PG_QUERY_SLOW - query time", "duration", queryDuration.Seconds(), "query", event.Query)
+	} else if cfg.LogAllQuery {
+		logger.Debugw("query time", "duration", queryDuration.Seconds(), "query", event.Query)
 	}
 }
 

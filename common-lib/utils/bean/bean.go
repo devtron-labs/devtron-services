@@ -64,7 +64,7 @@ type DockerRegistryInfo struct {
 }
 
 type PgQueryConfig struct {
-	LogQuery               bool
+	LogSlowQuery           bool
 	LogAllQuery            bool
 	LogAllFailureQueries   bool
 	ExportPromMetrics      bool
