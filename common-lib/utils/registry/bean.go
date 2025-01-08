@@ -16,3 +16,13 @@ const (
 )
 
 const JSON_KEY_USERNAME = "_json_key"
+
+type RegistryCredential struct {
+	RegistryType       registry `json:"registryType"`
+	RegistryURL        string   `json:"registryURL"`
+	Username           string   `json:"username"`
+	Password           string   `json:"password"`
+	AWSAccessKeyId     string   `json:"awsAccessKeyId,omitempty"`
+	AWSSecretAccessKey string   `json:"awsSecretAccessKey,omitempty"`
+	AWSRegion          string   `json:"awsRegion,omitempty"`
+}
