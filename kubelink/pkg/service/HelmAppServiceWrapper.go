@@ -139,6 +139,19 @@ func (impl *ApplicationServiceServerImpl) GetAppStatus(ctx context.Context, req 
 	return helmAppStatus, nil
 }
 
+func (impl *ApplicationServiceServerImpl) GetAppStatusV2(ctx context.Context, req *client.AppDetailRequest) (*client.AppStatus, error) {
+	impl.Logger.Infow("App detail request", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
+		"namespace", req.Namespace)
+
+	helmAppStatus, err := impl.HelmAppService.FetchApplicationStatusV2(ctx, req)
+	if err != nil {
+		impl.Logger.Errorw("Error in getting app detail", "clusterName", req.ClusterConfig.ClusterName, "releaseName", req.ReleaseName,
+			"namespace", req.Namespace, "err", err)
+		return nil, err
+	}
+	return helmAppStatus, nil
+}
+
 func (impl *ApplicationServiceServerImpl) Hibernate(ctx context.Context, in *client.HibernateRequest) (*client.HibernateResponse, error) {
 	impl.Logger.Info("Hibernate request")
 	res, err := impl.HelmAppService.ScaleObjects(ctx, in.ClusterConfig, in.ObjectIdentifier, true)
