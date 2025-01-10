@@ -83,6 +83,7 @@ type HelmAppService interface {
 	GetApplicationListForCluster(config *client.ClusterConfig) *client.DeployedAppList
 	BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error)
 	FetchApplicationStatus(req *client.AppDetailRequest) (*client.AppStatus, error)
+	FetchApplicationStatusV2(ctx context.Context, req *client.AppDetailRequest) (*client.AppStatus, error)
 	GetHelmAppValues(req *client.AppDetailRequest) (*client.ReleaseInfo, error)
 	ScaleObjects(ctx context.Context, clusterConfig *client.ClusterConfig, requests []*client.ObjectIdentifier, scaleDown bool) (*client.HibernateResponse, error)
 	GetDeploymentHistory(req *client.AppDetailRequest) (*client.HelmAppDeploymentHistory, error)
@@ -318,6 +319,28 @@ func (impl *HelmAppServiceImpl) FetchApplicationStatus(req *client.AppDetailRequ
 	// getting app status on basis of healthy/non-healthy as this api is used for deployment status
 	// in orchestrator and not for app status
 	helmAppStatus.ApplicationStatus = *util.GetAppStatusOnBasisOfHealthyNonHealthy(healthStatusArray)
+	return helmAppStatus, nil
+}
+
+// FetchApplicationStatusV2 gets the application status of helm release using cache if preferred which can be used anywhere as it gives unfiltered status
+// unlike its counterpart FetchApplicationStatus which filters down status into healthy or non-healthy since it is only used for deployment status calculation.
+func (impl HelmAppServiceImpl) FetchApplicationStatusV2(ctx context.Context, req *client.AppDetailRequest) (*client.AppStatus, error) {
+	helmAppStatus := &client.AppStatus{}
+	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
+	if err != nil {
+		impl.logger.Errorw("Error in getting helm release ", "err", err)
+		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		if internalErr != nil {
+			err = internalErr
+		}
+		return nil, err
+	}
+	resourceTreeResponse, err := impl.common.BuildResourceTreeForHelmRelease(ctx, req, helmRelease)
+	if err != nil {
+		impl.logger.Errorw("error in building resource tree ", "err", err)
+		return nil, err
+	}
+	helmAppStatus.ApplicationStatus = *k8sObjectsUtil.BuildAppHealthStatus(resourceTreeResponse.Nodes)
 	return helmAppStatus, nil
 }
 
