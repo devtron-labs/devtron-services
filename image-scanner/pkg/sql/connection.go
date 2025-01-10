@@ -41,7 +41,7 @@ func GetConfig() (*Config, error) {
 	return cfg, err
 }
 
-func NewDbConnectiowwn(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
+func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	options := pg.Options{
 		Addr:            cfg.Addr + ":" + cfg.Port,
 		User:            cfg.User,
