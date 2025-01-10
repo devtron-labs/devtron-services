@@ -43,7 +43,7 @@ func NewResourceTreeServiceImpl(k8sService K8sService,
 func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
 	parentObjects = sanitizeParentObjects(parentObjects)
 	if appDetailRequest.PreferCache && appDetailRequest.CacheConfig != nil {
-		impl.logger.Infow("Cache is not supported in oss", "payload", appDetailRequest)
+		impl.logger.Infow("Cache is not supported in oss", "releaseName", appDetailRequest.ReleaseName)
 		if !appDetailRequest.UseFallBack {
 			impl.logger.Infow("Use fallback is false, hence returning with error", "appDetailRequest", appDetailRequest)
 			return nil, errors.New("Cache is not supported in oss and use_fallback flag is false")
