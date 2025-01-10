@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/image-scanner/pkg/middleware"
@@ -73,7 +74,7 @@ func (app *App) Start() {
 	app.Router.Router.Use(middlewares.Recovery)
 	app.server = server
 	err = server.ListenAndServe()
-	if err != nil {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		app.Logger.Errorw("error in startup", "err", err)
 		os.Exit(2)
 	}

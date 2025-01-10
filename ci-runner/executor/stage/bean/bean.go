@@ -14,28 +14,11 @@
  * limitations under the License.
  */
 
-package main
+package bean
 
-import (
-	"fmt"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
+const (
+	ExternalCiArtifact = "externalCiArtifact"
+	ImageDigest        = "imageDigest"
+	UseAppDockerConfig = "useAppDockerConfig"
+	CiProjectDetails   = "ciProjectDetails"
 )
-
-func main() {
-	app, err := InitializeApp()
-	if err != nil {
-		log.Panic(err)
-	}
-	go app.Start()
-	//     gracefulStop start
-	var gracefulStop = make(chan os.Signal)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
-	sig := <-gracefulStop
-	fmt.Printf("caught term sig: %+v", sig)
-	app.Stop()
-	//      gracefulStop end
-}
