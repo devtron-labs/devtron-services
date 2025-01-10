@@ -29,8 +29,8 @@ github.com/cyphar/filepath-securejoin v0.2.4/go.mod h1:aPGpWjXOXUn2NCNjFvBE6aRxG
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250110055645-237b7149cc2f h1:L186XO7OdOW3OZtdmKp+TSOmYzWrpfzHC4XuCMqAIOw=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250110055645-237b7149cc2f/go.mod h1:HdSvrSW8psSLpfEdDQXMyIsIWWTDTeNjFZjVFPjaM40=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250110094640-fca164483e40 h1:iQzrtKHK8KIboQYvDRoW0mfRBFMd4VjieOHhMtaE4Rc=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250110094640-fca164483e40/go.mod h1:HdSvrSW8psSLpfEdDQXMyIsIWWTDTeNjFZjVFPjaM40=
 github.com/devtron-labs/protos v0.0.3-0.20240809072909-83171af34169 h1:9OMZv0/fOWKK9s9BLTofFL/BO79TdyvC1Sc1HsC4esQ=
 github.com/devtron-labs/protos v0.0.3-0.20240809072909-83171af34169/go.mod h1:1TqULGlTey+VNhAu/ag7NJuUvByJemkqodsc9L5PHJk=
 github.com/docker/cli v24.0.6+incompatible h1:fF+XCQCgJjjQNIMjzaSmiKJSCcfcXb3TWTcc7GAneOY=
