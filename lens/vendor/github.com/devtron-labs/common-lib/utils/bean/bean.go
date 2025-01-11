@@ -19,6 +19,7 @@ package bean
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/caarlos0/env"
 	"github.com/docker/cli/cli/config/types"
 	"time"
 )
@@ -72,9 +73,10 @@ type PgQueryMonitoringConfig struct {
 	ServiceName            string
 }
 
-func (c PgQueryMonitoringConfig) WithServiceName(serviceName string) PgQueryMonitoringConfig {
-	c.ServiceName = serviceName
-	return c
+func GetPgQueryMonitoringConfig(serviceName string) (PgQueryMonitoringConfig, error) {
+	cfg := &PgQueryMonitoringConfig{}
+	err := env.Parse(cfg)
+	return *cfg, err
 }
 
 type PgQueryEvent struct {

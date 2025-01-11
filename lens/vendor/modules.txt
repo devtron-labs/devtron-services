@@ -7,7 +7,7 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250111150401-43788499c055
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250111151450-56dd6e6a09f2
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/git-manager/util
@@ -288,4 +288,4 @@ google.golang.org/protobuf/types/known/timestamppb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250111150401-43788499c055
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250111151450-56dd6e6a09f2

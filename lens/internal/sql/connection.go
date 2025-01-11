@@ -47,7 +47,7 @@ func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 		logger.NewSugardLogger().Debugw("error in formatted query", "event", q, "err", err)
 		return err
 	}
-	utils.ExecutePGQueryProcessor(d.DBConfig.PgQueryMonitoringConfig.WithServiceName(d.DBConfig.ApplicationName), bean.PgQueryEvent{
+	utils.ExecutePGQueryProcessor(d.DBConfig.PgQueryMonitoringConfig, bean.PgQueryEvent{
 		StartTime: q.StartTime,
 		Error:     q.Err,
 		Query:     string(query),
@@ -65,6 +65,14 @@ type dbLogger struct {
 func GetConfig() (*Config, error) {
 	cfg := &Config{}
 	err := env.Parse(cfg)
+	if err != nil {
+		return cfg, err
+	}
+	monitoringCfg, err := bean.GetPgQueryMonitoringConfig(cfg.ApplicationName)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.PgQueryMonitoringConfig = monitoringCfg
 	return cfg, err
 }
 
