@@ -10,22 +10,26 @@ import (
 )
 
 type Config struct {
-	Addr                   string `env:"PG_ADDR" envDefault:"127.0.0.1"`
-	Port                   string `env:"PG_PORT" envDefault:"5432"`
-	User                   string `env:"PG_USER" envDefault:"user"`
-	Password               string `env:"PG_PASSWORD" envDefault:"password" secretData:"-"`
-	Database               string `env:"PG_DATABASE" envDefault:"orchestrator"`
-	ApplicationName        string `env:"APP" envDefault:"chart-sync"`
-	LogSlowQuery           bool   `env:"PG_LOG_SLOW_QUERY" envDefault:"true"`
-	LogAllQuery            bool   `env:"PG_LOG_ALL_QUERY" envDefault:"false"`
-	LogAllFailureQueries   bool   `env:"PG_LOG_ALL_FAILURE_QUERIES" envDefault:"true"`
-	ExportPromMetrics      bool   `env:"PG_EXPORT_PROM_METRICS" envDefault:"true"`
-	QueryDurationThreshold int64  `env:"PG_QUERY_DUR_THRESHOLD" envDefault:"2000"`
+	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
+	Port            string `env:"PG_PORT" envDefault:"5432"`
+	User            string `env:"PG_USER" envDefault:"user"`
+	Password        string `env:"PG_PASSWORD" envDefault:"password" secretData:"-"`
+	Database        string `env:"PG_DATABASE" envDefault:"orchestrator"`
+	ApplicationName string `env:"APP" envDefault:"chart-sync"`
+	bean.PgQueryMonitoringConfig
 }
 
 func GetConfig() (*Config, error) {
 	cfg := &Config{}
 	err := env.Parse(cfg)
+	if err != nil {
+		return cfg, err
+	}
+	monitoringCfg, err := bean.GetPgQueryMonitoringConfig(cfg.ApplicationName)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.PgQueryMonitoringConfig = monitoringCfg
 	return cfg, err
 }
 
@@ -49,19 +53,8 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 		logger.Infow("connected with db", "db", obfuscateSecretTags(cfg))
 	}
 	//--------------
-	dbConnection.OnQueryProcessed(utils.GetPGPostQueryProcessor(getPgQueryConfig(cfg)))
+	dbConnection.OnQueryProcessed(utils.GetPGPostQueryProcessor(cfg.PgQueryMonitoringConfig))
 	return dbConnection, err
-}
-
-func getPgQueryConfig(cfg *Config) bean.PgQueryConfig {
-	return bean.PgQueryConfig{
-		LogSlowQuery:           cfg.LogSlowQuery,
-		LogAllQuery:            cfg.LogAllQuery,
-		LogAllFailureQueries:   cfg.LogAllFailureQueries,
-		ExportPromMetrics:      cfg.ExportPromMetrics,
-		QueryDurationThreshold: cfg.QueryDurationThreshold,
-		ServiceName:            cfg.ApplicationName,
-	}
 }
 
 func obfuscateSecretTags(cfg interface{}) interface{} {

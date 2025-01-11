@@ -4,7 +4,7 @@ go 1.21
 
 toolchain go1.21.8
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250110105922-54a8e418886d
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250111152036-0183a9201937
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
