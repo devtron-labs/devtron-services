@@ -28,17 +28,13 @@ import (
 )
 
 type Config struct {
-	Addr                   string `env:"PG_ADDR" envDefault:"127.0.0.1"`
-	Port                   string `env:"PG_PORT" envDefault:"5432"`
-	User                   string `env:"PG_USER" envDefault:""`
-	Password               string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
-	Database               string `env:"PG_DATABASE" envDefault:"lens"`
-	ApplicationName        string `env:"APP" envDefault:"lens"`
-	LogSlowQuery           bool   `env:"PG_LOG_SLOW_QUERY" envDefault:"true"`
-	LogAllQuery            bool   `env:"PG_LOG_ALL_QUERY" envDefault:"false"`
-	LogAllFailureQueries   bool   `env:"PG_LOG_ALL_FAILURE_QUERIES" envDefault:"true"`
-	ExportPromMetrics      bool   `env:"PG_EXPORT_PROM_METRICS" envDefault:"true"`
-	QueryDurationThreshold int64  `env:"PG_QUERY_DUR_THRESHOLD" envDefault:"2000"`
+	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
+	Port            string `env:"PG_PORT" envDefault:"5432"`
+	User            string `env:"PG_USER" envDefault:""`
+	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
+	Database        string `env:"PG_DATABASE" envDefault:"lens"`
+	ApplicationName string `env:"APP" envDefault:"lens"`
+	bean.PgQueryMonitoringConfig
 }
 
 func (d dbLogger) BeforeQuery(c context.Context, q *pg.QueryEvent) (context.Context, error) {
@@ -51,7 +47,7 @@ func (d dbLogger) AfterQuery(c context.Context, q *pg.QueryEvent) error {
 		logger.NewSugardLogger().Debugw("error in formatted query", "event", q, "err", err)
 		return err
 	}
-	utils.ExecutePGQueryProcessor(getPgQueryConfig(d.DBConfig), bean.PgQueryEvent{
+	utils.ExecutePGQueryProcessor(d.DBConfig.PgQueryMonitoringConfig.WithServiceName(d.DBConfig.ApplicationName), bean.PgQueryEvent{
 		StartTime: q.StartTime,
 		Error:     q.Err,
 		Query:     string(query),
@@ -64,17 +60,6 @@ type dbLogger struct {
 	beforeQueryMethod func(context.Context, *pg.QueryEvent) (context.Context, error)
 	afterQueryMethod  func(context.Context, *pg.QueryEvent) error
 	DBConfig          *Config
-}
-
-func getPgQueryConfig(cfg *Config) bean.PgQueryConfig {
-	return bean.PgQueryConfig{
-		LogSlowQuery:           cfg.LogSlowQuery,
-		LogAllQuery:            cfg.LogAllQuery,
-		LogAllFailureQueries:   cfg.LogAllFailureQueries,
-		ExportPromMetrics:      cfg.ExportPromMetrics,
-		QueryDurationThreshold: cfg.QueryDurationThreshold,
-		ServiceName:            cfg.ApplicationName,
-	}
 }
 
 func GetConfig() (*Config, error) {
