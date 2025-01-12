@@ -22,7 +22,7 @@ require (
 	github.com/docker/cli v24.0.6+incompatible // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-pg/pg v8.0.7+incompatible // indirect
+	github.com/go-pg/pg v6.15.1+incompatible // indirect
 	github.com/go-pg/zerochecker v0.2.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
