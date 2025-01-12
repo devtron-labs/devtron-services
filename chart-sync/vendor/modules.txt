@@ -93,9 +93,12 @@ github.com/containerd/platforms
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250108143447-5d5964eb151f
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250112054916-147f77c7b7b1
 ## explicit; go 1.21
+github.com/devtron-labs/common-lib/git-manager/util
 github.com/devtron-labs/common-lib/helmLib/registry
+github.com/devtron-labs/common-lib/utils
+github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/http
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
 # github.com/distribution/reference v0.6.0
@@ -295,6 +298,7 @@ github.com/pkg/errors
 ## explicit; go 1.19
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
+github.com/prometheus/client_golang/prometheus/promauto
 github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.5.0
 ## explicit; go 1.19
@@ -785,4 +789,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250108143447-5d5964eb151f
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250112054916-147f77c7b7b1
