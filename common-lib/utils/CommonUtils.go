@@ -152,7 +152,7 @@ var pgQueryDuration *prometheus.HistogramVec
 func GetPgQueryDurationHistogram() *prometheus.HistogramVec {
 	if pgQueryDuration == nil {
 		pgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-			Name: "pg_query_duration_seconds_v3",
+			Name: "pg_query_duration_seconds",
 			Help: "Duration of PG queries",
 		}, []string{"status", "serviceName"})
 	}
