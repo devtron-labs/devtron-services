@@ -24,6 +24,7 @@ import (
 	"github.com/devtron-labs/image-scanner/pkg/grafeasService"
 	"github.com/devtron-labs/image-scanner/pkg/klarService"
 	"github.com/devtron-labs/image-scanner/pkg/security"
+	"github.com/devtron-labs/image-scanner/pkg/sql/adaptor"
 	"github.com/devtron-labs/image-scanner/pkg/sql/bean"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
 	"github.com/devtron-labs/image-scanner/pkg/user"
@@ -36,6 +37,7 @@ import (
 type RestHandler interface {
 	ScanForVulnerability(w http.ResponseWriter, r *http.Request)
 	ScanForVulnerabilityEvent(scanConfig *bean2.ImageScanEvent) (*common.ScanEventResponse, error)
+	RegisterAndSaveScannedResult(w http.ResponseWriter, r *http.Request)
 }
 
 func NewRestHandlerImpl(logger *zap.SugaredLogger,
@@ -119,14 +121,9 @@ func (impl *RestHandlerImpl) ScanForVulnerabilityEvent(scanConfig *bean2.ImageSc
 		impl.Logger.Errorw("error in marshalling scanEvent", "event", scanConfig, "err", err)
 		return nil, err
 	}
-	executionHistoryModel := &repository.ImageScanExecutionHistory{
-		Image:              scanConfig.Image,
-		ImageHash:          scanConfig.ImageDigest,
-		ExecutionTime:      time.Now(),
-		ExecutedBy:         scanConfig.UserId,
-		SourceMetadataJson: string(scanEventJson),
-	}
-	executionHistory, executionHistoryDirPath, err := impl.ImageScanService.RegisterScanExecutionHistoryAndState(executionHistoryModel, tool)
+	executionHistoryModel := adaptor.GetImageScanExecutionHistory(scanConfig, scanEventJson, time.Now())
+
+	executionHistory, executionHistoryDirPath, err := impl.ImageScanService.RegisterScanExecutionHistoryAndState(executionHistoryModel, tool.Id)
 	if err != nil {
 		impl.Logger.Errorw("service err, RegisterScanExecutionHistoryAndState", "err", err)
 		return nil, err
@@ -174,4 +171,23 @@ func (impl *RestHandlerImpl) ScanImageAsPerTool(scanConfig *bean2.ImageScanEvent
 		}
 	}
 	return result, nil
+}
+
+func (impl *RestHandlerImpl) RegisterAndSaveScannedResult(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var scanResultPayload bean2.ScanResultPayload
+	err := decoder.Decode(&scanResultPayload)
+	if err != nil {
+		impl.Logger.Errorw("error in decoding scanResultPayload", "error", err)
+		WriteJsonResp(w, err, nil, http.StatusBadRequest)
+		return
+	}
+	impl.Logger.Infow("register and save scan result payload", "saveScanResultPayload", scanResultPayload)
+	err = impl.ImageScanService.RegisterAndSaveScannedResult(&scanResultPayload)
+	if err != nil {
+		impl.Logger.Errorw("service err, RegisterAndSaveScannedResult", "err", err)
+		WriteJsonResp(w, err, nil, http.StatusInternalServerError)
+		return
+	}
+	WriteJsonResp(w, nil, nil, http.StatusOK)
 }

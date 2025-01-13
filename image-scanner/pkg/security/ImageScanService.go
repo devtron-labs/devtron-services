@@ -31,6 +31,7 @@ import (
 	httpUtil "github.com/devtron-labs/image-scanner/internals/step-lib/util/http-util"
 	"github.com/devtron-labs/image-scanner/internals/util"
 	"github.com/devtron-labs/image-scanner/pkg/helper"
+	"github.com/devtron-labs/image-scanner/pkg/sql/adaptor"
 	"github.com/devtron-labs/image-scanner/pkg/sql/bean"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
 	"github.com/go-pg/pg"
@@ -58,11 +59,12 @@ type ImageScanService interface {
 	CreateFolderForOutputData(executionHistoryModelId int) string
 	HandleProgressingScans()
 	GetActiveTool() (*repository.ScanToolMetadata, error)
-	RegisterScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory, tool *repository.ScanToolMetadata) (*repository.ImageScanExecutionHistory, string, error)
+	RegisterScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory, toolId int) (*repository.ImageScanExecutionHistory, string, error)
 	GetImageScanRenderDto(registryId string, scanEvent *bean2.ImageScanEvent) (*common.ImageScanRenderDto, error)
 	GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error)
 	FetchProxyUrl(scanEvent *bean2.ImageScanEvent) (string, []name.Option, error)
-	SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error
+	SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean2.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error
+	RegisterAndSaveScannedResult(scanResultPayload *bean2.ScanResultPayload) error
 }
 
 type ImageScanServiceImpl struct {
@@ -111,6 +113,22 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 	}
 	imageScanService.HandleProgressingScans()
 	return imageScanService
+}
+
+func GetImageScannerConfig() (*ImageScanConfig, error) {
+	scannerConfig := &ImageScanConfig{}
+	err := env.Parse(scannerConfig)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("could not get scanner config from environment :%v", err))
+	}
+	return scannerConfig, err
+}
+
+type ImageScanConfig struct {
+	ScannerType           string `env:"SCANNER_TYPE" envDefault:""`
+	ScanTryCount          int    `env:"IMAGE_SCAN_TRY_COUNT" envDefault:"1"`
+	ScanImageTimeout      int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`      // Time is considered in minutes
+	ScanImageAsyncTimeout int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"` // Time is considered in minutes
 }
 
 func (impl *ImageScanServiceImpl) GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error) {
@@ -252,23 +270,42 @@ func (impl *ImageScanServiceImpl) CreateFolderForOutputData(executionHistoryMode
 	return executionHistoryDirPath
 }
 
-func (impl *ImageScanServiceImpl) RegisterScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory,
-	tool *repository.ScanToolMetadata) (*repository.ImageScanExecutionHistory, string, error) {
-	executionHistoryDirPath := ""
+func (impl *ImageScanServiceImpl) saveImageScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory, toolId int) error {
 	//creating execution history
 	tx, err := impl.ScanHistoryRepository.GetConnection().Begin()
 	if err != nil {
 		impl.Logger.Errorw("error in initiating db transaction", "err", err)
-		return nil, executionHistoryDirPath, err
+		return err
 	}
 	// Rollback tx on error.
 	defer tx.Rollback()
 	err = impl.ScanHistoryRepository.Save(tx, executionHistoryModel)
 	if err != nil {
 		impl.Logger.Errorw("Failed to save executionHistory", "model", executionHistoryModel, "err", err)
+		return err
+	}
+	executionHistoryMappingModel := adaptor.GetScanToolExecutionHistoryMapping(executionHistoryModel, bean.ScanExecutionProcessStateRunning, "", toolId)
+	err = impl.ScanToolExecutionHistoryMappingRepository.Save(tx, executionHistoryMappingModel)
+	if err != nil {
+		impl.Logger.Errorw("Failed to save executionHistoryMappingModel", "err", err)
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		impl.Logger.Errorw("error in committing transaction", "err", err)
+		return err
+	}
+	return nil
+}
+
+func (impl *ImageScanServiceImpl) RegisterScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory,
+	toolId int) (*repository.ImageScanExecutionHistory, string, error) {
+	executionHistoryDirPath := ""
+	err := impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, toolId)
+	if err != nil {
+		impl.Logger.Errorw("error in saving image scan exec history and it's state", "executionHistoryModel", executionHistoryModel, "err", err)
 		return nil, executionHistoryDirPath, err
 	}
-
 	// creating folder for storing all details if not exist
 	isExist, err := helper.DoesFileExist(bean.ScanOutputDirectory)
 	if err != nil {
@@ -278,7 +315,7 @@ func (impl *ImageScanServiceImpl) RegisterScanExecutionHistoryAndState(execution
 	if !isExist {
 		err = os.Mkdir(bean.ScanOutputDirectory, commonUtil.DefaultFileCreatePermission)
 		if err != nil && !os.IsExist(err) {
-			impl.Logger.Errorw("error in creating Output directory", "toolId", tool.Id, "executionHistoryDir", executionHistoryDirPath, "err", err)
+			impl.Logger.Errorw("error in creating Output directory", "toolId", toolId, "executionHistoryDir", executionHistoryDirPath, "err", err)
 			return nil, executionHistoryDirPath, err
 		}
 	}
@@ -287,28 +324,6 @@ func (impl *ImageScanServiceImpl) RegisterScanExecutionHistoryAndState(execution
 	err = os.Mkdir(executionHistoryDirPath, commonUtil.DefaultFileCreatePermission)
 	if err != nil && !os.IsExist(err) {
 		impl.Logger.Errorw("error in creating executionHistory directory", "executionHistoryId", executionHistoryModel.Id, "err", err)
-		return nil, executionHistoryDirPath, err
-	}
-	executionHistoryMappingModel := &repository.ScanToolExecutionHistoryMapping{
-		ImageScanExecutionHistoryId: executionHistoryModel.Id,
-		ScanToolId:                  tool.Id,
-		ExecutionStartTime:          executionHistoryModel.ExecutionTime,
-		State:                       bean.ScanExecutionProcessStateRunning,
-		AuditLog: repository.AuditLog{
-			CreatedOn: executionHistoryModel.ExecutionTime,
-			CreatedBy: int32(executionHistoryModel.ExecutedBy),
-			UpdatedOn: executionHistoryModel.ExecutionTime,
-			UpdatedBy: int32(executionHistoryModel.ExecutedBy),
-		},
-	}
-	err = impl.ScanToolExecutionHistoryMappingRepository.Save(tx, executionHistoryMappingModel)
-	if err != nil {
-		impl.Logger.Errorw("Failed to save executionHistoryMappingModel", "err", err)
-		return nil, executionHistoryDirPath, err
-	}
-	err = tx.Commit()
-	if err != nil {
-		impl.Logger.Errorw("error in committing transaction", "err", err)
 		return nil, executionHistoryDirPath, err
 	}
 	return executionHistoryModel, executionHistoryDirPath, nil
@@ -1008,18 +1023,25 @@ func (impl *ImageScanServiceImpl) FetchProxyUrl(scanEvent *bean2.ImageScanEvent)
 	return "", []name.Option{}, nil
 }
 
-func GetImageScannerConfig() (*ImageScanConfig, error) {
-	scannerConfig := &ImageScanConfig{}
-	err := env.Parse(scannerConfig)
+func (impl *ImageScanServiceImpl) RegisterAndSaveScannedResult(scanResultPayload *bean2.ScanResultPayload) error {
+	scanEventJson, err := json.Marshal(scanResultPayload.ImageScanEvent)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("could not get scanner config from environment :%v", err))
+		impl.Logger.Errorw("error in marshalling scanEvent", "imageScanEvent", scanResultPayload.ImageScanEvent, "err", err)
+		return err
 	}
-	return scannerConfig, err
+	executionHistoryModel := adaptor.GetImageScanExecutionHistory(scanResultPayload.ImageScanEvent, scanEventJson, time.Now())
+	err = impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, scanResultPayload.ScanToolId)
+	if err != nil {
+		impl.Logger.Errorw("error in saving scan execution history and state mapping", "executionHistoryModel", executionHistoryModel, "toolId", scanResultPayload.ScanToolId, "err", err)
+		return err
+	}
+	err = impl.saveSbomAndSourceScanningResult(scanResultPayload.Sbom, scanResultPayload.SourceScanningResult)
+	if err != nil {
+		impl.Logger.Errorw("error in saving sbom and actual scanning result", "executionHistoryId", executionHistoryModel.Id, "toolId", scanResultPayload.ScanToolId, "err", err)
+		return err
+	}
 }
 
-type ImageScanConfig struct {
-	ScannerType           string `env:"SCANNER_TYPE" envDefault:""`
-	ScanTryCount          int    `env:"IMAGE_SCAN_TRY_COUNT" envDefault:"1"`
-	ScanImageTimeout      int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`      // Time is considered in minutes
-	ScanImageAsyncTimeout int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"` // Time is considered in minutes
+func (impl *ImageScanServiceImpl) saveSbomAndSourceScanningResult(sbomOutput string, sourceScanningResult string) error {
+
 }
