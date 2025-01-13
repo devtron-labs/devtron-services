@@ -470,9 +470,9 @@ func (impl *ImageScanServiceImpl) ProcessScanStep(step repository.ScanToolStep, 
 	return output, nil
 }
 
-func (impl *ImageScanServiceImpl) SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error {
+func (impl *ImageScanServiceImpl) SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean2.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error {
 	cvesToBeSaved := make([]*repository.CveStore, 0, len(vulnerabilities))
-	uniqueVulnerabilityMap := make(map[string]*bean.ImageScanOutputObject)
+	uniqueVulnerabilityMap := make(map[string]*bean2.ImageScanOutputObject)
 	allCvesNames := make([]string, 0, len(vulnerabilities))
 	for _, vul := range vulnerabilities {
 		if _, ok := uniqueVulnerabilityMap[vul.Name]; !ok {
@@ -554,7 +554,7 @@ func (impl *ImageScanServiceImpl) SaveCvesAndImageScanExecutionResults(vulnerabi
 }
 
 func (impl *ImageScanServiceImpl) ConvertEndStepOutputAndSaveVulnerabilities(stepOutput []byte, executionHistoryId int, tool repository.ScanToolMetadata, step repository.ScanToolStep, userId int32) error {
-	var vulnerabilities []*bean.ImageScanOutputObject
+	var vulnerabilities []*bean2.ImageScanOutputObject
 	var err error
 	if isV1Template(tool.ResultDescriptorTemplate) { // result descriptor template is go template, go with v1 logic
 		vulnerabilities, err = impl.getImageScanOutputObjectsV1(stepOutput, tool.ResultDescriptorTemplate)
@@ -590,7 +590,7 @@ func isValidGoTemplate(templateStr string) bool {
 	return err == nil
 }
 
-func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV1(stepOutput []byte, resultDescriptorTemplate string) ([]*bean.ImageScanOutputObject, error) {
+func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV1(stepOutput []byte, resultDescriptorTemplate string) ([]*bean2.ImageScanOutputObject, error) {
 	//rendering image descriptor template with output json to get vulnerabilities updated
 	renderedTemplate, err := commonUtil.ParseJsonTemplate(resultDescriptorTemplate, stepOutput)
 	if err != nil {
@@ -598,7 +598,7 @@ func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV1(stepOutput []byte,
 		return nil, err
 	}
 	renderedTemplate = common.RemoveTrailingComma(renderedTemplate)
-	var vulnerabilities []*bean.ImageScanOutputObject
+	var vulnerabilities []*bean2.ImageScanOutputObject
 	err = json.Unmarshal([]byte(renderedTemplate), &vulnerabilities)
 	if err != nil {
 		impl.Logger.Errorw("error in unmarshalling rendered template", "err", err)
@@ -607,8 +607,8 @@ func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV1(stepOutput []byte,
 	return vulnerabilities, nil
 }
 
-func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV2(stepOutput []byte, resultDescriptorTemplate string) ([]*bean.ImageScanOutputObject, error) {
-	var vulnerabilities []*bean.ImageScanOutputObject
+func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV2(stepOutput []byte, resultDescriptorTemplate string) ([]*bean2.ImageScanOutputObject, error) {
+	var vulnerabilities []*bean2.ImageScanOutputObject
 	var mappings []map[string]interface{}
 	err := json.Unmarshal([]byte(resultDescriptorTemplate), &mappings)
 	if err != nil {
@@ -628,7 +628,7 @@ func (impl *ImageScanServiceImpl) getImageScanOutputObjectsV2(stepOutput []byte,
 
 				if nestedValue.Get(vulnerabilitiesPath).IsArray() {
 					nestedValue.Get(vulnerabilitiesPath).ForEach(func(_, vul gjson.Result) bool {
-						vulnerability := &bean.ImageScanOutputObject{
+						vulnerability := &bean2.ImageScanOutputObject{
 							Name:           vul.Get(vulnerabilityDataKeyPathsMap[bean.MappingKeyName].(string)).String(),
 							Package:        vul.Get(vulnerabilityDataKeyPathsMap[bean.MappingKeyPackage].(string)).String(),
 							PackageVersion: vul.Get(vulnerabilityDataKeyPathsMap[bean.MappingKeyPackageVersion].(string)).String(),
@@ -1035,13 +1035,17 @@ func (impl *ImageScanServiceImpl) RegisterAndSaveScannedResult(scanResultPayload
 		impl.Logger.Errorw("error in saving scan execution history and state mapping", "executionHistoryModel", executionHistoryModel, "toolId", scanResultPayload.ScanToolId, "err", err)
 		return err
 	}
-	err = impl.saveSbomAndSourceScanningResult(scanResultPayload.Sbom, scanResultPayload.SourceScanningResult)
+
+	err = impl.saveSourceScanningResult(scanResultPayload.ImageScanOutput)
 	if err != nil {
 		impl.Logger.Errorw("error in saving sbom and actual scanning result", "executionHistoryId", executionHistoryModel.Id, "toolId", scanResultPayload.ScanToolId, "err", err)
 		return err
 	}
+	return nil
 }
 
-func (impl *ImageScanServiceImpl) saveSbomAndSourceScanningResult(sbomOutput string, sourceScanningResult string) error {
+func (impl *ImageScanServiceImpl) saveSourceScanningResult(imageScanOutput []*bean2.ImageScanOutputObject) error {
+	//
 
+	return nil
 }
