@@ -147,9 +147,14 @@ func GetSelfK8sPodName() string {
 	return os.Getenv(DEVTRON_SELF_POD_NAME)
 }
 
+var pgQueryDuration *prometheus.HistogramVec
+
 func GetPgQueryDurationHistogram() *prometheus.HistogramVec {
-	return promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "pg_query_duration_seconds_v2",
-		Help: "Duration of PG queries",
-	}, []string{"status", "serviceName"})
+	if pgQueryDuration == nil {
+		pgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+			Name: "pg_query_duration_seconds",
+			Help: "Duration of PG queries",
+		}, []string{"status", "serviceName"})
+	}
+	return pgQueryDuration
 }
