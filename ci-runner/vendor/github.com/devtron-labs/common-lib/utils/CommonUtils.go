@@ -122,7 +122,7 @@ func ExecutePGQueryProcessor(cfg bean.PgQueryMonitoringConfig, event bean.PgQuer
 		} else {
 			status = "SUCCESS"
 		}
-		PgQueryDuration.WithLabelValues(status, cfg.ServiceName).Observe(queryDuration.Seconds())
+		GetPgQueryDurationHistogram().WithLabelValues(status, cfg.ServiceName).Observe(queryDuration.Seconds())
 	}
 
 	// Log pg query if enabled
@@ -147,8 +147,9 @@ func GetSelfK8sPodName() string {
 	return os.Getenv(DEVTRON_SELF_POD_NAME)
 }
 
-// TODO: how to separate this service-wise ?
-var PgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	Name: "pg_query_duration_seconds",
-	Help: "Duration of PG queries",
-}, []string{"status", "serviceName"})
+func GetPgQueryDurationHistogram() *prometheus.HistogramVec {
+	return promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "pg_query_duration_seconds",
+		Help: "Duration of PG queries",
+	}, []string{"status", "serviceName"})
+}
