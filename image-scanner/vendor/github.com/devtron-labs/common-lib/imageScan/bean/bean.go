@@ -65,10 +65,10 @@ func (r *ImageScanEvent) IsBuiltImage() bool {
 
 type ScanResultPayload struct {
 	ImageScanEvent       *ImageScanEvent
-	ScanToolId           int                     `json:"scanToolId"`
-	SourceScanningResult string                  `json:"sourceScanningResult"`
-	Sbom                 string                  `json:"sbom"`
-	ImageScanOutput      []ImageScanOutputObject `json:"imageScanOutput"`
+	ScanToolId           int                      `json:"scanToolId"`
+	SourceScanningResult string                   `json:"sourceScanningResult"`
+	Sbom                 string                   `json:"sbom"`
+	ImageScanOutput      []*ImageScanOutputObject `json:"imageScanOutput"`
 }
 
 type ImageScanOutputObject struct {

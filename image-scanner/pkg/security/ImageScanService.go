@@ -1035,17 +1035,10 @@ func (impl *ImageScanServiceImpl) RegisterAndSaveScannedResult(scanResultPayload
 		impl.Logger.Errorw("error in saving scan execution history and state mapping", "executionHistoryModel", executionHistoryModel, "toolId", scanResultPayload.ScanToolId, "err", err)
 		return err
 	}
-
-	err = impl.saveSourceScanningResult(scanResultPayload.ImageScanOutput)
+	err = impl.SaveCvesAndImageScanExecutionResults(scanResultPayload.ImageScanOutput, executionHistoryModel.Id, scanResultPayload.ScanToolId, int32(scanResultPayload.ImageScanEvent.UserId))
 	if err != nil {
-		impl.Logger.Errorw("error in saving sbom and actual scanning result", "executionHistoryId", executionHistoryModel.Id, "toolId", scanResultPayload.ScanToolId, "err", err)
+		impl.Logger.Errorw("error in saving cves and image scan exec result ", "executionHistoryId", executionHistoryModel.Id, "err", err)
 		return err
 	}
-	return nil
-}
-
-func (impl *ImageScanServiceImpl) saveSourceScanningResult(imageScanOutput []*bean2.ImageScanOutputObject) error {
-	//
-
 	return nil
 }
