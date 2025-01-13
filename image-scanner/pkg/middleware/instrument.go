@@ -39,11 +39,6 @@ var requestCounter = promauto.NewCounterVec(
 	},
 	[]string{"path", "method", "status"})
 
-var PgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-	Name: "pg_query_duration_seconds",
-	Help: "Duration of PG queries",
-}, []string{"label"})
-
 var currentRequestGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 	Name: "image_scanner_http_requests_current",
 	Help: "no of request being served currently",
