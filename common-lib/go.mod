@@ -13,6 +13,7 @@ require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/docker/docker v27.2.0+incompatible
 	github.com/gammazero/workerpool v1.1.3
+	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/google/wire v0.6.0
 	github.com/gorilla/mux v1.8.0
 	github.com/nats-io/nats.go v1.28.0
@@ -40,9 +41,12 @@ require (
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	mellium.im/sasl v0.3.2 // indirect
 )
 
 require (

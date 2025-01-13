@@ -93,9 +93,12 @@ github.com/containerd/platforms
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250108143447-5d5964eb151f
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250113035729-92b06d9ec587
 ## explicit; go 1.21
+github.com/devtron-labs/common-lib/git-manager/util
 github.com/devtron-labs/common-lib/helmLib/registry
+github.com/devtron-labs/common-lib/utils
+github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/http
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
 # github.com/distribution/reference v0.6.0
@@ -276,8 +279,8 @@ github.com/monochromegane/go-gitignore
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/onsi/ginkgo v1.16.5
-## explicit; go 1.16
+# github.com/nxadm/tail v1.4.8
+## explicit; go 1.13
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -295,6 +298,7 @@ github.com/pkg/errors
 ## explicit; go 1.19
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
+github.com/prometheus/client_golang/prometheus/promauto
 github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.5.0
 ## explicit; go 1.19
@@ -671,8 +675,8 @@ k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/ptr
 k8s.io/utils/strings/slices
-# mellium.im/sasl v0.3.1
-## explicit; go 1.18
+# mellium.im/sasl v0.3.2
+## explicit; go 1.20
 mellium.im/sasl
 # oras.land/oras-go v1.2.6
 ## explicit; go 1.22.4
@@ -785,4 +789,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250108143447-5d5964eb151f
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250113035729-92b06d9ec587
