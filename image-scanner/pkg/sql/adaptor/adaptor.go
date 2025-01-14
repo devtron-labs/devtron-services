@@ -35,3 +35,13 @@ func GetScanToolExecutionHistoryMapping(executionHistoryModel *repository.ImageS
 		},
 	}
 }
+
+func GetResourceScanExecutionResult(executionHistoryId, scanToolId int, scanDataJson string, format repository.ResourceScanFormat, types []int) *repository.ResourceScanResult {
+	return &repository.ResourceScanResult{
+		ImageScanExecutionHistoryId: executionHistoryId,
+		ScanDataJson:                scanDataJson,
+		Format:                      format,
+		Types:                       types,
+		ScanToolId:                  scanToolId,
+	}
+}
