@@ -64,7 +64,7 @@ type ImageScanService interface {
 	GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error)
 	FetchProxyUrl(scanEvent *bean2.ImageScanEvent) (string, []name.Option, error)
 	SaveCvesAndImageScanExecutionResults(vulnerabilities []*bean2.ImageScanOutputObject, executionHistoryId int, toolId int, userId int32) error
-	RegisterAndSaveScannedResult(scanResultPayload *bean2.ScanResultPayload) error
+	RegisterAndSaveScannedResult(scanResultPayload *bean2.ScanResultPayload) (int, error)
 }
 
 type ImageScanServiceImpl struct {
@@ -1023,22 +1023,22 @@ func (impl *ImageScanServiceImpl) FetchProxyUrl(scanEvent *bean2.ImageScanEvent)
 	return "", []name.Option{}, nil
 }
 
-func (impl *ImageScanServiceImpl) RegisterAndSaveScannedResult(scanResultPayload *bean2.ScanResultPayload) error {
+func (impl *ImageScanServiceImpl) RegisterAndSaveScannedResult(scanResultPayload *bean2.ScanResultPayload) (int, error) {
 	scanEventJson, err := json.Marshal(scanResultPayload.ImageScanEvent)
 	if err != nil {
 		impl.Logger.Errorw("error in marshalling scanEvent", "imageScanEvent", scanResultPayload.ImageScanEvent, "err", err)
-		return err
+		return 0, err
 	}
 	executionHistoryModel := adaptor.GetImageScanExecutionHistory(scanResultPayload.ImageScanEvent, scanEventJson, time.Now())
 	err = impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, scanResultPayload.ScanToolId)
 	if err != nil {
 		impl.Logger.Errorw("error in saving scan execution history and state mapping", "executionHistoryModel", executionHistoryModel, "toolId", scanResultPayload.ScanToolId, "err", err)
-		return err
+		return 0, err
 	}
 	err = impl.SaveCvesAndImageScanExecutionResults(scanResultPayload.ImageScanOutput, executionHistoryModel.Id, scanResultPayload.ScanToolId, int32(scanResultPayload.ImageScanEvent.UserId))
 	if err != nil {
 		impl.Logger.Errorw("error in saving cves and image scan exec result ", "executionHistoryId", executionHistoryModel.Id, "err", err)
-		return err
+		return 0, err
 	}
-	return nil
+	return executionHistoryModel.Id, nil
 }
