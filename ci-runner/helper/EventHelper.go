@@ -192,6 +192,7 @@ type CommonWorkflowRequest struct {
 	HostUrl                       string                         `json:"hostUrl"`
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
 	ExecuteImageScanningVia       ExecutionMedium                `json:"executeImageScanningVia,omitempty"`
+	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
