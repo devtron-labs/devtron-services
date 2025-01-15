@@ -772,11 +772,14 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 }
 
 func GetPrePostStageDisplayName(stageName string, stepType StepType) string {
+	log.Println("stageName-stepType", stageName, stepType)
+
 	if stepType == STEP_TYPE_PRE {
 		return fmt.Sprintf("%s (Pre-Build Task)", stageName)
 	} else if stepType == STEP_TYPE_POST {
 		return fmt.Sprintf("%s (Post-Build Task)", stageName)
 	} else {
+
 		return fmt.Sprintf("%s", stageName)
 	}
 }

@@ -228,7 +228,7 @@ func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err 
 	return ExecuteWithStageInfoLogWithMetadata(stageName, nil, stageExecutor)
 }
 
-// ExecuteWithStageInfoLog logs the stage info.
+// ExecuteWithStageInfoLogWithMetadata logs the stage info.
 // it will log info for pre stage execution and post the stage execution
 // return the error returned by the stageExecutor func
 func ExecuteWithStageInfoLogWithMetadata(stageName string, metadata interface{}, stageExecutor func() error) (err error) {
