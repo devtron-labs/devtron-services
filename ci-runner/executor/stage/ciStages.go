@@ -299,7 +299,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// scan only if ci scan enabled
 	if helper.IsEventTypeEligibleToScanImage(ciCdRequest.Type) &&
 		ciCdRequest.CommonWorkflowRequest.ScanEnabled {
-		err = runImageScanning(dest, digest, ciCdRequest, metrics, artifactUploaded)
+		err = impl.runImageScanning(ciCdRequest, scriptEnvs, refStageMap, metrics, artifactUploaded, dest, digest)
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -438,7 +438,7 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 	return pluginArtifactsFromFile, resultsFromPlugin, nil
 }
 
-func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, artifactUploaded bool) error {
+func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*helper.StepObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) error {
 	imageScanningStage := func() error {
 		log.Println("Image Scanning Started for digest", digest)
 		scanEvent := adaptor2.GetImageScanEvent(dest, digest, ciCdRequest.CommonWorkflowRequest)
@@ -453,7 +453,31 @@ func runImageScanning(dest string, digest string, ciCdRequest *helper.CiCdTrigge
 		log.Println("Image scanning completed with scanEvent", scanEvent)
 		return nil
 	}
-
+	imageScanningTaskExecution := func() error {
+		log.Println("Image Scanning Started")
+		for _, allSteps := range ciCdRequest.CommonWorkflowRequest.ImageScanningSteps {
+			scanToolId := allSteps.ScanToolId
+			tasks := allSteps.Steps
+			//setting scan tool id in script env
+			scriptEnvs.SystemEnv["SCAN_TOOL_ID"] = strconv.Itoa(scanToolId)
+			// run image scanning steps
+			_, _, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_SCANNING, ciCdRequest.CommonWorkflowRequest, tasks, refStageMap, scriptEnvs, nil, true)
+			if err != nil {
+				log.Println("error in running pre Ci Steps", "err", err)
+				return helper.NewCiStageError(err).
+					WithMetrics(metrics).
+					WithFailureMessage(fmt.Sprintf(workFlow.ScanFailed.String(), step.Name)).
+					WithArtifactUploaded(artifactUploaded)
+			}
+		}
+		//unset scan tool id in script env
+		scriptEnvs.SystemEnv["SCAN_TOOL_ID"] = ""
+		log.Println("Image scanning completed")
+		return nil
+	}
+	if ciCdRequest.CommonWorkflowRequest.ExecuteImageScanningVia.IsExecutionMediumSteps() {
+		return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningTaskExecution)
+	}
 	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
 }
 
