@@ -475,7 +475,7 @@ func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scri
 		log.Println("Image scanning completed")
 		return nil
 	}
-	if ciCdRequest.CommonWorkflowRequest.ExecuteImageScanningVia == helper.Steps {
+	if ciCdRequest.CommonWorkflowRequest.ExecuteImageScanningVia.IsExecutionMediumSteps() {
 		return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningTaskExecution)
 	}
 	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
