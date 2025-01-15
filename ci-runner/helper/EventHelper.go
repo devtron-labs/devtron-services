@@ -190,6 +190,8 @@ type CommonWorkflowRequest struct {
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
+	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
+	ExecuteImageScanningVia       ExecutionMedium                `json:"executeImageScanningVia,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
@@ -208,6 +210,13 @@ func (c *CommonWorkflowRequest) GetCdStageType() PipelineType {
 	}
 	return ""
 }
+
+type ExecutionMedium string
+
+const (
+	Rest  ExecutionMedium = "rest"
+	Steps ExecutionMedium = "steps"
+)
 
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
 	return &util.CloudHelperBaseConfig{
@@ -763,4 +772,9 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 	}
 	event.PipelineType = stage
 	return event
+}
+
+type ImageScanningSteps struct {
+	Steps      []*StepObject `json:"steps"`
+	ScanToolId int           `json:"scanToolId"`
 }
