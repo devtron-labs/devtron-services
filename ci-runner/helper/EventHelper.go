@@ -373,6 +373,12 @@ type CiCompleteEvent struct {
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	DockerRegistryId              string              `json:"dockerRegistryId"`
+	TargetPlatforms               []string            `json:"targetPlatforms"`
+}
+
+func (event *CiCompleteEvent) WithTargetPlatforms(targetPlatforms []string) *CiCompleteEvent {
+	event.TargetPlatforms = targetPlatforms
+	return event
 }
 
 func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {

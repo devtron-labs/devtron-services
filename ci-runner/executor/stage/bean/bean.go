@@ -22,3 +22,11 @@ const (
 	UseAppDockerConfig = "useAppDockerConfig"
 	CiProjectDetails   = "ciProjectDetails"
 )
+
+type DockerBuildStageMetadata struct {
+	TargetPlatforms []TargetPlatform `json:"targetPlatforms"`
+}
+
+type TargetPlatform struct {
+	Name string `json:"name"`
+}

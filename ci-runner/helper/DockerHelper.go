@@ -30,6 +30,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
+	"github.com/devtron-labs/ci-runner/executor/stage/adapter"
+	bean2 "github.com/devtron-labs/ci-runner/executor/stage/bean"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
@@ -403,7 +405,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return nil
 		}
 
-		if err = util.ExecuteWithStageInfoLog(util.DOCKER_BUILD, buildImageStage); err != nil {
+		if err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: adapter.GetTargetPlatformObjectForList(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage); err != nil {
 			return "", nil
 		}
 
@@ -557,7 +559,7 @@ func getExportCacheCmds(targetPlatforms, dockerBuild, localCachePath string, use
 	}
 
 	cacheCmd := "%s --platform=%s --cache-to=type=local,dest=%s,mode=" + cacheMode
-	platforms := strings.Split(targetPlatforms, ",")
+	platforms := adapter.GetTargetPlatformListFromString(targetPlatforms)
 
 	exportCacheCmds := make(map[string]string)
 	for _, platform := range platforms {

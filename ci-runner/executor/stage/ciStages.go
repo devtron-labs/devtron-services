@@ -24,6 +24,7 @@ import (
 	"github.com/devtron-labs/ci-runner/executor"
 	adaptor2 "github.com/devtron-labs/ci-runner/executor/adaptor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
+	"github.com/devtron-labs/ci-runner/executor/stage/adapter"
 	bean2 "github.com/devtron-labs/ci-runner/executor/stage/bean"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
@@ -310,7 +311,8 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	event := adaptor.NewCiCompleteEvent(ciCdRequest.CommonWorkflowRequest).WithMetrics(*metrics).
 		WithDockerImage(dest).WithDigest(digest).WithIsArtifactUploaded(artifactUploaded).
-		WithImageDetailsFromCR(resultsFromPlugin).WithPluginArtifacts(pluginArtifacts)
+		WithImageDetailsFromCR(resultsFromPlugin).WithPluginArtifacts(pluginArtifacts).
+		WithTargetPlatforms(GetTargetPlatformFromCiBuildConfig(ciCdRequest.CommonWorkflowRequest.CiBuildConfig))
 	err = helper.SendCiCompleteEvent(ciCdRequest.CommonWorkflowRequest, event)
 	if err != nil {
 		log.Println(err)
@@ -658,4 +660,14 @@ func (impl *CiStage) extractDigestForCiJob(workflowRequest *helper.CommonWorkflo
 	}
 	log.Println(fmt.Sprintf("time since extract digest from image process:- %s", time.Since(startTime).String()))
 	return imgDigest, nil
+}
+
+func GetTargetPlatformFromCiBuildConfig(ciBuildConfig *helper.CiBuildConfigBean) []string {
+	if ciBuildConfig == nil {
+		return []string{}
+	} else if ciBuildConfig.DockerBuildConfig == nil {
+		return []string{}
+	} else {
+		return adapter.GetTargetPlatformListFromString(ciBuildConfig.DockerBuildConfig.TargetPlatform)
+	}
 }
