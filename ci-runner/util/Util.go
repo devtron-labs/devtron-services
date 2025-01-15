@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/common-lib/git-manager/util"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"io"
@@ -298,14 +297,4 @@ func PrintFileContent(filePath string) {
 
 	// Print the file content
 	log.Println(util.DEVTRON, string(content))
-}
-
-func GetPrePostStageDisplayName(stageName string, stepType helper.StepType) string {
-	if stepType == helper.STEP_TYPE_PRE {
-		return fmt.Sprintf("%s (Pre-Build Task)", stageName)
-	} else if stepType == helper.STEP_TYPE_POST {
-		return fmt.Sprintf("%s (Post-Build Task)", stageName)
-	} else {
-		return fmt.Sprintf("%s", stageName)
-	}
 }

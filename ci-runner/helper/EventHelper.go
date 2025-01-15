@@ -770,3 +770,13 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 	event.PipelineType = stage
 	return event
 }
+
+func GetPrePostStageDisplayName(stageName string, stepType StepType) string {
+	if stepType == STEP_TYPE_PRE {
+		return fmt.Sprintf("%s (Pre-Build Task)", stageName)
+	} else if stepType == STEP_TYPE_POST {
+		return fmt.Sprintf("%s (Post-Build Task)", stageName)
+	} else {
+		return fmt.Sprintf("%s", stageName)
+	}
+}
