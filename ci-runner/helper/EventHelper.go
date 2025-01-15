@@ -191,7 +191,7 @@ type CommonWorkflowRequest struct {
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
-	ExecuteImageScanningVia       ExecutionMedium                `json:"executeImageScanningVia,omitempty"`
+	ExecuteImageScanningVia       bean2.ExecutionMedium          `json:"executeImageScanningVia,omitempty"`
 	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
 }
 
@@ -211,14 +211,6 @@ func (c *CommonWorkflowRequest) GetCdStageType() PipelineType {
 	}
 	return ""
 }
-
-type ExecutionMedium string
-
-const (
-	Rest  ExecutionMedium = "rest"
-	Steps ExecutionMedium = "steps"
-)
-
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
 	return &util.CloudHelperBaseConfig{
 		StorageModuleConfigured: c.BlobStorageConfigured,
