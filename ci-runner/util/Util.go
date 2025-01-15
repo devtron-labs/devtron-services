@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/common-lib/git-manager/util"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"io"
@@ -51,7 +52,7 @@ const (
 	DOCKER_STOP                          = "Docker Stop"
 	BUILD_ARTIFACT                       = "Build Artifact"
 	UPLOAD_ARTIFACT                      = "Uploading Artifact"
-	PUSH_CACHE                           = "Pushing Cache"
+	PUSH_CACHE                           = "Pushing Cache (Cleanup)"
 	DOCKER_PUSH_AND_EXTRACT_IMAGE_DIGEST = "Docker Push And Extract Image Digest"
 	IMAGE_SCAN                           = "Image Scanning"
 	SETUP_BUILDX_BUILDER                 = "Setting Up Buildx Builder"
@@ -297,4 +298,14 @@ func PrintFileContent(filePath string) {
 
 	// Print the file content
 	log.Println(util.DEVTRON, string(content))
+}
+
+func GetPrePostStageDisplayName(stageName string, stepType helper.StepType) string {
+	if stepType == helper.STEP_TYPE_PRE {
+		return fmt.Sprintf("%s (Pre-Build Task)", stageName)
+	} else if stepType == helper.STEP_TYPE_POST {
+		return fmt.Sprintf("%s (Post-Build Task)", stageName)
+	} else {
+		return fmt.Sprintf("%s", stageName)
+	}
 }
