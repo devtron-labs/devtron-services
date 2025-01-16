@@ -465,12 +465,12 @@ func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scri
 			//setting scan tool id in script env
 			scriptEnvs.SystemEnv["SCAN_TOOL_ID"] = strconv.Itoa(scanToolId)
 			// run image scanning steps
-			_, _, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_SCANNING, ciCdRequest.CommonWorkflowRequest, tasks, refStageMap, scriptEnvs, nil, true)
+			_, _, _, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_SCANNING, ciCdRequest.CommonWorkflowRequest, tasks, refStageMap, scriptEnvs, nil, true)
 			if err != nil {
 				log.Println("error in running pre Ci Steps", "err", err)
 				return helper.NewCiStageError(err).
 					WithMetrics(metrics).
-					WithFailureMessage(fmt.Sprintf(workFlow.ScanFailed.String(), step.Name)).
+					WithFailureMessage(workFlow.ScanFailed.String()).
 					WithArtifactUploaded(artifactUploaded)
 			}
 		}
