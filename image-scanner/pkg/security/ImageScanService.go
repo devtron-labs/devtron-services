@@ -284,7 +284,7 @@ func (impl *ImageScanServiceImpl) saveImageScanExecutionHistoryAndState(executio
 		impl.Logger.Errorw("Failed to save executionHistory", "model", executionHistoryModel, "err", err)
 		return err
 	}
-	executionHistoryMappingModel := adaptor.GetScanToolExecutionHistoryMapping(executionHistoryModel, bean.ScanExecutionProcessStateRunning, "", toolId)
+	executionHistoryMappingModel := adaptor.GetScanToolExecutionHistoryMapping(executionHistoryModel, bean.ScanExecutionProcessStateCompleted, "", toolId)
 	err = impl.ScanToolExecutionHistoryMappingRepository.Save(tx, executionHistoryMappingModel)
 	if err != nil {
 		impl.Logger.Errorw("Failed to save executionHistoryMappingModel", "err", err)
