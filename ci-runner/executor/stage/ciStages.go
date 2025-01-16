@@ -257,6 +257,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			return artifactUploaded, err
 		}
 	}
+	setDigestInGlobalEnv(scriptEnvs, digest)
 	var postCiDuration float64
 	start = time.Now()
 	metrics.PostCiStartTime = start
@@ -324,6 +325,9 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		return artifactUploaded, err
 	}
 	return artifactUploaded, nil
+}
+func setDigestInGlobalEnv(scriptEnvs *util2.ScriptEnvVariables, digest string) {
+	scriptEnvs.SystemEnv["DIGEST"] = digest
 }
 
 func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
