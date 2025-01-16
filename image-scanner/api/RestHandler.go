@@ -18,6 +18,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	"github.com/devtron-labs/image-scanner/pkg/clairService"
@@ -182,6 +183,14 @@ func (impl *RestHandlerImpl) RegisterAndSaveScannedResult(w http.ResponseWriter,
 		WriteJsonResp(w, err, nil, http.StatusBadRequest)
 		return
 	}
+
+	err = ValidateScanResultPayload(&scanResultPayload)
+	if err != nil {
+		impl.Logger.Errorw("validation failed", "error", err)
+		WriteJsonResp(w, err, nil, http.StatusBadRequest)
+		return
+	}
+
 	impl.Logger.Infow("register and save scan result payload", "saveScanResultPayload", scanResultPayload)
 	_, err = impl.ImageScanService.RegisterAndSaveScannedResult(&scanResultPayload)
 	if err != nil {
@@ -190,4 +199,26 @@ func (impl *RestHandlerImpl) RegisterAndSaveScannedResult(w http.ResponseWriter,
 		return
 	}
 	WriteJsonResp(w, nil, nil, http.StatusOK)
+}
+
+func ValidateScanResultPayload(scanResultPayload *bean2.ScanResultPayload) error {
+	if scanResultPayload.ScanToolId == 0 {
+		return fmt.Errorf("scan tool id not found: required")
+	}
+	if scanResultPayload.ImageScanEvent == nil {
+		return fmt.Errorf("image and digest not found: required")
+	}
+	if scanResultPayload.ImageScanEvent != nil && len(scanResultPayload.ImageScanEvent.Image) == 0 {
+		return fmt.Errorf("image not found: required")
+	}
+	if scanResultPayload.ImageScanEvent != nil && len(scanResultPayload.ImageScanEvent.ImageDigest) == 0 {
+		return fmt.Errorf("image digest not found: required")
+	}
+	if len(scanResultPayload.Sbom) == 0 {
+		return fmt.Errorf("sbom not found: required")
+	}
+	if len(scanResultPayload.SourceScanningResult) == 0 {
+		return fmt.Errorf("source Scanning result not found: required")
+	}
+	return nil
 }
