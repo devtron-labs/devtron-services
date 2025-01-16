@@ -26,7 +26,7 @@ type Configuration struct {
 	UseGitCli               bool   `env:"USE_GIT_CLI" envDefault:"false"`
 	UseGitCliAnalytics      bool   `env:"USE_GIT_CLI_ANALYTICS" envDefault:"false"` // This flag is used to compute commitDiff using git-cli only for analytics
 	AnalyticsDebug          bool   `env:"ANALYTICS_DEBUG" envDefault:"false"`
-	CliCmdTimeoutGlobal     int    `env:"CLI_CMD_TIMEOUT_GLOBAL_SECONDS" envDefault:"0"`
+	CliCmdTimeoutGlobal     int    `env:"CLI_CMD_TIMEOUT_GLOBAL_SECONDS" envDefault:"900"`
 	CliCmdTimeoutJson       string `env:"CLI_CMD_TIMEOUT_JSON" envDefault:""`
 	GoGitTimeout            int    `env:"GOGIT_TIMEOUT_SECONDS" envDefault:"10" `
 }

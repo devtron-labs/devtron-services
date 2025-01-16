@@ -22,11 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	"github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	"github.com/devtron-labs/image-scanner/pkg/roundTripper"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
-	"github.com/go-pg/pg"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -49,7 +49,7 @@ const (
 )
 
 type ClairService interface {
-	ScanImage(scanEvent *common.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error)
+	ScanImage(scanEvent *bean.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error)
 	CheckIfIndexReportExistsForManifestHash(manifestHash claircore.Digest) (bool, error)
 	CreateIndexReportFromManifest(manifest *claircore.Manifest) error
 	GetVulnerabilityReportFromManifestHash(manifestHash claircore.Digest) (*claircore.VulnerabilityReport, error)
@@ -100,13 +100,13 @@ func GetClairConfig() (*ClairConfig, error) {
 	return cfg, err
 }
 
-func (impl *ClairServiceImpl) ScanImage(scanEvent *common.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error) {
+func (impl *ClairServiceImpl) ScanImage(scanEvent *bean.ImageScanEvent, tool *repository.ScanToolMetadata, executionHistory *repository.ImageScanExecutionHistory) (*common.ScanEventResponse, error) {
 	impl.Logger.Debugw("new request, scan image", "requestPayload", scanEvent)
 	scanEventResponse := &common.ScanEventResponse{
 		RequestData: scanEvent,
 	}
-	_, isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image, false)
-	if err != nil && err != pg.ErrNoRows {
+	_, isImageScanned, err := impl.ImageScanService.IsImageScanned(scanEvent.Image)
+	if err != nil {
 		impl.Logger.Errorw("error in fetching scan history ", "err", err, "image", scanEvent.Image)
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (impl *ClairServiceImpl) ScanImage(scanEvent *common.ImageScanEvent, tool *
 	return scanEventResponse, nil
 }
 
-func (impl *ClairServiceImpl) GetVulnerabilityReportFromClair(scanEvent *common.ImageScanEvent) (*claircore.VulnerabilityReport, error) {
+func (impl *ClairServiceImpl) GetVulnerabilityReportFromClair(scanEvent *bean.ImageScanEvent) (*claircore.VulnerabilityReport, error) {
 	//get manifest from image
 	manifest, err := impl.CreateClairManifest(scanEvent)
 	if err != nil {
@@ -180,7 +180,7 @@ func (impl *ClairServiceImpl) GetVulnerabilityReportFromClair(scanEvent *common.
 	return vulnerabilityReport, nil
 }
 
-func (impl *ClairServiceImpl) CreateClairManifest(scanEvent *common.ImageScanEvent) (*claircore.Manifest, error) {
+func (impl *ClairServiceImpl) CreateClairManifest(scanEvent *bean.ImageScanEvent) (*claircore.Manifest, error) {
 	roundTripper, err := impl.RoundTripperService.GetRoundTripper(scanEvent)
 	if err != nil {
 		impl.Logger.Errorw("error in getting round tripper", "err", "image", scanEvent.Image)

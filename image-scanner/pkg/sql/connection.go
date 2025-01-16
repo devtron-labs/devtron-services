@@ -17,12 +17,12 @@
 package sql
 
 import (
-	"reflect"
-	"time"
-
 	"github.com/caarlos0/env/v6"
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
+	"reflect"
 )
 
 type Config struct {
@@ -32,12 +32,20 @@ type Config struct {
 	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
 	Database        string `env:"PG_DATABASE" envDefault:"orchestrator"`
 	ApplicationName string `env:"APP" envDefault:"image-scanner"`
-	LogQuery        bool   `env:"PG_LOG_QUERY" envDefault:"true"`
+	bean.PgQueryMonitoringConfig
 }
 
 func GetConfig() (*Config, error) {
 	cfg := &Config{}
 	err := env.Parse(cfg)
+	if err != nil {
+		return cfg, err
+	}
+	monitoringCfg, err := bean.GetPgQueryMonitoringConfig(cfg.ApplicationName)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.PgQueryMonitoringConfig = monitoringCfg
 	return cfg, err
 }
 
@@ -61,16 +69,8 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 		logger.Infow("connected with db", "db", obfuscateSecretTags(cfg))
 	}
 	//--------------
-	if cfg.LogQuery {
-		dbConnection.OnQueryProcessed(func(event *pg.QueryProcessedEvent) {
-			query, err := event.FormattedQuery()
-			if err != nil {
-				panic(err)
-			}
-			logger.Infow("query time",
-				"duration", time.Since(event.StartTime),
-				"query", query)
-		})
+	if cfg.LogSlowQuery {
+		dbConnection.OnQueryProcessed(utils.GetPGPostQueryProcessor(cfg.PgQueryMonitoringConfig))
 	}
 	return dbConnection, err
 }

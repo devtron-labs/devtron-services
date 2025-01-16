@@ -18,6 +18,7 @@ package api
 
 import (
 	"encoding/json"
+	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	"github.com/devtron-labs/image-scanner/pkg/clairService"
 	"github.com/devtron-labs/image-scanner/pkg/grafeasService"
@@ -34,7 +35,7 @@ import (
 
 type RestHandler interface {
 	ScanForVulnerability(w http.ResponseWriter, r *http.Request)
-	ScanForVulnerabilityEvent(scanConfig *common.ImageScanEvent) (*common.ScanEventResponse, error)
+	ScanForVulnerabilityEvent(scanConfig *bean2.ImageScanEvent) (*common.ScanEventResponse, error)
 }
 
 func NewRestHandlerImpl(logger *zap.SugaredLogger,
@@ -84,7 +85,7 @@ type ResetRequest struct {
 
 func (impl *RestHandlerImpl) ScanForVulnerability(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	var scanConfig common.ImageScanEvent
+	var scanConfig bean2.ImageScanEvent
 	err := decoder.Decode(&scanConfig)
 	if err != nil {
 		impl.Logger.Errorw("error in decode request", "error", err)
@@ -101,7 +102,7 @@ func (impl *RestHandlerImpl) ScanForVulnerability(w http.ResponseWriter, r *http
 	WriteJsonResp(w, err, result, http.StatusOK)
 }
 
-func (impl *RestHandlerImpl) ScanForVulnerabilityEvent(scanConfig *common.ImageScanEvent) (*common.ScanEventResponse, error) {
+func (impl *RestHandlerImpl) ScanForVulnerabilityEvent(scanConfig *bean2.ImageScanEvent) (*common.ScanEventResponse, error) {
 	if scanConfig.UserId == 0 {
 		scanConfig.UserId = 1 //setting user as system user in case of empty user data
 	}
@@ -144,7 +145,7 @@ func (impl *RestHandlerImpl) ScanForVulnerabilityEvent(scanConfig *common.ImageS
 	return result, nil
 }
 
-func (impl *RestHandlerImpl) ScanImageAsPerTool(scanConfig *common.ImageScanEvent, tool *repository.ScanToolMetadata,
+func (impl *RestHandlerImpl) ScanImageAsPerTool(scanConfig *bean2.ImageScanEvent, tool *repository.ScanToolMetadata,
 	executionHistory *repository.ImageScanExecutionHistory, executionHistoryDirPath string) (*common.ScanEventResponse, error) {
 	var result = &common.ScanEventResponse{}
 	imageToBeScanned, err := impl.ImageScanService.GetImageToBeScannedAndFetchCliEnv(scanConfig)
