@@ -329,6 +329,7 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 						workflowType = val
 					}
 				}
+				impl.logger.Debugw("Full Event details in Pods update informer", "time", time.Now(), "podObj", podObj)
 				impl.logger.Debugw("Event received in Pods update informer", "time", time.Now(), "podObjStatus", podObj.Status)
 				nodeStatus := impl.assessNodeStatus(podObj)
 				workflowStatus := impl.getWorkflowStatus(podObj, nodeStatus, workflowType)
@@ -365,6 +366,7 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 						workflowType = val
 					}
 				}
+				impl.logger.Debugw("Full Event details in Pods delete informer", "time", time.Now(), "podObj", podObj)
 				impl.logger.Debugw("Event received in Pods delete informer", "time", time.Now(), "podObjStatus", podObj.Status)
 				nodeStatus := impl.assessNodeStatus(podObj)
 				nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, clusterClient)
