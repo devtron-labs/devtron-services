@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/lens/pkg/middleware"
@@ -61,7 +62,7 @@ func (app *App) Start() {
 	server := &http.Server{Addr: fmt.Sprintf(":%d", port), Handler: app.MuxRouter.Router}
 	app.server = server
 	err := server.ListenAndServe()
-	if err != nil {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		app.Logger.Errorw("error in startup", "err", err)
 		os.Exit(2)
 	}

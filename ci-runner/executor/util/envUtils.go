@@ -29,8 +29,14 @@ import (
 )
 
 type ScriptEnvVariables struct {
-	SystemEnv  map[string]string
-	RuntimeEnv map[string]string
+	SystemEnv         map[string]string
+	RuntimeEnv        map[string]string
+	ExistingScriptEnv map[string]string
+}
+
+func (s *ScriptEnvVariables) ResetExistingScriptEnv() *ScriptEnvVariables {
+	s.ExistingScriptEnv = make(map[string]string)
+	return s
 }
 
 func getRuntimeEnvVariables(ciCdRequest *helper.CiCdTriggerEvent) map[string]string {
