@@ -177,7 +177,7 @@ require (
 )
 
 replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250116095544-33cda6744e2e
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250117085010-3d6ac9f53860
 	go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.18.0
 	// https://github.com/kubernetes/kubernetes/issues/79384#issuecomment-505627280
 	k8s.io/api => k8s.io/api v0.29.0

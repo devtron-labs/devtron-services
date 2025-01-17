@@ -36,9 +36,13 @@ import (
 var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 
 const (
-	DOCKER_REGISTRY_TYPE_DOCKERHUB = "docker-hub"
-	DEVTRON_SELF_POD_UID           = "DEVTRON_SELF_POD_UID"
-	DEVTRON_SELF_POD_NAME          = "DEVTRON_SELF_POD_NAME"
+	DOCKER_REGISTRY_TYPE_DOCKERHUB        = "docker-hub"
+	DEVTRON_SELF_POD_UID                  = "DEVTRON_SELF_POD_UID"
+	DEVTRON_SELF_POD_NAME                 = "DEVTRON_SELF_POD_NAME"
+	DEVTRON_SELF_DOWNWARD_API_VOLUME      = "devtron-pod-info"
+	DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH = "/etc/devtron-pod-info"
+	POD_LABELS                            = "labels"
+	POD_ANNOTATIONS                       = "annotations"
 )
 
 // Generates random string
@@ -147,7 +151,6 @@ func GetSelfK8sPodName() string {
 	return os.Getenv(DEVTRON_SELF_POD_NAME)
 }
 
-// TODO: how to separate this service-wise ?
 var PgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Name: "pg_query_duration_seconds",
 	Help: "Duration of PG queries",
