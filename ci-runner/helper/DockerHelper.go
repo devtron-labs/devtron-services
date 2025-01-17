@@ -945,7 +945,10 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 	deploymentNames := make([]string, 0)
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		builderCmd, deploymentName := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		if err != nil {
+			return err
+		}
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
 		if i == 0 {
@@ -957,7 +960,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 
 		fmt.Println(util.DEVTRON, " cmd : ", builderCmd)
 		builderExecCmd := impl.GetCommandToExecute(builderCmd)
-		err := impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
+		err = impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
 		if err != nil {
 			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
 			return err
@@ -1017,7 +1020,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string) {
+func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string, error) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1030,7 +1033,11 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildxCreate = fmt.Sprintf(buildxCreate, platforms)
 	}
 	// add driver options for app labels and annotations
-	driverOpts["driverOptions"] = getBuildXDriverOptionsWithLabelsAndAnnotations(driverOpts["driverOptions"])
+	var err error
+	driverOpts["driverOptions"], err = getBuildXDriverOptionsWithLabelsAndAnnotations(driverOpts["driverOptions"])
+	if err != nil {
+		return "", "", err
+	}
 
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
 	if len(driverOpts["driverOptions"]) > 0 {
@@ -1042,7 +1049,7 @@ func getBuildxK8sDriverCmd(dockerConnection, buildxDriverImage string, driverOpt
 		buildkitToml = fmt.Sprintf("--config %s", BuildkitdConfigPath)
 	}
 	buildxCreate = fmt.Sprintf("%s %s", buildxCreate, buildkitToml)
-	return buildxCreate, nodeName
+	return buildxCreate, nodeName, nil
 }
 
 func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) string {
@@ -1057,20 +1064,20 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 	return driverOptions
 }
 
-func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string {
+func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) (string, error) {
 	labels := make(map[string]string)
 	annotations := make(map[string]string)
 
 	// Read labels and annotations from files
 	labelsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_LABELS
-	labelsOut, err := os.ReadFile(labelsPath)
+	labelsOut, err := readFileAndLogErrors(labelsPath)
 	if err != nil {
-		log.Println(util.DEVTRON, "error in reading labels from podinfo, err:", err)
+		return "", err
 	}
 	annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_ANNOTATIONS
-	annotationsOut, err := os.ReadFile(annotationsPath)
+	annotationsOut, err := readFileAndLogErrors(annotationsPath)
 	if err != nil {
-		log.Println(util.DEVTRON, "error in reading annotations from podinfo, err:", err)
+		return "", err
 	}
 
 	// Parse labels and annotations
@@ -1084,18 +1091,33 @@ func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string
 	// Combine driver options
 	driverOptions = getBuildXDriverOptions(utils.POD_LABELS, labels, driverOptions)
 	driverOptions = getBuildXDriverOptions(utils.POD_ANNOTATIONS, annotations, driverOptions)
-	return driverOptions
+	return driverOptions, nil
+}
+
+func readFileAndLogErrors(filePath string) ([]byte, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			log.Println(util.DEVTRON, "file not found at path:", filePath)
+			return content, nil
+		} else {
+			log.Println(util.DEVTRON, "IO error while reading file at path:", filePath, "err:", err)
+			return nil, err
+		}
+	}
+	return content, nil
 }
 
 func parseKeyValuePairs(input string) map[string]string {
 	keyValuePairs := make(map[string]string)
 	lines := strings.Split(input, "\n")
 	for _, line := range lines {
+		line = strings.TrimSpace(line)
 		if len(line) > 0 {
 			kv := strings.SplitN(line, "=", 2)
 			if len(kv) == 2 {
-				key := kv[0]
-				value := strings.Trim(kv[1], `"`)
+				key := strings.TrimSpace(kv[0])
+				value := strings.Trim(strings.TrimSpace(kv[1]), `"`)
 				keyValuePairs[key] = value
 			}
 		}
