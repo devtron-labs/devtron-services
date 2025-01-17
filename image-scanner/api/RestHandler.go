@@ -164,12 +164,16 @@ func (impl *RestHandlerImpl) ScanImageAsPerTool(scanConfig *bean2.ImageScanEvent
 			impl.Logger.Errorw("err in process msg", "err", err)
 			return nil, err
 		}
-	} else {
+	} else if tool.Name == bean.ScannerTypeTrivy && tool.Version == bean.ScanToolVersion1 {
 		err = impl.ImageScanService.ScanImage(scanConfig, tool, executionHistory, executionHistoryDirPath)
 		if err != nil {
 			impl.Logger.Errorw("err in process msg", "err", err)
 			return nil, err
 		}
+	} else {
+		err = fmt.Errorf("no tool found for scanning")
+		impl.Logger.Errorw("err in process msg", "err", err)
+		return nil, err
 	}
 	return result, nil
 }

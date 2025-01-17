@@ -34,6 +34,7 @@ const (
 	ScanToolClair            = "CLAIR"
 	ScanToolVersion2         = "V2"
 	ScanToolVersion4         = "V4"
+	ScanToolVersion1         = "V1"
 	SbomOutputFileNameSuffix = "_out.json"
 )
 
