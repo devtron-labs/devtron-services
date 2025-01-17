@@ -32,6 +32,7 @@ const (
 	ScannerTypeClairV2       = "CLAIRV2"
 	ScannerTypeTrivy         = "TRIVY"
 	ScanToolClair            = "CLAIR"
+	ScanToolAwsInspector     = "AWS INSPECTOR"
 	ScanToolVersion2         = "V2"
 	ScanToolVersion4         = "V4"
 	ScanToolVersion1         = "V1"
