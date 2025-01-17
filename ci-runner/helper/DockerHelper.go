@@ -1062,12 +1062,12 @@ func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string
 	annotations := make(map[string]string)
 
 	// Read labels and annotations from files
-	labelsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/labels"
+	labelsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_LABELS
 	labelsOut, err := os.ReadFile(labelsPath)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in reading labels from podinfo, err:", err)
 	}
-	annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/annotations"
+	annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_ANNOTATIONS
 	annotationsOut, err := os.ReadFile(annotationsPath)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in reading annotations from podinfo, err:", err)
@@ -1082,8 +1082,8 @@ func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) string
 	}
 
 	// Combine driver options
-	driverOptions = getBuildXDriverOptions("labels", labels, driverOptions)
-	driverOptions = getBuildXDriverOptions("annotations", annotations, driverOptions)
+	driverOptions = getBuildXDriverOptions(utils.POD_LABELS, labels, driverOptions)
+	driverOptions = getBuildXDriverOptions(utils.POD_ANNOTATIONS, annotations, driverOptions)
 	return driverOptions
 }
 

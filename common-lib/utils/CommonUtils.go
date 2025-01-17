@@ -41,6 +41,8 @@ const (
 	DEVTRON_SELF_POD_NAME                 = "DEVTRON_SELF_POD_NAME"
 	DEVTRON_SELF_DOWNWARD_API_VOLUME      = "devtron-pod-info"
 	DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH = "/etc/devtron-pod-info"
+	POD_LABELS                            = "labels"
+	POD_ANNOTATIONS                       = "annotations"
 )
 
 // Generates random string
