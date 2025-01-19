@@ -41,11 +41,11 @@ func NewInformerFactoryImpl(logger *zap.SugaredLogger,
 	}
 }
 
-func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, eventHandlers *bean.EventHandlers[coreV1.Secret],
-	options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error) {
+func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, clusterLabels *middleware.ClusterLabels,
+	eventHandlers *bean.EventHandlers[coreV1.Secret], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error) {
 	clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 	if k8sErr != nil {
-		middleware.IncUnreachableCluster("Default cluster", "1")
+		middleware.IncUnreachableCluster(clusterLabels)
 		return nil, k8sErr
 	}
 	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, options...)

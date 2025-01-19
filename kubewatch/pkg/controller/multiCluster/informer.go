@@ -91,7 +91,7 @@ func (impl *InformerImpl) Start() error {
 	err := impl.startDefaultClusterInformer()
 	if err != nil {
 		impl.logger.Errorw("error in starting default cluster informer", "err", err)
-		middleware.IncUnregisteredInformers("Default cluster", "1", "DefaultClusterSecret")
+		middleware.IncUnregisteredInformers("Default cluster", "1", middleware.DEFAULT_CLUSTER_SECRET)
 		return err
 	}
 	models, err := impl.clusterRepository.FindAllActive()
@@ -162,7 +162,8 @@ func (impl *InformerImpl) startDefaultClusterInformer() error {
 		AddFuncHandler(addFunc).
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
-	secretFactory, err := informerFactory.GetSharedInformerFactory(impl.defaultK8sConfig, eventHandler, labelOptions)
+	clusterLabels := middleware.NewClusterLabels("Default cluster", 1)
+	secretFactory, err := informerFactory.GetSharedInformerFactory(impl.defaultK8sConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in registering default cluster secret informer", "err", err)
 		return err
@@ -280,13 +281,13 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 	}
 	if len(clusterInfo.ErrorInConnecting) > 0 {
 		impl.logger.Debugw("cluster is not reachable", "clusterId", clusterId, "clusterName", clusterInfo.ClusterName)
-		middleware.IncUnreachableCluster(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id))
+		middleware.IncUnreachableCluster(middleware.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id))
 	}
 	if impl.appConfig.IsMultiClusterSystemExec() {
 		err = impl.startSystemExecInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting system executor informer for cluster", "clusterId", clusterId, "err", err)
-			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), "SystemExecutor")
+			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), middleware.SYSTEM_EXECUTOR)
 			return err
 		} else if errors.Is(err, AlreadyExists) {
 			impl.logger.Warnw("system executor informer already exist for cluster", "clusterId", clusterId)
@@ -296,7 +297,7 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 		err = impl.startArgoCdInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting argo cd informer for cluster", "clusterId", clusterId, "err", err)
-			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), "ArgoCD")
+			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), middleware.ARGO_CD)
 			return err
 		} else if errors.Is(err, AlreadyExists) {
 			impl.logger.Warnw("argo cd informer already exist for cluster", "clusterId", clusterId)
@@ -353,7 +354,6 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 			impl.logger.Errorw("error while publishing Request", "err", err)
 			return
 		}
-
 		impl.logger.Debug("cd workflow update sent")
 	}
 	// deleteFunc is called when an existing pod is deleted
@@ -387,20 +387,19 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 			impl.logger.Errorw("error while getting Topic")
 			return
 		}
-
 		err = impl.pubSubClient.Publish(topic, string(wfJson))
 		if err != nil {
 			impl.logger.Errorw("error while publishing Request", "err", err)
 			return
 		}
-
 		impl.logger.Debug("cd workflow update sent")
 	}
 	podInformerFactory := impl.informerClient.GetPodInformerFactory()
 	eventHandler := bean.NewEventHandlers[coreV1.Pod]().
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
-	informerFactory, err := podInformerFactory.GetSharedInformerFactory(restConfig, eventHandler, labelOptions)
+	clusterLabels := middleware.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
+	informerFactory, err := podInformerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in adding event handler for cluster pod informer", "err", err)
 	}

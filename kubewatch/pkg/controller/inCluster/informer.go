@@ -59,7 +59,7 @@ func (impl *InformerImpl) Start(stopChan <-chan int) {
 		workflowInformer, err := ciWfInformer.GetSharedInformer(namespace, impl.defaultK8sConfig)
 		if err != nil {
 			impl.logger.Errorw("error in starting workflow informer", "err", err)
-			middleware.IncUnregisteredInformers("Default cluster", "1", "CIStageArgoWorkflow")
+			middleware.IncUnregisteredInformers("Default cluster", "1", middleware.CI_STAGE_ARGO_WORKFLOW)
 		}
 		stopCh := make(chan struct{})
 		defer close(stopCh)
@@ -78,7 +78,7 @@ func (impl *InformerImpl) Start(stopChan <-chan int) {
 		workflowInformer, err := cdWfInformer.GetSharedInformer(namespace, impl.defaultK8sConfig)
 		if err != nil {
 			impl.logger.Errorw("error in starting workflow informer", "err", err)
-			middleware.IncUnregisteredInformers("Default cluster", "1", "CDStageArgoWorkflow")
+			middleware.IncUnregisteredInformers("Default cluster", "1", middleware.CD_STAGE_ARGO_WORLFLOW)
 		}
 		stopCh := make(chan struct{})
 		defer close(stopCh)
@@ -91,7 +91,7 @@ func (impl *InformerImpl) Start(stopChan <-chan int) {
 		acdInformer, err := applicationInformer.GetSharedInformer(impl.appConfig.GetAcdConfig().ACDNamespace, impl.defaultK8sConfig)
 		if err != nil {
 			impl.logger.Errorw("error in registering acd informer", "err", err)
-			middleware.IncUnregisteredInformers("Default cluster", "1", "ArgoCD")
+			middleware.IncUnregisteredInformers("Default cluster", "1", middleware.ARGO_CD)
 		}
 		appStopCh := make(chan struct{})
 		defer close(appStopCh)

@@ -17,6 +17,7 @@
 package resource
 
 import (
+	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/pod"
 	"github.com/devtron-labs/kubewatch/pkg/resource/secret"
@@ -26,8 +27,8 @@ import (
 )
 
 type InformerFactory[T any] interface {
-	GetSharedInformerFactory(config *rest.Config, eventHandlers *bean.EventHandlers[T],
-		options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error)
+	GetSharedInformerFactory(config *rest.Config, clusterLabels *middleware.ClusterLabels,
+		eventHandlers *bean.EventHandlers[T], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error)
 }
 
 func (impl *InformerClientImpl) GetSecretInformerFactory() InformerFactory[coreV1.Secret] {

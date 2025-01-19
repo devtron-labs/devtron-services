@@ -19,6 +19,7 @@ package middleware
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"strconv"
 )
 
 // metrics name constants
@@ -33,8 +34,15 @@ const (
 	CLUSTER_NAME  = "clusterName"
 	CLUSTER_ID    = "clusterId"
 	INFORMER_NAME = "informerName"
-	HOST          = "host"
-	PATH          = "path"
+
+	CI_STAGE_ARGO_WORKFLOW = "CIStageArgoWorkflow"
+	CD_STAGE_ARGO_WORLFLOW = "CDStageArgoWorkflow"
+	ARGO_CD                = "ArgoCD"
+	DEFAULT_CLUSTER_SECRET = "DefaultClusterSecret"
+	SYSTEM_EXECUTOR        = "SystemExecutor"
+
+	HOST = "host"
+	PATH = "path"
 )
 
 var UnreachableCluster = promauto.NewCounterVec(
@@ -53,8 +61,20 @@ var UnregisteredInformers = promauto.NewCounterVec(
 	[]string{CLUSTER_NAME, CLUSTER_ID, INFORMER_NAME},
 )
 
-func IncUnreachableCluster(clusterName, clusterId string) {
-	UnreachableCluster.WithLabelValues(clusterName, clusterId).Inc()
+type ClusterLabels struct {
+	ClusterName string
+	ClusterId   int
+}
+
+func NewClusterLabels(clusterName string, clusterId int) *ClusterLabels {
+	return &ClusterLabels{
+		ClusterName: clusterName,
+		ClusterId:   clusterId,
+	}
+}
+
+func IncUnreachableCluster(clusterLabels *ClusterLabels) {
+	UnreachableCluster.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId)).Inc()
 }
 
 func IncUnregisteredInformers(clusterName, clusterId, informerName string) {
