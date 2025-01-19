@@ -22,5 +22,9 @@ import (
 )
 
 func LogExecutionTime(logger *zap.SugaredLogger, startTime time.Time, message string, keysAndValues ...interface{}) {
-	logger.Debugw(message, "time", time.Since(startTime), keysAndValues)
+	if len(keysAndValues) != 0 {
+		logger.Debugw(message, "time", time.Since(startTime), keysAndValues)
+	} else {
+		logger.Debugw(message, "time", time.Since(startTime))
+	}
 }

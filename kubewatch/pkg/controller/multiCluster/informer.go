@@ -247,9 +247,12 @@ func (impl *InformerImpl) handleClusterDelete(clusterId int) error {
 
 func (impl *InformerImpl) syncMultiClusterInformer(clusterId int) error {
 	clusterInfo, err := impl.clusterRepository.FindById(clusterId)
-	if err != nil {
+	if err != nil && !errors.Is(err, pg.ErrNoRows) {
 		impl.logger.Error("error in fetching cluster info by id", "err", err)
 		return err
+	} else if errors.Is(err, pg.ErrNoRows) {
+		impl.logger.Warnw("cluster not found", "clusterId", clusterId)
+		return nil
 	}
 	// before creating a new informer for cluster, close the existing one
 	impl.logger.Debugw("stopping informer for cluster", "cluster-name", clusterInfo.ClusterName, "cluster-id", clusterInfo.Id)
