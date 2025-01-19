@@ -14,36 +14,21 @@
  * limitations under the License.
  */
 
-package main
+package resource
 
 import (
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"fmt"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
-func main() {
-	app, err := InitializeApp()
-	if err != nil {
-		log.Panic(err)
-	}
-	go app.Start()
+type UnimplementedImpl struct {
+}
 
-	if app.appConfig.IsMultiClusterMode() {
-		err = app.multiClusterInformer.Start()
-		if err != nil {
-			log.Panic(err)
-		}
-	}
-	stopChan := make(chan int)
-	go app.inClusterInformer.Start(stopChan)
-	var gracefulStop = make(chan os.Signal)
-	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT)
-	sig := <-gracefulStop
-	stopChan <- 0
-	app.logger.Infow("caught sig: %+v", sig)
-	app.Stop()
-	time.Sleep(app.defaultTimeout)
+func NewUnimplementedImpl() *UnimplementedImpl {
+	return &UnimplementedImpl{}
+}
+
+func (impl *UnimplementedImpl) GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+	return nil, fmt.Errorf("informer not implemented")
 }

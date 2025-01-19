@@ -14,36 +14,6 @@
  * limitations under the License.
  */
 
-package main
+package config
 
-import (
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-)
-
-func main() {
-	app, err := InitializeApp()
-	if err != nil {
-		log.Panic(err)
-	}
-	go app.Start()
-
-	if app.appConfig.IsMultiClusterMode() {
-		err = app.multiClusterInformer.Start()
-		if err != nil {
-			log.Panic(err)
-		}
-	}
-	stopChan := make(chan int)
-	go app.inClusterInformer.Start(stopChan)
-	var gracefulStop = make(chan os.Signal)
-	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT)
-	sig := <-gracefulStop
-	stopChan <- 0
-	app.logger.Infow("caught sig: %+v", sig)
-	app.Stop()
-	time.Sleep(app.defaultTimeout)
-}
+const ClusterTypeAll string = "ALL_CLUSTER"

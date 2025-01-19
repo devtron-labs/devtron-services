@@ -14,13 +14,23 @@
  * limitations under the License.
  */
 
-package utils
+package pubsub
 
 import (
+	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
+	"github.com/devtron-labs/kubewatch/pkg/config"
 	"go.uber.org/zap"
-	"time"
 )
 
-func LogExecutionTime(logger *zap.SugaredLogger, startTime time.Time, message string, keysAndValues ...interface{}) {
-	logger.Debugw(message, "time", time.Since(startTime), keysAndValues)
+func NewPubSubClientServiceImpl(logger *zap.SugaredLogger, appConfig *config.AppConfig) (*pubsub.PubSubClientServiceImpl, error) {
+	if appConfig.GetExternalConfig().External {
+		logger.Warnw("external config found, skipping pubsub client creation")
+		logger.Debugw("skipping pubsub client creation", "externalConfig", appConfig.GetExternalConfig())
+		return nil, nil
+	}
+	client, err := pubsub.NewPubSubClientServiceImpl(logger)
+	if err != nil {
+		logger.Errorw("error in startup", "err", err)
+	}
+	return client, err
 }

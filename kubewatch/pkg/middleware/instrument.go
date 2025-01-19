@@ -24,15 +24,17 @@ import (
 // metrics name constants
 const (
 	KUBEWATCH_UNREACHABLE_CLIENT_COUNT     = "Kubewatch_unreachable_client_count"
+	KUBEWATCH_UNREGISTERED_INFORMER_COUNT  = "Kubewatch_unregistered_informer_count"
 	KUBEWATCH_UNREACHABLE_CLIENT_COUNT_API = "Kubewatch_unreachable_client_count_API"
 )
 
 // metrics labels constants
 const (
-	CLUSTER_NAME = "clusterName"
-	CLUSTER_ID   = "clusterId"
-	HOST         = "host"
-	PATH         = "path"
+	CLUSTER_NAME  = "clusterName"
+	CLUSTER_ID    = "clusterId"
+	INFORMER_NAME = "informerName"
+	HOST          = "host"
+	PATH          = "path"
 )
 
 var UnreachableCluster = promauto.NewCounterVec(
@@ -40,8 +42,21 @@ var UnreachableCluster = promauto.NewCounterVec(
 		Name: KUBEWATCH_UNREACHABLE_CLIENT_COUNT,
 		Help: "How many HTTP requests processed, partitioned by status code, method and HTTP path.",
 	},
-	[]string{CLUSTER_NAME, CLUSTER_ID})
+	[]string{CLUSTER_NAME, CLUSTER_ID},
+)
 
-func IncUnUnreachableCluster(clusterName, clusterId string) {
+var UnregisteredInformers = promauto.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: KUBEWATCH_UNREGISTERED_INFORMER_COUNT,
+		Help: "How many informers are unregistered, with cluster name and cluster id.",
+	},
+	[]string{CLUSTER_NAME, CLUSTER_ID, INFORMER_NAME},
+)
+
+func IncUnreachableCluster(clusterName, clusterId string) {
 	UnreachableCluster.WithLabelValues(clusterName, clusterId).Inc()
+}
+
+func IncUnregisteredInformers(clusterName, clusterId, informerName string) {
+	UnregisteredInformers.WithLabelValues(clusterName, clusterId, informerName).Inc()
 }

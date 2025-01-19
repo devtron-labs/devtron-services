@@ -43,6 +43,9 @@ type Cluster struct {
 }
 
 func NewClusterRepositoryImpl(dbConnection *pg.DB, logger *zap.SugaredLogger) *ClusterRepositoryImpl {
+	if dbConnection == nil {
+		return nil
+	}
 	return &ClusterRepositoryImpl{
 		dbConnection: dbConnection,
 		logger:       logger,

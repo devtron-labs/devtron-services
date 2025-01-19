@@ -8,8 +8,17 @@ package main
 
 import (
 	"github.com/devtron-labs/common-lib/monitoring"
+	"github.com/devtron-labs/common-lib/utils/k8s"
 	"github.com/devtron-labs/kubewatch/api/router"
+	"github.com/devtron-labs/kubewatch/pkg/cluster"
+	"github.com/devtron-labs/kubewatch/pkg/config"
+	"github.com/devtron-labs/kubewatch/pkg/controller/inCluster"
+	"github.com/devtron-labs/kubewatch/pkg/controller/multiCluster"
 	"github.com/devtron-labs/kubewatch/pkg/logger"
+	"github.com/devtron-labs/kubewatch/pkg/pubsub"
+	"github.com/devtron-labs/kubewatch/pkg/resource"
+	"github.com/devtron-labs/kubewatch/pkg/sql"
+	"github.com/devtron-labs/kubewatch/pkg/utils"
 )
 
 // Injectors from Wire.go:
@@ -18,14 +27,35 @@ func InitializeApp() (*App, error) {
 	sugaredLogger := logger.NewSugaredLogger()
 	monitoringRouter := monitoring.NewMonitoringRouter(sugaredLogger)
 	routerImpl := api.NewRouter(sugaredLogger, monitoringRouter)
-	clusterConfig, err := GetClusterConfig()
+	appConfig, err := config.GetAppConfig()
 	if err != nil {
 		return nil, err
 	}
-	externalConfig, err := GetExternalConfig()
+	sqlConfig, err := sql.GetConfig()
 	if err != nil {
 		return nil, err
 	}
-	app := NewApp(routerImpl, sugaredLogger, clusterConfig, externalConfig)
+	db, err := sql.NewDbConnection(appConfig, sqlConfig, sugaredLogger)
+	if err != nil {
+		return nil, err
+	}
+	clusterRepositoryImpl := repository.NewClusterRepositoryImpl(db, sugaredLogger)
+	pubSubClientServiceImpl, err := pubsub.NewPubSubClientServiceImpl(sugaredLogger, appConfig)
+	if err != nil {
+		return nil, err
+	}
+	customK8sHttpTransportConfig := k8s.NewCustomK8sHttpTransportConfig()
+	k8sUtilImpl := utils.NewK8sUtilImpl(sugaredLogger, customK8sHttpTransportConfig)
+	informerClientImpl := resource.NewInformerClientImpl(sugaredLogger, pubSubClientServiceImpl, appConfig, k8sUtilImpl)
+	restConfig, err := utils.GetDefaultK8sConfig()
+	if err != nil {
+		return nil, err
+	}
+	informerImpl, err := multiCluster.NewMultiClusterInformerImpl(sugaredLogger, clusterRepositoryImpl, pubSubClientServiceImpl, appConfig, k8sUtilImpl, informerClientImpl, restConfig)
+	if err != nil {
+		return nil, err
+	}
+	inClusterInformerImpl := inCluster.NewStartController(sugaredLogger, appConfig, informerClientImpl, restConfig)
+	app := NewApp(routerImpl, sugaredLogger, appConfig, db, informerImpl, inClusterInformerImpl)
 	return app, nil
 }

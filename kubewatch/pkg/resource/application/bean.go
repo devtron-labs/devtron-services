@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package sql
+package application
 
-import "github.com/google/wire"
-
-var PgSqlWireSet = wire.NewSet(
-	GetConfig,
-	NewDbConnection,
+import (
+	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	"time"
 )
+
+type applicationDetail struct {
+	Application *v1alpha1.Application `json:"application"`
+	StatusTime  time.Time             `json:"statusTime"`
+}
