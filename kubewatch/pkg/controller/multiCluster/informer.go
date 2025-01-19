@@ -87,7 +87,9 @@ func NewMultiClusterInformerImpl(logger *zap.SugaredLogger,
 
 func (impl *InformerImpl) Start() error {
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start informer")
+	defer func() {
+		impl.logger.Debugw("time taken to start informer", "time", time.Since(startTime))
+	}()
 	err := impl.startDefaultClusterInformer()
 	if err != nil {
 		impl.logger.Errorw("error in starting default cluster informer", "err", err)
@@ -110,7 +112,9 @@ func (impl *InformerImpl) Start() error {
 
 func (impl *InformerImpl) Stop() {
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start default cluster informer")
+	defer func() {
+		impl.logger.Debugw("time taken to start default cluster informer", "time", time.Since(startTime))
+	}()
 	for _, clusterId := range maps.Keys(impl.multiClusterStopper) {
 		impl.stopInformerByClusterId(clusterId)
 	}
@@ -134,7 +138,9 @@ func (impl *InformerImpl) stopInformerByClusterId(clusterId int) {
 
 func (impl *InformerImpl) startDefaultClusterInformer() error {
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start default cluster informer")
+	defer func() {
+		impl.logger.Debugw("time taken to start default cluster informer", "time", time.Since(startTime))
+	}()
 	impl.logger.Debug("starting informer, reading new cluster request for default cluster")
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 		opts.FieldSelector = CLUSTER_MODIFY_EVENT_FIELD_SELECTOR
@@ -273,7 +279,9 @@ func (impl *InformerImpl) syncMultiClusterInformer(clusterId int) error {
 
 func (impl *InformerImpl) startInformer(clusterId int) error {
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start informer", "clusterId", clusterId)
+	defer func() {
+		impl.logger.Debugw("time taken to start informer", "clusterId", clusterId, "time", time.Since(startTime))
+	}()
 	clusterInfo, err := impl.clusterRepository.FindById(clusterId)
 	if err != nil && !errors.Is(err, pg.ErrNoRows) {
 		impl.logger.Errorw("error in fetching cluster", "clusterId", clusterId, "err", err)
@@ -315,7 +323,9 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 		return nil
 	}
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start system workflow informer", "clusterId", clusterInfo.Id)
+	defer func() {
+		impl.logger.Debugw("time taken to start system workflow informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+	}()
 	stopper, ok := impl.multiClusterStopper[clusterInfo.Id]
 	if ok && stopper.HasSystemWfInformer() {
 		impl.logger.Debug(fmt.Sprintf("informer for %s already exist", clusterInfo.ClusterName))
@@ -420,7 +430,9 @@ func (impl *InformerImpl) startArgoCdInformer(clusterInfo *repository.Cluster) e
 		return nil
 	}
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start argo cd informer", "clusterId", clusterInfo.Id)
+	defer func() {
+		impl.logger.Debugw("time taken to start argo cd informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+	}()
 	stopper, ok := impl.multiClusterStopper[clusterInfo.Id]
 	if ok && stopper.HasArgoCdInformer() {
 		impl.logger.Debug(fmt.Sprintf("informer for %s already exist", clusterInfo.ClusterName))

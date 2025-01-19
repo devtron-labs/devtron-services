@@ -22,7 +22,6 @@ import (
 	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	v1alpha12 "github.com/argoproj/argo-cd/v2/pkg/client/informers/externalversions/application/v1alpha1"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
-	"github.com/devtron-labs/kubewatch/pkg/utils"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -45,7 +44,9 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 
 func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "registered application informer", "namespace", namespace)
+	defer func() {
+		impl.logger.Debugw("registered application informer", "namespace", namespace, "time", time.Since(startTime))
+	}()
 	clientSet := versioned.NewForConfigOrDie(k8sConfig)
 	acdInformer := v1alpha12.NewApplicationInformer(clientSet, namespace, 0, cache.Indexers{})
 

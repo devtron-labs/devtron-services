@@ -22,7 +22,6 @@ import (
 	"github.com/argoproj/argo-workflows/v3/workflow/util"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/kubewatch/pkg/config"
-	"github.com/devtron-labs/kubewatch/pkg/utils"
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -60,7 +59,9 @@ func NewCdInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientSer
 
 func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
-	defer utils.LogExecutionTime(impl.logger, startTime, "registered workflow informer", "namespace", namespace)
+	defer func() {
+		impl.logger.Debugw("registered workflow informer", "namespace", namespace, "time", time.Since(startTime))
+	}()
 	httpClient, err := rest.HTTPClientFor(k8sConfig)
 	if err != nil {
 		impl.logger.Error("error in getting http client for the default k8s config")
