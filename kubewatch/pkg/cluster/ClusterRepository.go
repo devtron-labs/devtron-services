@@ -17,6 +17,7 @@
 package repository
 
 import (
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/kubewatch/pkg/sql"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
@@ -40,6 +41,16 @@ type Cluster struct {
 	ErrorInConnecting      string            `sql:"error_in_connecting"`
 	InsecureSkipTlsVerify  bool              `sql:"insecure_skip_tls_verify"`
 	sql.AuditLog
+}
+
+func (c *Cluster) SupportsSystemExec() bool {
+	return c.ClusterName == commonBean.DEFAULT_CLUSTER || c.CdArgoSetup
+}
+
+// SupportsArgoCd returns true if the cluster supports ArgoCD
+// TODO Asutosh: Discuss with product and update
+func (c *Cluster) SupportsArgoCd() bool {
+	return c.ClusterName == commonBean.DEFAULT_CLUSTER || c.CdArgoSetup
 }
 
 func NewClusterRepositoryImpl(dbConnection *pg.DB, logger *zap.SugaredLogger) *ClusterRepositoryImpl {
@@ -67,7 +78,7 @@ func (impl ClusterRepositoryImpl) FindAllActive() ([]*Cluster, error) {
 	var clusters []*Cluster
 	err := impl.dbConnection.
 		Model(&clusters).
-		Where("active=?", true).
+		Where("active = ?", true).
 		Select()
 	return clusters, err
 }
@@ -76,8 +87,8 @@ func (impl ClusterRepositoryImpl) FindById(id int) (*Cluster, error) {
 	var cluster Cluster
 	err := impl.dbConnection.
 		Model(&cluster).
-		Where("id= ? ", id).
-		Where("active =?", true).
+		Where("id = ?", id).
+		Where("active = ?", true).
 		Select()
 	return &cluster, err
 }
@@ -86,8 +97,8 @@ func (impl ClusterRepositoryImpl) FindByIdWithActiveFalse(id int) (*Cluster, err
 	var cluster Cluster
 	err := impl.dbConnection.
 		Model(&cluster).
-		Where("id= ? ", id).
-		Where("active =?", false).
+		Where("id = ?", id).
+		Where("active = ?", false).
 		Select()
 	return &cluster, err
 }

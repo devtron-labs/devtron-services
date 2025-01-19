@@ -30,7 +30,6 @@ type ClusterInfo struct {
 const (
 	CLUSTER_MODIFY_EVENT_SECRET_TYPE    = "cluster.request/modify"
 	CLUSTER_MODIFY_EVENT_FIELD_SELECTOR = "type==cluster.request/modify"
-	DEFAULT_CLUSTER                     = "default_cluster"
 	INFORMER_ALREADY_EXIST_MESSAGE      = "INFORMER_ALREADY_EXIST"
 	CLUSTER_ACTION_ADD                  = "add"
 	CLUSTER_ACTION_UPDATE               = "update"

@@ -33,7 +33,7 @@ import (
 
 func (impl *InformerImpl) getK8sConfigForCluster(clusterInfo *repository.Cluster) *rest.Config {
 	restConfig := &rest.Config{}
-	if clusterInfo.ClusterName == DEFAULT_CLUSTER {
+	if clusterInfo.ClusterName == commonBean.DEFAULT_CLUSTER {
 		restConfig = impl.defaultK8sConfig
 	} else {
 		restConfig = &rest.Config{

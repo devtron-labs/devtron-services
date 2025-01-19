@@ -283,7 +283,7 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 		middleware.IncUnreachableCluster(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id))
 	}
 	if impl.appConfig.IsMultiClusterSystemExec() {
-		err = impl.startSystemWorkflowInformer(clusterInfo)
+		err = impl.startSystemExecInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting system executor informer for cluster", "clusterId", clusterId, "err", err)
 			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), "SystemExecutor")
@@ -305,7 +305,11 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 	return nil
 }
 
-func (impl *InformerImpl) startSystemWorkflowInformer(clusterInfo *repository.Cluster) error {
+func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluster) error {
+	if !clusterInfo.SupportsSystemExec() {
+		impl.logger.Warnw("argo workflow setup is not done for cluster, skipping", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
+		return nil
+	}
 	startTime := time.Now()
 	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start system workflow informer", "clusterId", clusterInfo.Id)
 	stopper, ok := impl.multiClusterStopper[clusterInfo.Id]
@@ -409,6 +413,10 @@ func (impl *InformerImpl) startSystemWorkflowInformer(clusterInfo *repository.Cl
 }
 
 func (impl *InformerImpl) startArgoCdInformer(clusterInfo *repository.Cluster) error {
+	if !clusterInfo.SupportsArgoCd() {
+		impl.logger.Warnw("argo cd setup is not done for cluster, skipping", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
+		return nil
+	}
 	startTime := time.Now()
 	defer utils.LogExecutionTime(impl.logger, startTime, "time taken to start argo cd informer", "clusterId", clusterInfo.Id)
 	stopper, ok := impl.multiClusterStopper[clusterInfo.Id]
