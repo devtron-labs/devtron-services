@@ -195,7 +195,7 @@ func (impl *RestHandlerImpl) RegisterAndSaveScannedResult(w http.ResponseWriter,
 		return
 	}
 
-	impl.Logger.Infow("register and save scan result payload", "saveScanResultPayload", scanResultPayload)
+	impl.Logger.Debugw("register and save scan result payload", "saveScanResultPayload", scanResultPayload)
 	_, err = impl.ImageScanService.RegisterAndSaveScannedResult(&scanResultPayload)
 	if err != nil {
 		impl.Logger.Errorw("service err, RegisterAndSaveScannedResult", "err", err)
