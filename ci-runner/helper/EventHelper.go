@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	bean3 "github.com/devtron-labs/ci-runner/bean"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"log"
@@ -135,9 +134,9 @@ type CommonWorkflowRequest struct {
 	InAppLoggingEnabled            bool                             `json:"inAppLoggingEnabled"`
 	DefaultAddressPoolBaseCidr     string                           `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize         int                              `json:"defaultAddressPoolSize"`
-	PreCiSteps                     []*bean3.StepObject              `json:"preCiSteps"`
-	PostCiSteps                    []*bean3.StepObject              `json:"postCiSteps"`
-	RefPlugins                     []*bean3.RefPluginObject         `json:"refPlugins"`
+	PreCiSteps                     []*StepObject                    `json:"preCiSteps"`
+	PostCiSteps                    []*StepObject                    `json:"postCiSteps"`
+	RefPlugins                     []*RefPluginObject               `json:"refPlugins"`
 	AppName                        string                           `json:"appName"`
 	TriggerByAuthor                string                           `json:"triggerByAuthor"`
 	CiBuildConfig                  *CiBuildConfigBean               `json:"ciBuildConfig"`
@@ -177,7 +176,7 @@ type CommonWorkflowRequest struct {
 	DeploymentTriggeredBy         string                         `json:"deploymentTriggeredBy,omitempty"`
 	DeploymentTriggerTime         time.Time                      `json:"deploymentTriggerTime,omitempty"`
 	DeploymentReleaseCounter      int                            `json:"deploymentReleaseCounter,omitempty"`
-	PrePostDeploySteps            []*bean3.StepObject            `json:"prePostDeploySteps"`
+	PrePostDeploySteps            []*StepObject                  `json:"prePostDeploySteps"`
 	TaskYaml                      *TaskYaml                      `json:"-"`
 	IsVirtualExecution            bool                           `json:"isVirtualExecution"`
 	CiArtifactLastFetch           time.Time                      `json:"ciArtifactLastFetch"`
@@ -197,17 +196,17 @@ type CommonWorkflowRequest struct {
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
-	return c.StageType == string(bean3.STEP_TYPE_PRE)
+	return c.StageType == string(STEP_TYPE_PRE)
 }
 
 func (c *CommonWorkflowRequest) IsPostCdStage() bool {
-	return c.StageType == string(bean3.STEP_TYPE_POST)
+	return c.StageType == string(STEP_TYPE_POST)
 }
 
 func (c *CommonWorkflowRequest) GetCdStageType() PipelineType {
-	if c.StageType == string(bean3.STEP_TYPE_PRE) {
+	if c.StageType == string(STEP_TYPE_PRE) {
 		return PRE_CD
-	} else if c.StageType == string(bean3.STEP_TYPE_POST) {
+	} else if c.StageType == string(STEP_TYPE_POST) {
 		return POST_CD
 	}
 	return ""
@@ -270,9 +269,9 @@ type CiRequest struct {
 	MinioEndpoint               string                           `json:"minioEndpoint"`
 	DefaultAddressPoolBaseCidr  string                           `json:"defaultAddressPoolBaseCidr"`
 	DefaultAddressPoolSize      int                              `json:"defaultAddressPoolSize"`
-	PreCiSteps                  []*bean3.StepObject              `json:"preCiSteps"`
-	PostCiSteps                 []*bean3.StepObject              `json:"postCiSteps"`
-	RefPlugins                  []*bean3.RefPluginObject         `json:"refPlugins"`
+	PreCiSteps                  []*StepObject                    `json:"preCiSteps"`
+	PostCiSteps                 []*StepObject                    `json:"postCiSteps"`
+	RefPlugins                  []*RefPluginObject               `json:"refPlugins"`
 	AppName                     string                           `json:"appName"`
 	TriggerByAuthor             string                           `json:"triggerByAuthor"`
 	CiBuildConfig               *CiBuildConfigBean               `json:"ciBuildConfig"`
@@ -330,8 +329,8 @@ type CdRequest struct {
 	CiRunnerDockerMtuValue     int                              `json:"ciRunnerDockerMtuValue"`
 	DeploymentReleaseCounter   int                              `json:"deploymentReleaseCounter,omitempty"`
 	IsDryRun                   bool                             `json:"isDryRun"`
-	PrePostDeploySteps         []*bean3.StepObject              `json:"prePostDeploySteps"`
-	RefPlugins                 []*bean3.RefPluginObject         `json:"refPlugins"`
+	PrePostDeploySteps         []*StepObject                    `json:"prePostDeploySteps"`
+	RefPlugins                 []*RefPluginObject               `json:"refPlugins"`
 	StageType                  string                           `json:"stageType"`
 }
 
@@ -357,25 +356,25 @@ type CiArtifactDTO struct {
 }
 
 type CiCompleteEvent struct {
-	CiProjectDetails              []CiProjectDetails     `json:"ciProjectDetails"`
-	DockerImage                   string                 `json:"dockerImage"`
-	Digest                        string                 `json:"digest"`
-	PipelineId                    int                    `json:"pipelineId"`
-	DataSource                    string                 `json:"dataSource"`
-	PipelineName                  string                 `json:"pipelineName"`
-	WorkflowId                    int                    `json:"workflowId"`
-	TriggeredBy                   int                    `json:"triggeredBy"`
-	MaterialType                  string                 `json:"materialType"`
-	Metrics                       CIMetrics              `json:"metrics"`
-	AppName                       string                 `json:"appName"`
-	IsArtifactUploaded            bool                   `json:"isArtifactUploaded"`
-	FailureReason                 string                 `json:"failureReason"` // FailureReason is used for notifying the failure reason to the user. Should be short and user-friendly
-	ImageDetailsFromCR            json.RawMessage        `json:"imageDetailsFromCR"`
-	PluginRegistryArtifactDetails map[string][]string    `json:"PluginRegistryArtifactDetails"`
-	PluginArtifactStage           string                 `json:"pluginArtifactStage"`
-	IsScanEnabled                 bool                   `json:"isScanEnabled"`
-	PluginArtifacts               *bean3.PluginArtifacts `json:"pluginArtifacts"`
-	DockerRegistryId              string                 `json:"dockerRegistryId"`
+	CiProjectDetails              []CiProjectDetails  `json:"ciProjectDetails"`
+	DockerImage                   string              `json:"dockerImage"`
+	Digest                        string              `json:"digest"`
+	PipelineId                    int                 `json:"pipelineId"`
+	DataSource                    string              `json:"dataSource"`
+	PipelineName                  string              `json:"pipelineName"`
+	WorkflowId                    int                 `json:"workflowId"`
+	TriggeredBy                   int                 `json:"triggeredBy"`
+	MaterialType                  string              `json:"materialType"`
+	Metrics                       CIMetrics           `json:"metrics"`
+	AppName                       string              `json:"appName"`
+	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
+	FailureReason                 string              `json:"failureReason"` // FailureReason is used for notifying the failure reason to the user. Should be short and user-friendly
+	ImageDetailsFromCR            json.RawMessage     `json:"imageDetailsFromCR"`
+	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
+	PluginArtifactStage           string              `json:"pluginArtifactStage"`
+	IsScanEnabled                 bool                `json:"isScanEnabled"`
+	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
+	DockerRegistryId              string              `json:"dockerRegistryId"`
 }
 
 func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {
@@ -393,7 +392,7 @@ func (event *CiCompleteEvent) WithImageDetailsFromCR(imageDetailsFromCR json.Raw
 	return event
 }
 
-func (event *CiCompleteEvent) WithPluginArtifacts(pluginArtifacts *bean3.PluginArtifacts) *CiCompleteEvent {
+func (event *CiCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CiCompleteEvent {
 	event.PluginArtifacts = pluginArtifacts
 	return event
 }
@@ -438,23 +437,23 @@ type ImageScanningEvent struct {
 }
 
 type CdStageCompleteEvent struct {
-	CiProjectDetails              []CiProjectDetails     `json:"ciProjectDetails"`
-	WorkflowId                    int                    `json:"workflowId"`
-	WorkflowRunnerId              int                    `json:"workflowRunnerId"`
-	CdPipelineId                  int                    `json:"cdPipelineId"`
-	TriggeredBy                   int                    `json:"triggeredBy"`
-	StageYaml                     string                 `json:"stageYaml"`
-	ArtifactLocation              string                 `json:"artifactLocation"`
-	TaskYaml                      *TaskYaml              `json:"-"`
-	PipelineName                  string                 `json:"pipelineName"`
-	CiArtifactDTO                 CiArtifactDTO          `json:"ciArtifactDTO"`
-	PluginRegistryArtifactDetails map[string][]string    `json:"PluginRegistryArtifactDetails"`
-	PluginArtifactStage           string                 `json:"pluginArtifactStage"`
-	PluginArtifacts               *bean3.PluginArtifacts `json:"pluginArtifacts"`
-	IsArtifactUploaded            bool                   `json:"isArtifactUploaded"`
+	CiProjectDetails              []CiProjectDetails  `json:"ciProjectDetails"`
+	WorkflowId                    int                 `json:"workflowId"`
+	WorkflowRunnerId              int                 `json:"workflowRunnerId"`
+	CdPipelineId                  int                 `json:"cdPipelineId"`
+	TriggeredBy                   int                 `json:"triggeredBy"`
+	StageYaml                     string              `json:"stageYaml"`
+	ArtifactLocation              string              `json:"artifactLocation"`
+	TaskYaml                      *TaskYaml           `json:"-"`
+	PipelineName                  string              `json:"pipelineName"`
+	CiArtifactDTO                 CiArtifactDTO       `json:"ciArtifactDTO"`
+	PluginRegistryArtifactDetails map[string][]string `json:"PluginRegistryArtifactDetails"`
+	PluginArtifactStage           string              `json:"pluginArtifactStage"`
+	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
+	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
 }
 
-func (event *CdStageCompleteEvent) WithPluginArtifacts(pluginArtifacts *bean3.PluginArtifacts) *CdStageCompleteEvent {
+func (event *CdStageCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CdStageCompleteEvent {
 	event.PluginArtifacts = pluginArtifacts
 	return event
 }
@@ -759,9 +758,9 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 		Digest:       ciCdRequest.CiArtifactDTO.ImageDigest,
 	}
 	var stage PipelineType
-	if ciCdRequest.StageType == string(bean3.STEP_TYPE_PRE) {
+	if ciCdRequest.StageType == string(STEP_TYPE_PRE) {
 		stage = PRE_CD
-	} else if ciCdRequest.StageType == string(bean3.STEP_TYPE_POST) {
+	} else if ciCdRequest.StageType == string(STEP_TYPE_POST) {
 		stage = POST_CD
 	}
 	event.PipelineType = stage
@@ -769,6 +768,6 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 }
 
 type ImageScanningSteps struct {
-	Steps      []*bean3.StepObject `json:"steps"`
-	ScanToolId int                 `json:"scanToolId"`
+	Steps      []*StepObject `json:"steps"`
+	ScanToolId int           `json:"scanToolId"`
 }

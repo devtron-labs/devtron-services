@@ -18,7 +18,6 @@ package executor
 
 import (
 	"fmt"
-	"github.com/devtron-labs/ci-runner/bean"
 	cictx "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
@@ -165,10 +164,10 @@ type executionConf struct {
 	DockerImage       string
 	command           string
 	args              []string
-	CustomScriptMount *bean.MountPath
-	SourceCodeMount   *bean.MountPath
-	ExtraVolumeMounts []*bean.MountPath
-	OutputDirMount    []*bean.MountPath
+	CustomScriptMount *helper.MountPath
+	SourceCodeMount   *helper.MountPath
+	ExtraVolumeMounts []*helper.MountPath
+	OutputDirMount    []*helper.MountPath
 	// system generate values
 	scriptFileName      string //internal
 	workDirectory       string

@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package bean
+package helper
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/devtron-labs/ci-runner/helper"
 	commonBean "github.com/devtron-labs/common-lib/workflow"
 	"strings"
 )
@@ -53,8 +52,8 @@ type StepObject struct {
 	InputVars                []*commonBean.VariableObject `json:"inputVars"`
 	ExposedPorts             map[int]int                  `json:"exposedPorts"` //map of host:container
 	OutputVars               []*commonBean.VariableObject `json:"outputVars"`
-	TriggerSkipConditions    []*helper.ConditionObject    `json:"triggerSkipConditions"`
-	SuccessFailureConditions []*helper.ConditionObject    `json:"successFailureConditions"`
+	TriggerSkipConditions    []*ConditionObject           `json:"triggerSkipConditions"`
+	SuccessFailureConditions []*ConditionObject           `json:"successFailureConditions"`
 	DockerImage              string                       `json:"dockerImage"`
 	Command                  string                       `json:"command"`
 	Args                     []string                     `json:"args"`

@@ -19,15 +19,14 @@ package helper
 import (
 	"fmt"
 	"github.com/Knetic/govaluate"
-	"github.com/devtron-labs/ci-runner/bean"
 	commonBean "github.com/devtron-labs/common-lib/workflow"
 )
 
 type ConditionObject struct {
-	ConditionType            bean.ConditionType `json:"conditionType"`       //TRIGGER, SKIP, PASS, FAIL
-	ConditionOnVariable      string             `json:"conditionOnVariable"` //name of variable
-	ConditionalOperator      string             `json:"conditionalOperator"`
-	ConditionalValue         string             `json:"conditionalValue"`
+	ConditionType            ConditionType `json:"conditionType"`       //TRIGGER, SKIP, PASS, FAIL
+	ConditionOnVariable      string        `json:"conditionOnVariable"` //name of variable
+	ConditionalOperator      string        `json:"conditionalOperator"`
+	ConditionalValue         string        `json:"conditionalValue"`
 	typecastConditionalValue interface{}
 }
 
@@ -41,7 +40,7 @@ func ShouldTriggerStage(conditions []*ConditionObject, variables []*commonBean.V
 		}
 		status = status && result
 	}
-	if conditionType == bean.TRIGGER {
+	if conditionType == TRIGGER {
 		return status, nil // trigger if all success
 	} else {
 		return !status, nil //skip if all ture
@@ -58,7 +57,7 @@ func StageIsSuccess(conditions []*ConditionObject, variables []*commonBean.Varia
 		}
 		status = status && result
 	}
-	if conditionType == bean.PASS {
+	if conditionType == PASS {
 		return status, nil // success if all success
 	} else {
 		return !status, nil //fail if all success

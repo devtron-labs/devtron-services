@@ -17,7 +17,6 @@
 package bean
 
 import (
-	bean3 "github.com/devtron-labs/ci-runner/bean"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 )
@@ -36,7 +35,7 @@ const (
 type ImageScanningExecutorBean struct {
 	CiCdRequest      *helper.CiCdTriggerEvent
 	ScriptEnvs       *util2.ScriptEnvVariables
-	RefStageMap      map[int][]*bean3.StepObject
+	RefStageMap      map[int][]*helper.StepObject
 	Metrics          *helper.CIMetrics
 	ArtifactUploaded bool
 	Dest             string
