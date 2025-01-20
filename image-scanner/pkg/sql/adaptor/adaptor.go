@@ -40,7 +40,7 @@ func GetResourceScanExecutionResult(executionHistoryId, scanToolId int, scanData
 	resultTypes := make([]int, 0, 4)
 	switch format {
 	case repository.SbomResultSource:
-		resultTypes = []int{repository.Vulnerabilities.ToInt(), repository.License.ToInt()}
+		resultTypes = []int{repository.Vulnerabilities.ToInt()}
 	case repository.CycloneDxSbom:
 		resultTypes = []int{repository.Vulnerabilities.ToInt(), repository.License.ToInt()}
 	default:
