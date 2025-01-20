@@ -52,13 +52,13 @@ func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, c
 	secretInformer := informerFactory.Core().V1().Secrets()
 	_, eventErr := secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			impl.logger.Debug("event received in cluster secret add informer", "time", time.Now())
+			impl.logger.Debugw("event received in cluster secret add informer", "time", time.Now())
 			if secretObject, ok := newObj.(*coreV1.Secret); ok {
 				eventHandlers.AddFunc(secretObject)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			impl.logger.Debug("event received in cluster secret update informer", "time", time.Now())
+			impl.logger.Debugw("event received in cluster secret update informer", "time", time.Now())
 			oldSecretObject, validOld := oldObj.(*coreV1.Secret)
 			newSecretObject, validNew := newObj.(*coreV1.Secret)
 			if validOld && validNew {

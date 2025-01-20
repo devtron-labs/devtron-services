@@ -43,7 +43,7 @@ func main() {
 	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-gracefulStop
 	stopChan <- 0
-	app.logger.Infow("caught sig: %+v", sig)
+	app.logger.Infow("caught sig", "sig", sig.String())
 	app.Stop()
 	time.Sleep(app.defaultTimeout)
 }

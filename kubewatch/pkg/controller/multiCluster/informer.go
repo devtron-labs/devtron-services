@@ -331,7 +331,7 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 		impl.logger.Debug(fmt.Sprintf("informer for %s already exist", clusterInfo.ClusterName))
 		return AlreadyExists
 	}
-	impl.logger.Infow("starting informer for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
+	impl.logger.Infow("starting system executor informer for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	restConfig := impl.getK8sConfigForCluster(clusterInfo)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 		opts.LabelSelector = WORKFLOW_LABEL_SELECTOR
@@ -344,7 +344,7 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 				workflowType = val
 			}
 		}
-		impl.logger.Debugw("event received in Pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
+		impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
 		nodeStatus := impl.assessNodeStatus(newPodObj)
 		workflowStatus := getWorkflowStatus(newPodObj, nodeStatus, workflowType)
 		wfJson, err := json.Marshal(workflowStatus)
@@ -367,7 +367,7 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 			impl.logger.Errorw("error while publishing Request", "err", err)
 			return
 		}
-		impl.logger.Debug("cd workflow update sent")
+		impl.logger.Debugw("system executor workflow update sent", "workflowType", workflowType)
 	}
 	// deleteFunc is called when an existing pod is deleted
 	deleteFunc := func(podObj *coreV1.Pod) {
@@ -397,29 +397,30 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 		}
 		topic, err := getTopic(workflowType)
 		if err != nil {
-			impl.logger.Errorw("error while getting Topic")
+			impl.logger.Errorw("error while getting topic")
 			return
 		}
 		err = impl.pubSubClient.Publish(topic, string(wfJson))
 		if err != nil {
-			impl.logger.Errorw("error while publishing Request", "err", err)
+			impl.logger.Errorw("error while publishing request", "err", err)
 			return
 		}
-		impl.logger.Debug("cd workflow update sent")
+		impl.logger.Debugw("workflow update sent", "workflowType", workflowType)
 	}
 	podInformerFactory := impl.informerClient.GetPodInformerFactory()
 	eventHandler := bean.NewEventHandlers[coreV1.Pod]().
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
 	clusterLabels := middleware.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
-	informerFactory, err := podInformerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
+	podFactory, err := podInformerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in adding event handler for cluster pod informer", "err", err)
+		return err
 	}
 	stopChannel := make(chan struct{})
-	stopper = stopper.RegisterSystemWfStopper(informerFactory, stopChannel)
-	informerFactory.Start(stopChannel)
-	impl.logger.Infow("informer started for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
+	stopper = stopper.RegisterSystemWfStopper(podFactory, stopChannel)
+	podFactory.Start(stopChannel)
+	impl.logger.Infow("informer started for system executor cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	impl.multiClusterStopper[clusterInfo.Id] = stopper
 	return nil
 }

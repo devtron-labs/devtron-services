@@ -49,10 +49,10 @@ func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, c
 		return nil, k8sErr
 	}
 	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, options...)
-	podInformer := informerFactory.Core().V1().Secrets()
+	podInformer := informerFactory.Core().V1().Pods()
 	_, eventErr := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			impl.logger.Debug("event received in pod add informer", "time", time.Now())
+			impl.logger.Debugw("event received in pod add informer", "time", time.Now())
 			if eventHandlers.AddFunc == nil {
 				return
 			}
@@ -61,7 +61,7 @@ func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, c
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			impl.logger.Debug("event received in pod update informer", "time", time.Now())
+			impl.logger.Debugw("event received in pod update informer", "time", time.Now())
 			if eventHandlers.UpdateFunc == nil {
 				return
 			}
