@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	bean3 "github.com/devtron-labs/ci-runner/bean"
 	"github.com/devtron-labs/ci-runner/executor"
 	adaptor2 "github.com/devtron-labs/ci-runner/executor/adaptor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
@@ -234,7 +235,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		}
 	}
 
-	refStageMap := make(map[int][]*helper.StepObject)
+	refStageMap := make(map[int][]*bean3.StepObject)
 	for _, ref := range ciCdRequest.CommonWorkflowRequest.RefPlugins {
 		refStageMap[ref.Id] = ref.Steps
 	}
@@ -257,11 +258,12 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 			return artifactUploaded, err
 		}
 	}
-	setDigestInGlobalEnv(scriptEnvs, digest)
+	// setting digest in global env
+	helper.SetKeyValueInGlobalSystemEnv(scriptEnvs, bean2.DigestGlobalEnvKey, digest)
 	var postCiDuration float64
 	start = time.Now()
 	metrics.PostCiStartTime = start
-	var pluginArtifacts *helper.PluginArtifacts
+	var pluginArtifacts *bean3.PluginArtifacts
 	if len(ciCdRequest.CommonWorkflowRequest.PostCiSteps) > 0 {
 		pluginArtifacts, resultsFromPlugin, err = impl.runPostCiSteps(ciCdRequest, scriptEnvs, refStageMap, preCiStageOutVariable, metrics, artifactUploaded, dest, digest)
 		postCiDuration = time.Since(start).Seconds()
@@ -300,7 +302,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	// scan only if ci scan enabled
 	if helper.IsEventTypeEligibleToScanImage(ciCdRequest.Type) &&
 		ciCdRequest.CommonWorkflowRequest.ScanEnabled {
-		err = impl.runImageScanning(ciCdRequest, scriptEnvs, refStageMap, metrics, artifactUploaded, dest, digest)
+		err = impl.runImageScanning(adaptor2.GetImageScannerExecutorBean(ciCdRequest, scriptEnvs, refStageMap, metrics, artifactUploaded, dest, digest))
 		if err != nil {
 			return artifactUploaded, err
 		}
@@ -326,12 +328,9 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	}
 	return artifactUploaded, nil
 }
-func setDigestInGlobalEnv(scriptEnvs *util2.ScriptEnvVariables, digest string) {
-	scriptEnvs.SystemEnv["DIGEST"] = digest
-}
 
 func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
-	buildSkipEnabled bool, refStageMap map[int][]*helper.StepObject,
+	buildSkipEnabled bool, refStageMap map[int][]*bean3.StepObject,
 	scriptEnvs *util2.ScriptEnvVariables, artifactUploaded bool) (json.RawMessage, map[int]map[string]*commonBean.VariableObject, error) {
 	start := time.Now()
 	metrics.PreCiStartTime = start
@@ -339,7 +338,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 		log.Println("running PRE-CI steps")
 	}
 	// run pre artifact processing
-	_, preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil, true)
+	_, preCiStageOutVariable, step, err := impl.stageExecutorManager.RunCiCdSteps(bean3.STEP_TYPE_PRE, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PreCiSteps, refStageMap, scriptEnvs, nil, true)
 	preCiDuration := time.Since(start).Seconds()
 	if err != nil {
 		log.Println("error in running pre Ci Steps", "err", err)
@@ -360,7 +359,7 @@ func (impl *CiStage) runPreCiSteps(ciCdRequest *helper.CiCdTriggerEvent, metrics
 }
 
 func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics,
-	refStageMap map[int][]*helper.StepObject, scriptEnvs *util2.ScriptEnvVariables, artifactUploaded bool,
+	refStageMap map[int][]*bean3.StepObject, scriptEnvs *util2.ScriptEnvVariables, artifactUploaded bool,
 	preCiStageOutVariable map[int]map[string]*commonBean.VariableObject) (string, error) {
 	// build
 	start := time.Now()
@@ -376,7 +375,7 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 			// build success will always be false
 			scriptEnvs.SystemEnv[util.ENV_VARIABLE_BUILD_SUCCESS] = "false"
 			// run post artifact processing
-			impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable, true)
+			impl.stageExecutorManager.RunCiCdSteps(bean3.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, postCiStepsToTriggerOnCiFail, refStageMap, scriptEnvs, preCiStageOutVariable, true)
 			scriptEnvs = scriptEnvs.ResetExistingScriptEnv()
 		}
 		// code-block ends
@@ -415,14 +414,14 @@ func (impl *CiStage) extractDigest(ciCdRequest *helper.CiCdTriggerEvent, dest st
 	return digest, err
 }
 
-func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) (*helper.PluginArtifacts, json.RawMessage, error) {
+func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*bean3.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) (*bean3.PluginArtifacts, json.RawMessage, error) {
 	log.Println("running POST-CI steps")
 	// sending build success as true always as post-ci triggers only if ci gets success
 	scriptEnvs.SystemEnv[util.ENV_VARIABLE_BUILD_SUCCESS] = "true"
 	scriptEnvs.SystemEnv["DEST"] = dest
 	scriptEnvs.SystemEnv["DIGEST"] = digest
 	// run post artifact processing
-	pluginArtifactsFromFile, _, step, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable, true)
+	pluginArtifactsFromFile, _, step, err := impl.stageExecutorManager.RunCiCdSteps(bean3.STEP_TYPE_POST, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PostCiSteps, refStageMap, scriptEnvs, preCiStageOutVariable, true)
 	if err != nil {
 		log.Println("error in running Post Ci Steps", "err", err)
 		return nil, nil, helper.NewCiStageError(err).
@@ -442,7 +441,12 @@ func (impl *CiStage) runPostCiSteps(ciCdRequest *helper.CiCdTriggerEvent, script
 	return pluginArtifactsFromFile, resultsFromPlugin, nil
 }
 
-func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*helper.StepObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) error {
+func (impl *CiStage) runImageScanning(imageScannerExecutor *bean2.ImageScanningExecutorBean) error {
+	ciCdRequest := imageScannerExecutor.CiCdRequest
+	dest, digest := imageScannerExecutor.Dest, imageScannerExecutor.Digest
+	metrics, artifactUploaded := imageScannerExecutor.Metrics, imageScannerExecutor.ArtifactUploaded
+	scriptEnvs, refStageMap := imageScannerExecutor.ScriptEnvs, imageScannerExecutor.RefStageMap
+
 	imageScanningStage := func() error {
 		log.Println("Image Scanning Started for digest", digest)
 		scanEvent := adaptor2.GetImageScanEvent(dest, digest, ciCdRequest.CommonWorkflowRequest)
@@ -465,7 +469,7 @@ func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scri
 			//setting scan tool id in script env
 			scriptEnvs.SystemEnv["SCAN_TOOL_ID"] = strconv.Itoa(scanToolId)
 			// run image scanning steps
-			_, _, _, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_SCANNING, ciCdRequest.CommonWorkflowRequest, tasks, refStageMap, scriptEnvs, nil, true)
+			_, _, _, err := impl.stageExecutorManager.RunCiCdSteps(bean3.STEP_TYPE_SCANNING, ciCdRequest.CommonWorkflowRequest, tasks, refStageMap, scriptEnvs, nil, true)
 			if err != nil {
 				log.Println("error in running pre Ci Steps", "err", err)
 				return helper.NewCiStageError(err).
@@ -475,7 +479,7 @@ func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scri
 			}
 		}
 		//unset scan tool id in script env
-		scriptEnvs.SystemEnv["SCAN_TOOL_ID"] = ""
+		delete(scriptEnvs.SystemEnv, bean2.ScanToolIdGlobalEnvKey)
 		log.Println("Image scanning completed")
 		return nil
 	}
@@ -485,7 +489,7 @@ func (impl *CiStage) runImageScanning(ciCdRequest *helper.CiCdTriggerEvent, scri
 	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
 }
 
-func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*helper.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, artifactUploaded bool) (string, string, error) {
+func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*bean3.StepObject, preCiStageOutVariable map[int]map[string]*commonBean.VariableObject, artifactUploaded bool) (string, string, error) {
 	dest, err := impl.runBuildArtifact(ciCdRequest, metrics, refStageMap, scriptEnvs, artifactUploaded, preCiStageOutVariable)
 	if err != nil {
 		return "", "", err
@@ -498,8 +502,8 @@ func (impl *CiStage) getImageDestAndDigest(ciCdRequest *helper.CiCdTriggerEvent,
 	return dest, digest, nil
 }
 
-func getPostCiStepToRunOnCiFail(postCiSteps []*helper.StepObject) []*helper.StepObject {
-	var postCiStepsToTriggerOnCiFail []*helper.StepObject
+func getPostCiStepToRunOnCiFail(postCiSteps []*bean3.StepObject) []*bean3.StepObject {
+	var postCiStepsToTriggerOnCiFail []*bean3.StepObject
 	if len(postCiSteps) > 0 {
 		for _, postCiStep := range postCiSteps {
 			if postCiStep.TriggerIfParentStageFail {

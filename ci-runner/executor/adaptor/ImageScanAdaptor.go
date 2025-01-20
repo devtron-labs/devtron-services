@@ -17,6 +17,9 @@
 package adaptor
 
 import (
+	bean3 "github.com/devtron-labs/ci-runner/bean"
+	bean2 "github.com/devtron-labs/ci-runner/executor/stage/bean"
+	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/imageScan/bean"
@@ -40,5 +43,16 @@ func GetImageScanEvent(dest, digest string, commonWorkflowRequest *helper.Common
 		},
 		ImageScanMaxRetries: commonWorkflowRequest.ImageScanMaxRetries,
 		ImageScanRetryDelay: commonWorkflowRequest.ImageScanRetryDelay,
+	}
+}
+func GetImageScannerExecutorBean(ciCdRequest *helper.CiCdTriggerEvent, scriptEnvs *util2.ScriptEnvVariables, refStageMap map[int][]*bean3.StepObject, metrics *helper.CIMetrics, artifactUploaded bool, dest string, digest string) *bean2.ImageScanningExecutorBean {
+	return &bean2.ImageScanningExecutorBean{
+		CiCdRequest:      ciCdRequest,
+		ScriptEnvs:       scriptEnvs,
+		RefStageMap:      refStageMap,
+		Metrics:          metrics,
+		ArtifactUploaded: artifactUploaded,
+		Dest:             dest,
+		Digest:           digest,
 	}
 }

@@ -19,6 +19,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/bean"
 	cictx "github.com/devtron-labs/ci-runner/executor/context"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
@@ -37,7 +38,7 @@ type StageExecutorImpl struct {
 }
 
 type StageExecutor interface {
-	RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (pluginArtifacts *helper.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *helper.StepObject, err error)
+	RunCiCdSteps(stepType bean.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*bean.StepObject, refStageMap map[int][]*bean.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (pluginArtifacts *bean.PluginArtifacts, outVars map[int]map[string]*commonBean.VariableObject, failedStep *bean.StepObject, err error)
 	RunCdStageTasks(ciContext cictx.CiContext, tasks []*helper.Task, scriptEnvVariables *util2.ScriptEnvVariables, stageType helper.PipelineType) error
 }
 
@@ -48,20 +49,20 @@ func NewStageExecutorImpl(cmdExecutor helper.CommandExecutor, scriptExecutor Scr
 	}
 }
 
-func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*helper.StepObject, refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (*helper.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *helper.StepObject, error) {
+func (impl *StageExecutorImpl) RunCiCdSteps(stepType bean.StepType, ciCdRequest *helper.CommonWorkflowRequest, steps []*bean.StepObject, refStageMap map[int][]*bean.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (*bean.PluginArtifacts, map[int]map[string]*commonBean.VariableObject, *bean.StepObject, error) {
 	/*if stageType == STEP_TYPE_POST {
 		postCiStageVariable = make(map[int]map[string]*VariableObject) // [stepId]name[]value
 	}*/
 
 	stageVariable := make(map[int]map[string]*commonBean.VariableObject)
-	pluginArtifactsFromFile := helper.NewPluginArtifact()
+	pluginArtifactsFromFile := bean.NewPluginArtifact()
 	for i, step := range steps {
 
-		stageInfoLoggingRequired := stepType != helper.STEP_TYPE_REF_PLUGIN
+		stageInfoLoggingRequired := stepType != bean.STEP_TYPE_REF_PLUGIN
 		failedStep := step
 		var (
 			err                error
-			refPluginArtifacts *helper.PluginArtifacts
+			refPluginArtifacts *bean.PluginArtifacts
 		)
 
 		executeStep := func() error {
@@ -95,7 +96,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 	return pluginArtifactsFromFile, stageVariable, nil, nil
 }
 
-func getScriptVariables(step *helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables) (emptyVariableList []string, scriptEnvs map[string]string, variableFileMount map[string]string) {
+func getScriptVariables(step *bean.StepObject, scriptEnvVariables *util2.ScriptEnvVariables) (emptyVariableList []string, scriptEnvs map[string]string, variableFileMount map[string]string) {
 	//variables with empty value
 	scriptEnvs = make(map[string]string)
 	variableFileMount = make(map[string]string)
@@ -138,20 +139,20 @@ func getScriptVariables(step *helper.StepObject, scriptEnvVariables *util2.Scrip
 	return emptyVariableList, scriptEnvs, variableFileMount
 }
 
-func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *helper.StepObject,
-	refStageMap map[int][]*helper.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject,
-	stageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (artifacts *helper.PluginArtifacts, failedStep *helper.StepObject, err error) {
+func (impl *StageExecutorImpl) RunCiCdStep(stepType bean.StepType, ciCdRequest helper.CommonWorkflowRequest, index int, step *bean.StepObject,
+	refStageMap map[int][]*bean.StepObject, scriptEnvVariables *util2.ScriptEnvVariables, preCiStageVariable map[int]map[string]*commonBean.VariableObject,
+	stageVariable map[int]map[string]*commonBean.VariableObject, resetEnvVariable bool) (artifacts *bean.PluginArtifacts, failedStep *bean.StepObject, err error) {
 	var vars []*commonBean.VariableObject
-	if stepType == helper.STEP_TYPE_REF_PLUGIN {
+	if stepType == bean.STEP_TYPE_REF_PLUGIN {
 		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
-	} else if stepType == helper.STEP_TYPE_SCANNING {
+	} else if stepType == bean.STEP_TYPE_SCANNING {
 		// only global variables are supported here in image scanning step
 		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, nil)
 	} else {
 		log.Printf("running step : %s\n", step.Name)
-		if stepType == helper.STEP_TYPE_PRE {
+		if stepType == bean.STEP_TYPE_PRE {
 			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, stageVariable, nil, nil)
-		} else if stepType == helper.STEP_TYPE_POST {
+		} else if stepType == bean.STEP_TYPE_POST {
 			vars, err = deduceVariables(step.InputVars, scriptEnvVariables, preCiStageVariable, stageVariable, nil)
 		}
 	}
@@ -164,7 +165,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	// this is required to pass the existing script env variables to the next recursive call
 	scriptEnvVariables.ExistingScriptEnv = scriptEnvs
 
-	if stepType == helper.STEP_TYPE_PRE || stepType == helper.STEP_TYPE_POST {
+	if stepType == bean.STEP_TYPE_PRE || stepType == bean.STEP_TYPE_POST {
 		log.Println(fmt.Sprintf("variables with empty value : %v", emptyVariableList))
 	}
 	if len(step.TriggerSkipConditions) > 0 {
@@ -198,9 +199,9 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.EnableSecretMasking)
 
 	stepOutputVarsFinal := make(map[string]string)
-	var pluginArtifacts *helper.PluginArtifacts
+	var pluginArtifacts *bean.PluginArtifacts
 	//---------------------------------------------------------------------------------------------------
-	if step.StepType == helper.STEP_TYPE_INLINE.String() {
+	if step.StepType == bean.STEP_TYPE_INLINE.String() {
 		//add system env variable
 		for k, v := range util2.GetSystemEnvVariables() {
 			//add only when not overridden by user
@@ -211,7 +212,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		// set the script env variables to the existing script env variables
 		// this is required to pass the existing script env variables to the next recursive call
 		scriptEnvVariables.ExistingScriptEnv = scriptEnvs
-		if step.ExecutorType == helper.SHELL {
+		if step.ExecutorType == bean.SHELL {
 			stageOutputVars, err := impl.scriptExecutor.RunScripts(ciContext, util.Output_path, fmt.Sprintf("stage-%d", index), step.Script, scriptEnvs, outVars)
 			if err != nil {
 				return nil, step, err
@@ -230,8 +231,8 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 					}
 				}
 			}
-		} else if step.ExecutorType == helper.CONTAINER_IMAGE {
-			var outputDirMount []*helper.MountPath
+		} else if step.ExecutorType == bean.CONTAINER_IMAGE {
+			var outputDirMount []*bean.MountPath
 			stepArtifact := filepath.Join(util.Output_path, "opt")
 
 			for _, artifact := range step.ArtifactPaths {
@@ -241,7 +242,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 					log.Println(util.DEVTRON, err)
 					return nil, step, err
 				}
-				path := helper.NewMountPath(filepath.Join(stepArtifact, artifact), artifact)
+				path := bean.NewMountPath(filepath.Join(stepArtifact, artifact), artifact)
 				outputDirMount = append(outputDirMount, path)
 			}
 			executionConf := &executionConf{
@@ -261,7 +262,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			}
 
 			for fileSrc, fileDst := range variableFileMount {
-				fileMountPaths := helper.NewMountPath(fileSrc, fileDst)
+				fileMountPaths := bean.NewMountPath(fileSrc, fileDst)
 				executionConf.ExtraVolumeMounts = append(executionConf.ExtraVolumeMounts, fileMountPaths)
 			}
 			if executionConf.SourceCodeMount != nil {
@@ -282,7 +283,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				}
 			}
 		}
-	} else if step.StepType == helper.STEP_TYPE_REF_PLUGIN.String() {
+	} else if step.StepType == bean.STEP_TYPE_REF_PLUGIN.String() {
 		steps := refStageMap[step.RefPluginId]
 		stepIndexVarNameValueMap := make(map[int]map[string]string)
 		stepIndexFileMountMap := make(map[int]map[string]*fileContentDto)
@@ -320,7 +321,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 				}
 			}
 		}
-		refPluginArtifacts, opt, _, err := impl.RunCiCdSteps(helper.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, scriptEnvVariables, nil, false)
+		refPluginArtifacts, opt, _, err := impl.RunCiCdSteps(bean.STEP_TYPE_REF_PLUGIN, &ciCdRequest, steps, refStageMap, scriptEnvVariables, nil, false)
 		if err != nil {
 			fmt.Println(err)
 			return nil, step, err

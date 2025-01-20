@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/bean"
 	"github.com/devtron-labs/ci-runner/helper/adaptor"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
 	"log"
@@ -71,7 +72,7 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	var artifactUploaded bool
 	var err error
-	var allPluginArtifacts *helper.PluginArtifacts
+	var allPluginArtifacts *bean.PluginArtifacts
 	defer func() {
 		*exitCode = deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, err)
 	}()
@@ -135,7 +136,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artif
 	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
 }
 
-func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.PluginArtifacts, error) {
+func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*bean.PluginArtifacts, error) {
 	err := os.Chdir("/")
 	if err != nil {
 		return nil, err
@@ -182,15 +183,15 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 		log.Println(util.DEVTRON, "error while getting global envs", err)
 		return nil, err
 	}
-	allPluginArtifacts := helper.NewPluginArtifact()
+	allPluginArtifacts := bean.NewPluginArtifact()
 	if len(ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps) > 0 {
-		refStageMap := make(map[int][]*helper.StepObject)
+		refStageMap := make(map[int][]*bean.StepObject)
 		for _, ref := range ciCdRequest.CommonWorkflowRequest.RefPlugins {
 			refStageMap[ref.Id] = ref.Steps
 		}
 		scriptEnvs.SystemEnv["DEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.Image
 		scriptEnvs.SystemEnv["DIGEST"] = ciCdRequest.CommonWorkflowRequest.CiArtifactDTO.ImageDigest
-		var stage = helper.StepType(ciCdRequest.CommonWorkflowRequest.StageType)
+		var stage = bean.StepType(ciCdRequest.CommonWorkflowRequest.StageType)
 		pluginArtifacts, _, step, err := impl.stageExecutorManager.RunCiCdSteps(stage, ciCdRequest.CommonWorkflowRequest, ciCdRequest.CommonWorkflowRequest.PrePostDeploySteps, refStageMap, scriptEnvs, nil, true)
 		if err != nil {
 			return allPluginArtifacts, helper.NewCdStageError(err).

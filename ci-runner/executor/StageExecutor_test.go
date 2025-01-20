@@ -17,6 +17,7 @@
 package executor
 
 import (
+	"github.com/devtron-labs/ci-runner/bean"
 	"github.com/devtron-labs/ci-runner/helper"
 	commonBean "github.com/devtron-labs/common-lib/workflow"
 	"reflect"
@@ -114,7 +115,7 @@ func Test_deduceVariables(t *testing.T) {
 
 func TestRunCiSteps(t *testing.T) {
 	type args struct {
-		stageType                  helper.StepType
+		stageType                  bean.StepType
 		req                        *helper.CommonWorkflowRequest
 		globalEnvironmentVariables map[string]string
 		preeCiStageVariable        map[int]map[string]*commonBean.VariableObject

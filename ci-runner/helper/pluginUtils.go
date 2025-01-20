@@ -2,13 +2,14 @@ package helper
 
 import (
 	"encoding/json"
+	"github.com/devtron-labs/ci-runner/bean"
 	"github.com/devtron-labs/ci-runner/util"
 	"io/ioutil"
 	"log"
 	"os"
 )
 
-func ExtractPluginArtifactsAndRemoveFile() (*PluginArtifacts, error) {
+func ExtractPluginArtifactsAndRemoveFile() (*bean.PluginArtifacts, error) {
 	exists, err := util.CheckFileExists(util.PluginArtifactsResults)
 	if err != nil || !exists {
 		log.Println("err", err)
@@ -19,7 +20,7 @@ func ExtractPluginArtifactsAndRemoveFile() (*PluginArtifacts, error) {
 		log.Println("error in reading file", "err", err.Error())
 		return nil, err
 	}
-	pluginArtifacts := &PluginArtifacts{}
+	pluginArtifacts := &bean.PluginArtifacts{}
 	err = json.Unmarshal(file, &pluginArtifacts)
 	if err != nil {
 		log.Println("error in unmarshalling imageDetailsFromCr results", "err", err.Error())
