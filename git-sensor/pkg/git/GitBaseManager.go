@@ -23,6 +23,7 @@ import (
 	"fmt"
 	commonLibGitManager "github.com/devtron-labs/common-lib/git-manager"
 	"github.com/devtron-labs/git-sensor/internals"
+	"github.com/devtron-labs/git-sensor/internals/middleware"
 	"github.com/devtron-labs/git-sensor/internals/sql"
 	"github.com/devtron-labs/git-sensor/util"
 	"go.uber.org/zap"
@@ -201,6 +202,13 @@ func (impl *GitManagerBaseImpl) runCommand(cmd *exec.Cmd) (response, errMsg stri
 	if err != nil {
 		impl.logger.Errorw("error in git cli operation", "msg", string(outBytes), "err", err)
 		errMsg = output
+		if errors.Is(err, context.DeadlineExceeded) {
+			errMsg = "command timed out"
+			impl.logger.Errorw("command timed out", "cmd", cmd.String())
+			// prometheus event count for timeout
+			middleware.GitMaterialPollCounter.WithLabelValues().Inc()
+			return output, errMsg, err
+		}
 		exErr, ok := err.(*exec.ExitError)
 		if !ok {
 			return output, errMsg, err
