@@ -206,7 +206,7 @@ func (impl *GitManagerBaseImpl) runCommand(cmd *exec.Cmd) (response, errMsg stri
 			errMsg = "command timed out"
 			impl.logger.Errorw("command timed out", "cmd", cmd.String())
 			// prometheus event count for timeout
-			middleware.GitMaterialPollCounter.WithLabelValues().Inc()
+			middleware.GitFetchTimeoutCounter.WithLabelValues().Inc()
 			return output, errMsg, err
 		}
 		exErr, ok := err.(*exec.ExitError)
