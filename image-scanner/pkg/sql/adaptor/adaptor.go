@@ -36,12 +36,22 @@ func GetScanToolExecutionHistoryMapping(executionHistoryModel *repository.ImageS
 	}
 }
 
-func GetResourceScanExecutionResult(executionHistoryId, scanToolId int, scanDataJson string, format repository.ResourceScanFormat, types []int) *repository.ResourceScanResult {
+func GetResourceScanExecutionResult(executionHistoryId, scanToolId int, scanDataJson string, format repository.ResourceScanFormat) *repository.ResourceScanResult {
+	resultTypes := make([]int, 0, 4)
+	switch format {
+	case repository.SbomResultSource:
+		resultTypes = []int{repository.Vulnerabilities.ToInt(), repository.License.ToInt()}
+	case repository.CycloneDxSbom:
+		resultTypes = []int{repository.Vulnerabilities.ToInt(), repository.License.ToInt()}
+	default:
+		resultTypes = []int{repository.Vulnerabilities.ToInt(), repository.License.ToInt(), repository.Config.ToInt(), repository.Secrets.ToInt()}
+
+	}
 	return &repository.ResourceScanResult{
 		ImageScanExecutionHistoryId: executionHistoryId,
 		ScanDataJson:                scanDataJson,
 		Format:                      format,
-		Types:                       types,
+		Types:                       resultTypes,
 		ScanToolId:                  scanToolId,
 	}
 }
