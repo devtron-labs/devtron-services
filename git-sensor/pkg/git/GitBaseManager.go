@@ -120,12 +120,12 @@ func (impl *GitManagerBaseImpl) Fetch(gitCtx GitContext, rootDir string) (respon
 		impl.logger.Errorw("error encountered in createFilesForTlsData", "err", err)
 	}
 	defer commonLibGitManager.DeleteTlsFiles(tlsPathInfo)
-	output, errMsg, err := impl.runCommandWithCred(cmd, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+	output, errMsg, err := impl.runCommandWithCred(cmd, gitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
 	if strings.Contains(output, util.LOCK_REF_MESSAGE) {
 		impl.logger.Info("error in fetch, pruning local refs and retrying", "rootDir", rootDir)
 		// running git remote prune origin and retrying fetch. gitHub issue - https://github.com/devtron-labs/devtron/issues/4605
 		pruneCmd, pruneCmdCancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "remote", "prune", "origin")
-		pruneOutput, pruneMsg, pruneErr := impl.runCommandWithCred(pruneCmd, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+		pruneOutput, pruneMsg, pruneErr := impl.runCommandWithCred(pruneCmd, gitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
 		defer pruneCmdCancel()
 		if pruneErr != nil {
 			impl.logger.Errorw("error in pruning local refs that do not exist at remote")
@@ -135,7 +135,7 @@ func (impl *GitManagerBaseImpl) Fetch(gitCtx GitContext, rootDir string) (respon
 		retryFetchCmd, retryFetchCancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 		defer retryFetchCancel()
 
-		output, errMsg, err = impl.runCommandWithCred(retryFetchCmd, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+		output, errMsg, err = impl.runCommandWithCred(retryFetchCmd, gitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
 	}
 	impl.logger.Debugw("fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
@@ -145,7 +145,7 @@ func (impl *GitManagerBaseImpl) Checkout(gitCtx GitContext, rootDir, branch stri
 	impl.logger.Debugw("git checkout ", "location", rootDir)
 	cmd, cancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "checkout", branch, "--force")
 	defer cancel()
-	output, errMsg, err := impl.runCommand(cmd)
+	output, errMsg, err := impl.runCommand(gitCtx, cmd)
 	impl.logger.Debugw("checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
@@ -162,7 +162,7 @@ func (impl *GitManagerBaseImpl) LogMergeBase(gitCtx GitContext, rootDir, from st
 	impl.logger.Debugw("git", cmdArgs)
 	cmd, cancel := impl.createCmdWithContext(gitCtx, "git", cmdArgs...)
 	defer cancel()
-	output, errMsg, err := impl.runCommand(cmd)
+	output, errMsg, err := impl.runCommand(gitCtx, cmd)
 	impl.logger.Debugw("root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (impl *GitManagerBaseImpl) LogMergeBase(gitCtx GitContext, rootDir, from st
 	return commits, nil
 }
 
-func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, userName, password string, tlsPathInfo *commonLibGitManager.TlsPathInfo) (response, errMsg string, err error) {
+func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitContext, userName, password string, tlsPathInfo *commonLibGitManager.TlsPathInfo) (response, errMsg string, err error) {
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("GIT_ASKPASS=%s", util.GIT_ASK_PASS),
 		fmt.Sprintf("GIT_USERNAME=%s", userName),
@@ -191,10 +191,10 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, userName, pass
 			cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSL_CAINFO=%s", tlsPathInfo.CaCertPath))
 		}
 	}
-	return impl.runCommand(cmd)
+	return impl.runCommand(gitCtx, cmd)
 }
 
-func (impl *GitManagerBaseImpl) runCommand(cmd *exec.Cmd) (response, errMsg string, err error) {
+func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	outBytes, err := cmd.CombinedOutput()
 	output := string(outBytes)
@@ -202,7 +202,7 @@ func (impl *GitManagerBaseImpl) runCommand(cmd *exec.Cmd) (response, errMsg stri
 	if err != nil {
 		impl.logger.Errorw("error in git cli operation", "msg", string(outBytes), "err", err)
 		errMsg = output
-		if errors.Is(err, context.DeadlineExceeded) {
+		if errors.Is(gitCtx.Err(), context.DeadlineExceeded) {
 			errMsg = "command timed out"
 			impl.logger.Errorw("command timed out", "cmd", cmd.String())
 			// prometheus event count for timeout
@@ -232,7 +232,7 @@ func (impl *GitManagerBaseImpl) ConfigureSshCommand(gitCtx GitContext, rootDir s
 	coreSshCommand := fmt.Sprintf("ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", sshPrivateKeyPath)
 	cmd, cancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "config", "core.sshCommand", coreSshCommand)
 	defer cancel()
-	output, errMsg, err := impl.runCommand(cmd)
+	output, errMsg, err := impl.runCommand(gitCtx, cmd)
 	impl.logger.Debugw("configure ssh command output ", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
@@ -339,7 +339,7 @@ func (impl *GitManagerBaseImpl) FetchDiffStatBetweenCommitsNameOnly(gitCtx GitCo
 		commonLibGitManager.DeleteTlsFiles(tlsPathInfo)
 	}()
 
-	output, errMsg, err := impl.runCommandWithCred(cmd, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+	output, errMsg, err := impl.runCommandWithCred(cmd, gitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
 	impl.logger.Debugw("root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	if err != nil || len(errMsg) > 0 {
 		impl.logger.Errorw("error in fetching fileStat diff btw commits: ", "oldHash", oldHash, "newHash", newHash, "checkoutPath", rootDir, "errorMsg", errMsg, "err", err)
@@ -363,7 +363,7 @@ func (impl *GitManagerBaseImpl) FetchDiffStatBetweenCommitsWithNumstat(gitCtx Gi
 		impl.logger.Errorw("error encountered in createFilesForTlsData", "err", err)
 	}
 	defer commonLibGitManager.DeleteTlsFiles(tlsPathInfo)
-	output, errMsg, err := impl.runCommandWithCred(cmd, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+	output, errMsg, err := impl.runCommandWithCred(cmd, gitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
 	impl.logger.Debugw("root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	if err != nil || len(errMsg) > 0 {
 		impl.logger.Errorw("error in fetching fileStat diff btw commits: ", "oldHash", oldHash, "newHash", newHash, "checkoutPath", rootDir, "errorMsg", errMsg, "err", err)
@@ -405,6 +405,6 @@ func (impl *GitManagerBaseImpl) ExecuteCustomCommand(gitContext GitContext, name
 		impl.logger.Errorw("error encountered in createFilesForTlsData", "err", err)
 	}
 	defer commonLibGitManager.DeleteTlsFiles(tlsPathInfo)
-	output, errMsg, err := impl.runCommandWithCred(cmd, gitContext.Username, gitContext.Password, tlsPathInfo)
+	output, errMsg, err := impl.runCommandWithCred(cmd, gitContext, gitContext.Username, gitContext.Password, tlsPathInfo)
 	return output, errMsg, err
 }
