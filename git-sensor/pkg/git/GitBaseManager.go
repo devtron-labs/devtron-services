@@ -378,10 +378,11 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 
 	//TODO: how to make it generic, currently works because the
 	// git command is placed at index 2 for current implementations
-	timeout := impl.getCommandTimeout(arg[2])
-
+	timeout := 0
+	if len(arg) > 2 {
+		timeout = impl.getCommandTimeout(arg[2])
+	}
 	if timeout > 0 {
-
 		newCtx, cancel = ctx.WithTimeout(timeout) //context.WithTimeout(ctx.Context, timeout*time.Second)
 	}
 	cmd := exec.CommandContext(newCtx, name, arg...)
