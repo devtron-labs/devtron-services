@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 )
 
 type GitManager interface {
@@ -196,6 +197,7 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitCont
 
 func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	outBytes, err := cmd.CombinedOutput()
 	output := string(outBytes)
 	output = strings.TrimSpace(output)
@@ -203,6 +205,8 @@ func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (re
 		impl.logger.Errorw("error in git cli operation", "msg", string(outBytes), "err", err)
 		errMsg = output
 		if errors.Is(gitCtx.Err(), context.DeadlineExceeded) {
+			// kill the process group
+			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 			errMsg = "command timed out"
 			impl.logger.Errorw("command timed out", "cmd", cmd.String())
 			// prometheus event count for timeout
