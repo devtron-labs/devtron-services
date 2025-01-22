@@ -152,3 +152,22 @@ var PgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Name: "pg_query_duration_seconds",
 	Help: "Duration of PG queries",
 }, []string{"status", "serviceName"})
+
+func GetTargetPlatformObjectFromString(targetPlatformString string) []*bean.TargetPlatform {
+	targetPlatforms := GetTargetPlatformListFromString(targetPlatformString)
+	targetPlatformObject := []*bean.TargetPlatform{}
+	for _, targetPlatform := range targetPlatforms {
+		if len(targetPlatform) > 0 {
+			targetPlatformObject = append(targetPlatformObject, &bean.TargetPlatform{Name: targetPlatform})
+		}
+	}
+	return targetPlatformObject
+}
+
+func GetTargetPlatformListFromString(targetPlatform string) []string {
+	return strings.Split(targetPlatform, ",")
+}
+
+func GetTargetPlatformStringFromList(targetPlatforms []string) string {
+	return strings.Join(targetPlatforms, ",")
+}
