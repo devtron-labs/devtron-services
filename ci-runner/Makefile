@@ -1,5 +1,5 @@
 
-all: build
+all: fetch-all-env build
 
 TAG?=6bd516eacd6ee-10
 FLAGS=
@@ -35,3 +35,6 @@ dep-update-oss:
 	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH)
 	go mod tidy
 	go mod vendor
+
+fetch-all-env:
+	go run fetchAllEnv/fetchAllEnv.go
