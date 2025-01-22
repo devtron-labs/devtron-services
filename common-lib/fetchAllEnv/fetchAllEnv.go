@@ -68,7 +68,7 @@ const MarkdownTemplate = `
 {{end}}
 {{end}}`
 
-func main() {
+func FetchEnvAndWriteToFile() {
 	WalkThroughProject()
 	return
 }
