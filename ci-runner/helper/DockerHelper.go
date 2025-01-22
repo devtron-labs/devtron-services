@@ -1065,32 +1065,35 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 }
 
 func getBuildXDriverOptionsWithLabelsAndAnnotations(driverOptions string) (string, error) {
+	// not passing annotation as of now because --driver-opt=annotations is not supported by buildx if contains quotes
 	labels := make(map[string]string)
-	annotations := make(map[string]string)
 
-	// Read labels and annotations from files
+	// Read labels from file
 	labelsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_LABELS
 	labelsOut, err := readFileAndLogErrors(labelsPath)
 	if err != nil {
 		return "", err
 	}
-	annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_ANNOTATIONS
-	annotationsOut, err := readFileAndLogErrors(annotationsPath)
-	if err != nil {
-		return "", err
-	}
 
-	// Parse labels and annotations
+	// Parse labels
 	if len(labelsOut) > 0 {
 		labels = parseKeyValuePairs(string(labelsOut))
-	}
-	if len(annotationsOut) > 0 {
-		annotations = parseKeyValuePairs(string(annotationsOut))
 	}
 
 	// Combine driver options
 	driverOptions = getBuildXDriverOptions(utils.POD_LABELS, labels, driverOptions)
-	driverOptions = getBuildXDriverOptions(utils.POD_ANNOTATIONS, annotations, driverOptions)
+
+	//annotations := make(map[string]string)
+	//annotationsPath := utils.DEVTRON_SELF_DOWNWARD_API_VOLUME_PATH + "/" + utils.POD_ANNOTATIONS
+	//annotationsOut, err := readFileAndLogErrors(annotationsPath)
+	//if err != nil {
+	//	return "", err
+	//}
+	//if len(annotationsOut) > 0 {
+	//	annotations = parseKeyValuePairs(string(annotationsOut))
+	//}
+	//driverOptions = getBuildXDriverOptions(utils.POD_ANNOTATIONS, annotations, driverOptions)
+
 	return driverOptions, nil
 }
 
