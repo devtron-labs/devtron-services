@@ -483,7 +483,7 @@ func (impl *CiStage) runImageScanning(imageScannerExecutor *bean2.ImageScanningE
 		log.Println("Image scanning completed")
 		return nil
 	}
-	if ciCdRequest.CommonWorkflowRequest.ExecuteImageScanningVia.IsExecutionMediumSteps() {
+	if ciCdRequest.CommonWorkflowRequest.ExecuteImageScanningVia.IsScanMediumExternal() {
 		return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningTaskExecution)
 	}
 	return util.ExecuteWithStageInfoLog(util.IMAGE_SCAN, imageScanningStage)
