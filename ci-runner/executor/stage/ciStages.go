@@ -24,7 +24,6 @@ import (
 	"github.com/devtron-labs/ci-runner/executor"
 	adaptor2 "github.com/devtron-labs/ci-runner/executor/adaptor"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
-	"github.com/devtron-labs/ci-runner/executor/stage/adapter"
 	bean2 "github.com/devtron-labs/ci-runner/executor/stage/bean"
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
@@ -668,6 +667,6 @@ func GetTargetPlatformFromCiBuildConfig(ciBuildConfig *helper.CiBuildConfigBean)
 	} else if ciBuildConfig.DockerBuildConfig == nil {
 		return []string{}
 	} else {
-		return adapter.GetTargetPlatformListFromString(ciBuildConfig.DockerBuildConfig.TargetPlatform)
+		return utils.ConvertTargetPlatformStringToList(ciBuildConfig.DockerBuildConfig.TargetPlatform)
 	}
 }

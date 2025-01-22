@@ -16,6 +16,8 @@
 
 package bean
 
+import "github.com/devtron-labs/common-lib/utils/bean"
+
 const (
 	ExternalCiArtifact = "externalCiArtifact"
 	ImageDigest        = "imageDigest"
@@ -24,9 +26,5 @@ const (
 )
 
 type DockerBuildStageMetadata struct {
-	TargetPlatforms []TargetPlatform `json:"targetPlatforms"`
-}
-
-type TargetPlatform struct {
-	Name string `json:"name"`
+	TargetPlatforms []*bean.TargetPlatform `json:"targetPlatforms"`
 }
