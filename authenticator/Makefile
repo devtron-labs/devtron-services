@@ -1,5 +1,5 @@
 
-all: fetch-all-env build
+all: build
 GOOS?=darwin
 
 FLAGS=
@@ -23,7 +23,3 @@ clean:
 
 run: build
 	./authenticator
-
-
-fetch-all-env:
-	go run fetchAllEnv/fetchAllEnv.go
