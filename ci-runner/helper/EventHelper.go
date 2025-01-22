@@ -191,7 +191,7 @@ type CommonWorkflowRequest struct {
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
-	ExecuteImageScanningVia       bean2.ExecutionMedium          `json:"executeImageScanningVia,omitempty"`
+	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
 	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
 }
 
