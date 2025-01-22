@@ -37,7 +37,7 @@ func GetScanToolExecutionHistoryMapping(executionHistoryModel *repository.ImageS
 }
 
 func GetResourceScanExecutionResult(executionHistoryId, scanToolId int, scanDataJson string, format repository.ResourceScanFormat) *repository.ResourceScanResult {
-	resultTypes := make([]int, 0, 4)
+	var resultTypes []int
 	switch format {
 	case repository.SbomResultSource:
 		resultTypes = []int{repository.Vulnerabilities.ToInt()}

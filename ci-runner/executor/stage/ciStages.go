@@ -467,7 +467,7 @@ func (impl *CiStage) runImageScanning(imageScannerExecutor *bean2.ImageScanningE
 			scanToolId := allSteps.ScanToolId
 			tasks := allSteps.Steps
 			//setting scan tool id in script env
-			scriptEnvs.SystemEnv["SCAN_TOOL_ID"] = strconv.Itoa(scanToolId)
+			scriptEnvs.SystemEnv[bean2.ScanToolIdGlobalEnvKey] = strconv.Itoa(scanToolId)
 			// run image scanning steps
 			_, _, _, err := impl.stageExecutorManager.RunCiCdSteps(helper.STEP_TYPE_SCANNING, ciCdRequest.CommonWorkflowRequest, tasks, refStageMap, scriptEnvs, nil, true)
 			if err != nil {
