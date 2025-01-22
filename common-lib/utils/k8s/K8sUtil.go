@@ -30,6 +30,7 @@ import (
 	v13 "k8s.io/api/policy/v1"
 	v1beta12 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
@@ -132,6 +133,7 @@ type K8sService interface {
 	CreateResources(ctx context.Context, restConfig *rest.Config, manifest string, gvk schema.GroupVersionKind, namespace string) (*ManifestResponse, error)
 	PatchResourceRequest(ctx context.Context, restConfig *rest.Config, pt types.PatchType, manifest string, name string, namespace string, gvk schema.GroupVersionKind) (*ManifestResponse, error)
 	GetResourceList(ctx context.Context, restConfig *rest.Config, gvk schema.GroupVersionKind, namespace string, asTable bool, listOptions *metav1.ListOptions) (*ResourceListResponse, bool, error)
+	WatchResourceList(ctx context.Context, restConfig *rest.Config, gvk schema.GroupVersionKind, namespace string, asTable bool, listOptions *metav1.ListOptions) (*ResourceListResponse, bool, error)
 	GetResourceIfWithAcceptHeader(restConfig *rest.Config, groupVersionKind schema.GroupVersionKind, asTable bool) (resourceIf dynamic.NamespaceableResourceInterface, namespaced bool, err error)
 	GetPodLogs(ctx context.Context, restConfig *rest.Config, name string, namespace string, sinceTime *metav1.Time, tailLines int, sinceSeconds int, follow bool, containerName string, isPrevContainerLogsEnabled bool) (io.ReadCloser, error)
 	ListEvents(restConfig *rest.Config, namespace string, groupVersionKind schema.GroupVersionKind, ctx context.Context, name string) (*v1.EventList, error)
@@ -1492,6 +1494,40 @@ func (impl *K8sServiceImpl) GetResourceList(ctx context.Context, restConfig *res
 		return nil, namespaced, err
 	}
 	return &ResourceListResponse{*resp}, namespaced, nil
+
+}
+func (impl *K8sServiceImpl) WatchResourceList(ctx context.Context, restConfig *rest.Config, gvk schema.GroupVersionKind, namespace string, asTable bool, listOptions *metav1.ListOptions) (watch.Interface, bool, error) {
+	var err error
+	restConfig, err = impl.httpClientConfig.OverrideConfigWithCustomTransport(restConfig)
+	if err != nil {
+		impl.logger.Errorw("error in overriding reset config", "err", err)
+		return nil, false, err
+	}
+
+	resourceIf, namespaced, err := impl.GetResourceIfWithAcceptHeader(restConfig, gvk, asTable)
+	if err != nil {
+		impl.logger.Errorw("error in getting dynamic interface for resource", "err", err, "namespace", namespace)
+		return nil, namespaced, err
+	}
+	var resp watch.Interface
+	if listOptions == nil {
+		listOptions = &metav1.ListOptions{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       gvk.Kind,
+				APIVersion: gvk.GroupVersion().String(),
+			},
+		}
+	}
+	if len(namespace) > 0 && namespaced {
+		resp, err = resourceIf.Namespace(namespace).Watch(ctx, *listOptions)
+	} else {
+		resp, err = resourceIf.Watch(ctx, *listOptions)
+	}
+	if err != nil {
+		impl.logger.Errorw("error in getting resource", "err", err, "namespace", namespace)
+		return nil, namespaced, err
+	}
+	return resp, namespaced, nil
 
 }
 func (impl *K8sServiceImpl) PatchResourceRequest(ctx context.Context, restConfig *rest.Config, pt types.PatchType, manifest string, name string, namespace string, gvk schema.GroupVersionKind) (*ManifestResponse, error) {
