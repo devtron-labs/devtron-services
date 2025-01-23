@@ -684,7 +684,7 @@ func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
 		return "failed"
 	}
 
-	return conditions[0].Reason
+	return conditions[0].Message
 }
 
 func significantPodChange(from *coreV1.Pod, to *coreV1.Pod) bool {
