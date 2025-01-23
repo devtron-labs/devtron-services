@@ -94,7 +94,8 @@ func (impl *InformerImpl) Start() error {
 	err := impl.startDefaultClusterInformer()
 	if err != nil {
 		impl.logger.Errorw("error in starting default cluster informer", "err", err)
-		middleware.IncUnregisteredInformers(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID, middleware.DEFAULT_CLUSTER_SECRET)
+		clusterLabels := middleware.NewClusterLabels(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET)
 		return err
 	}
 	models, err := impl.clusterRepository.FindAllActive()
@@ -299,7 +300,8 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 		err = impl.startSystemExecInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting system executor informer for cluster", "clusterId", clusterId, "err", err)
-			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, clusterInfo.Id, middleware.SYSTEM_EXECUTOR)
+			clusterLabels := middleware.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
+			middleware.IncUnregisteredInformers(clusterLabels, middleware.SYSTEM_EXECUTOR)
 			return err
 		} else if errors.Is(err, AlreadyExists) {
 			impl.logger.Warnw("system executor informer already exist for cluster", "clusterId", clusterId)
@@ -309,7 +311,8 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 		err = impl.startArgoCdInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting argo cd informer for cluster", "clusterId", clusterId, "err", err)
-			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, clusterInfo.Id, middleware.ARGO_CD)
+			clusterLabels := middleware.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
+			middleware.IncUnregisteredInformers(clusterLabels, middleware.ARGO_CD)
 			return err
 		} else if errors.Is(err, AlreadyExists) {
 			impl.logger.Warnw("argo cd informer already exist for cluster", "clusterId", clusterId)

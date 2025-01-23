@@ -60,7 +60,8 @@ func (impl *InformerImpl) Start(stopChan <-chan int) {
 		workflowInformer, err := ciWfInformer.GetSharedInformer(bean.DEFAULT_CLSUTER_ID, namespace, impl.defaultK8sConfig)
 		if err != nil {
 			impl.logger.Errorw("error in starting workflow informer", "err", err)
-			middleware.IncUnregisteredInformers(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID, middleware.CI_STAGE_ARGO_WORKFLOW)
+			clusterLabels := middleware.NewClusterLabels(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID)
+			middleware.IncUnregisteredInformers(clusterLabels, middleware.CI_STAGE_ARGO_WORKFLOW)
 		}
 		stopCh := make(chan struct{})
 		defer close(stopCh)
@@ -79,7 +80,8 @@ func (impl *InformerImpl) Start(stopChan <-chan int) {
 		workflowInformer, err := cdWfInformer.GetSharedInformer(bean.DEFAULT_CLSUTER_ID, namespace, impl.defaultK8sConfig)
 		if err != nil {
 			impl.logger.Errorw("error in starting workflow informer", "err", err)
-			middleware.IncUnregisteredInformers(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID, middleware.CD_STAGE_ARGO_WORLFLOW)
+			clusterLabels := middleware.NewClusterLabels(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID)
+			middleware.IncUnregisteredInformers(clusterLabels, middleware.CD_STAGE_ARGO_WORLFLOW)
 		}
 		stopCh := make(chan struct{})
 		defer close(stopCh)
@@ -92,7 +94,8 @@ func (impl *InformerImpl) Start(stopChan <-chan int) {
 		acdInformer, err := applicationInformer.GetSharedInformer(bean.DEFAULT_CLSUTER_ID, impl.appConfig.GetAcdConfig().ACDNamespace, impl.defaultK8sConfig)
 		if err != nil {
 			impl.logger.Errorw("error in registering acd informer", "err", err)
-			middleware.IncUnregisteredInformers(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID, middleware.ARGO_CD)
+			clusterLabels := middleware.NewClusterLabels(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID)
+			middleware.IncUnregisteredInformers(clusterLabels, middleware.ARGO_CD)
 		}
 		appStopCh := make(chan struct{})
 		defer close(appStopCh)

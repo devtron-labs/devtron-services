@@ -78,6 +78,6 @@ func IncUnreachableCluster(clusterLabels *ClusterLabels) {
 	UnreachableCluster.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId)).Inc()
 }
 
-func IncUnregisteredInformers(clusterName string, clusterId int, informerName string) {
-	UnregisteredInformers.WithLabelValues(clusterName, strconv.Itoa(clusterId), informerName).Inc()
+func IncUnregisteredInformers(clusterLabels *ClusterLabels, informerName string) {
+	UnregisteredInformers.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId), informerName).Inc()
 }
