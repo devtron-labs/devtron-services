@@ -41,8 +41,9 @@ const (
 	DEFAULT_CLUSTER_SECRET = "DefaultClusterSecret"
 	SYSTEM_EXECUTOR        = "SystemExecutor"
 
-	HOST = "host"
-	PATH = "path"
+	DEFAULT_CLUSTER_MATRICS_NAME = "Default cluster"
+	HOST                         = "host"
+	PATH                         = "path"
 )
 
 var UnreachableCluster = promauto.NewCounterVec(
@@ -77,6 +78,6 @@ func IncUnreachableCluster(clusterLabels *ClusterLabels) {
 	UnreachableCluster.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId)).Inc()
 }
 
-func IncUnregisteredInformers(clusterName, clusterId, informerName string) {
-	UnregisteredInformers.WithLabelValues(clusterName, clusterId, informerName).Inc()
+func IncUnregisteredInformers(clusterName string, clusterId int, informerName string) {
+	UnregisteredInformers.WithLabelValues(clusterName, strconv.Itoa(clusterId), informerName).Inc()
 }

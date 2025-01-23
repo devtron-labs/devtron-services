@@ -23,9 +23,10 @@ import (
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
+	"github.com/devtron-labs/kubewatch/pkg/controller/bean"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
-	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
+	resourceBean "github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"github.com/devtron-labs/kubewatch/pkg/utils"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
@@ -93,7 +94,7 @@ func (impl *InformerImpl) Start() error {
 	err := impl.startDefaultClusterInformer()
 	if err != nil {
 		impl.logger.Errorw("error in starting default cluster informer", "err", err)
-		middleware.IncUnregisteredInformers("Default cluster", "1", middleware.DEFAULT_CLUSTER_SECRET)
+		middleware.IncUnregisteredInformers(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID, middleware.DEFAULT_CLUSTER_SECRET)
 		return err
 	}
 	models, err := impl.clusterRepository.FindAllActive()
@@ -164,11 +165,11 @@ func (impl *InformerImpl) startDefaultClusterInformer() error {
 		}
 	}
 	informerFactory := impl.informerClient.GetSecretInformerFactory()
-	eventHandler := bean.NewEventHandlers[coreV1.Secret]().
+	eventHandler := resourceBean.NewEventHandlers[coreV1.Secret]().
 		AddFuncHandler(addFunc).
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
-	clusterLabels := middleware.NewClusterLabels("Default cluster", 1)
+	clusterLabels := middleware.NewClusterLabels(middleware.DEFAULT_CLUSTER_MATRICS_NAME, bean.DEFAULT_CLSUTER_ID)
 	secretFactory, err := informerFactory.GetSharedInformerFactory(impl.defaultK8sConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in registering default cluster secret informer", "err", err)
@@ -298,7 +299,7 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 		err = impl.startSystemExecInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting system executor informer for cluster", "clusterId", clusterId, "err", err)
-			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), middleware.SYSTEM_EXECUTOR)
+			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, clusterInfo.Id, middleware.SYSTEM_EXECUTOR)
 			return err
 		} else if errors.Is(err, AlreadyExists) {
 			impl.logger.Warnw("system executor informer already exist for cluster", "clusterId", clusterId)
@@ -308,7 +309,7 @@ func (impl *InformerImpl) startInformer(clusterId int) error {
 		err = impl.startArgoCdInformer(clusterInfo)
 		if err != nil && !errors.Is(err, AlreadyExists) {
 			impl.logger.Errorw("error in starting argo cd informer for cluster", "clusterId", clusterId, "err", err)
-			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, strconv.Itoa(clusterInfo.Id), middleware.ARGO_CD)
+			middleware.IncUnregisteredInformers(clusterInfo.ClusterName, clusterInfo.Id, middleware.ARGO_CD)
 			return err
 		} else if errors.Is(err, AlreadyExists) {
 			impl.logger.Warnw("argo cd informer already exist for cluster", "clusterId", clusterId)
@@ -408,7 +409,7 @@ func (impl *InformerImpl) startSystemExecInformer(clusterInfo *repository.Cluste
 		impl.logger.Debugw("workflow update sent", "workflowType", workflowType)
 	}
 	podInformerFactory := impl.informerClient.GetPodInformerFactory()
-	eventHandler := bean.NewEventHandlers[coreV1.Pod]().
+	eventHandler := resourceBean.NewEventHandlers[coreV1.Pod]().
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
 	clusterLabels := middleware.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
@@ -441,15 +442,15 @@ func (impl *InformerImpl) startArgoCdInformer(clusterInfo *repository.Cluster) e
 	}
 	impl.logger.Infow("starting informer for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	cfg := impl.getK8sConfigForCluster(clusterInfo)
-	acdInformer := impl.informerClient.GetSharedInformerClient(bean.ApplicationResourceType)
-	informerFactory, err := acdInformer.GetSharedInformer(metav1.NamespaceAll, cfg)
+	applicationInformer := impl.informerClient.GetSharedInformerClient(resourceBean.ApplicationResourceType)
+	acdInformer, err := applicationInformer.GetSharedInformer(clusterInfo.Id, metav1.NamespaceAll, cfg)
 	if err != nil {
 		impl.logger.Errorw("error in registering acd informer", "err", err, "clusterId", clusterInfo.Id)
 		return err
 	}
 	stopChannel := make(chan struct{})
 	stopper = stopper.RegisterArgoCdStopper(stopChannel)
-	informerFactory.Run(stopChannel)
+	acdInformer.Run(stopChannel)
 	impl.logger.Infow("informer started for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	impl.multiClusterStopper[clusterInfo.Id] = stopper
 	return nil

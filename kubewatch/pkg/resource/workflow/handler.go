@@ -57,7 +57,7 @@ func NewCdInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientSer
 	}
 }
 
-func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
 	defer func() {
 		impl.logger.Debugw("registered workflow informer", "namespace", namespace, "time", time.Since(startTime))

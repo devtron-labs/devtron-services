@@ -18,9 +18,9 @@ package application
 
 import (
 	"encoding/json"
-	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	applicationBean "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
-	v1alpha12 "github.com/argoproj/argo-cd/v2/pkg/client/informers/externalversions/application/v1alpha1"
+	applicationInformer "github.com/argoproj/argo-cd/v2/pkg/client/informers/externalversions/application/v1alpha1"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
@@ -42,32 +42,31 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	}
 }
 
-func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
 	defer func() {
 		impl.logger.Debugw("registered application informer", "namespace", namespace, "time", time.Since(startTime))
 	}()
 	clientSet := versioned.NewForConfigOrDie(k8sConfig)
-	acdInformer := v1alpha12.NewApplicationInformer(clientSet, namespace, 0, cache.Indexers{})
+	acdInformer := applicationInformer.NewApplicationInformer(clientSet, namespace, 0, cache.Indexers{})
 
 	_, err := acdInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			impl.logger.Debug("app added")
 
-			if app, ok := obj.(*v1alpha1.Application); ok {
+			if app, ok := obj.(*applicationBean.Application); ok {
 				impl.logger.Debugf("new app detected: %s, status: %s", app.Name, app.Status.Health.Status)
-				//sendAppUpdate(app, client, nil)
 			}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
 			impl.logger.Debug("app update detected")
 			statusTime := time.Now()
-			if oldApp, ok := old.(*v1alpha1.Application); ok {
-				if newApp, ok := new.(*v1alpha1.Application); ok {
+			if oldApp, ok := old.(*applicationBean.Application); ok {
+				if newApp, ok := new.(*applicationBean.Application); ok {
 					if newApp.Status.History != nil && len(newApp.Status.History) > 0 {
 						if oldApp.Status.History == nil || len(oldApp.Status.History) == 0 {
 							impl.logger.Debug("new deployment detected")
-							impl.sendAppUpdate(newApp, statusTime)
+							impl.sendAppUpdate(clusterId, newApp, statusTime)
 						} else {
 							impl.logger.Debugf("old deployment detected for update: %s, status:%s", oldApp.Name, oldApp.Status.Health.Status)
 							oldRevision := oldApp.Status.Sync.Revision
@@ -77,7 +76,7 @@ func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Co
 							newSyncStatus := string(newApp.Status.Sync.Status)
 							oldSyncStatus := string(oldApp.Status.Sync.Status)
 							if (oldRevision != newRevision) || (oldStatus != newStatus) || (newSyncStatus != oldSyncStatus) {
-								impl.sendAppUpdate(newApp, statusTime)
+								impl.sendAppUpdate(clusterId, newApp, statusTime)
 								impl.logger.Debug("send update app:" + oldApp.Name + ", oldRevision: " + oldRevision + ", newRevision:" +
 									newRevision + ", oldStatus: " + oldStatus + ", newStatus: " + newStatus +
 									", newSyncStatus: " + newSyncStatus + ", oldSyncStatus: " + oldSyncStatus)
@@ -96,10 +95,10 @@ func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Co
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			if app, ok := obj.(*v1alpha1.Application); ok {
+			if app, ok := obj.(*applicationBean.Application); ok {
 				statusTime := time.Now()
 				impl.logger.Debugf("app delete detected: %s, status:%s", app.Name, app.Status.Health.Status)
-				impl.sendAppDelete(app, statusTime)
+				impl.sendAppDelete(clusterId, app, statusTime)
 			}
 		},
 	})
@@ -110,7 +109,7 @@ func (impl *InformerImpl) GetSharedInformer(namespace string, k8sConfig *rest.Co
 	return acdInformer, nil
 }
 
-func (impl *InformerImpl) sendAppUpdate(app *v1alpha1.Application, statusTime time.Time) {
+func (impl *InformerImpl) sendAppUpdate(clusterId int, app *applicationBean.Application, statusTime time.Time) {
 	if impl.client == nil {
 		log.Println("client is nil, don't send update")
 		return
@@ -118,6 +117,7 @@ func (impl *InformerImpl) sendAppUpdate(app *v1alpha1.Application, statusTime ti
 	appDetail := applicationDetail{
 		Application: app,
 		StatusTime:  statusTime,
+		ClusterId:   clusterId,
 	}
 	appJson, err := json.Marshal(appDetail)
 	if err != nil {
@@ -135,7 +135,7 @@ func (impl *InformerImpl) sendAppUpdate(app *v1alpha1.Application, statusTime ti
 	log.Println("app update sent for app: " + app.Name)
 }
 
-func (impl *InformerImpl) sendAppDelete(app *v1alpha1.Application, statusTime time.Time) {
+func (impl *InformerImpl) sendAppDelete(clusterId int, app *applicationBean.Application, statusTime time.Time) {
 	if impl.client == nil {
 		log.Println("client is nil, don't send delete update")
 		return
@@ -143,6 +143,7 @@ func (impl *InformerImpl) sendAppDelete(app *v1alpha1.Application, statusTime ti
 	appDetail := applicationDetail{
 		Application: app,
 		StatusTime:  statusTime,
+		ClusterId:   clusterId,
 	}
 	appJson, err := json.Marshal(appDetail)
 	if err != nil {

@@ -29,6 +29,6 @@ func NewUnimplementedImpl() *UnimplementedImpl {
 	return &UnimplementedImpl{}
 }
 
-func (impl *UnimplementedImpl) GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *UnimplementedImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	return nil, fmt.Errorf("informer not implemented")
 }

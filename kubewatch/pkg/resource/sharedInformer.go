@@ -25,7 +25,7 @@ import (
 )
 
 type SharedInformer interface {
-	GetSharedInformer(namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error)
+	GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error)
 }
 
 func (impl *InformerClientImpl) GetSharedInformerClient(sharedInformerType bean.SharedInformerType) SharedInformer {
