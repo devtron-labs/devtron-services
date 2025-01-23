@@ -65,6 +65,7 @@ const (
 	CD_WORKFLOW_NAME                 = "cd"
 	WORKFLOW_TYPE_LABEL_KEY          = "workflowType"
 	JobKind                          = "Job"
+	NodeNoLongerExists               = "PodGC: node no longer exists"
 )
 
 type K8sInformer interface {
@@ -322,16 +323,23 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 	podInformer := informerFactory.Core().V1().Pods()
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			if podObj, ok := newObj.(*coreV1.Pod); ok {
+
+			newPod, _ := newObj.(*coreV1.Pod)
+			oldPod, _ := oldObj.(*coreV1.Pod)
+			if !significantPodChange(oldPod, newPod) {
+				impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", "podName", oldObj)
+			}
+
+			if newPod != nil {
 				var workflowType string
-				if podObj.Labels != nil {
-					if val, ok := podObj.Labels[WORKFLOW_TYPE_LABEL_KEY]; ok {
+				if newPod.Labels != nil {
+					if val, ok := newPod.Labels[WORKFLOW_TYPE_LABEL_KEY]; ok {
 						workflowType = val
 					}
 				}
-				impl.logger.Debugw("Event received in Pods update informer", "time", time.Now(), "podObjStatus", podObj.Status)
-				nodeStatus := impl.assessNodeStatus(podObj)
-				workflowStatus := impl.getWorkflowStatus(podObj, nodeStatus, workflowType)
+				impl.logger.Debugw("Event received in Pods update informer", "time", time.Now(), "podName", newPod.Name, "podObjStatus", newPod.Status)
+				nodeStatus := impl.assessNodeStatus(newPod)
+				workflowStatus := impl.getWorkflowStatus(newPod, nodeStatus, workflowType)
 				wfJson, err := json.Marshal(workflowStatus)
 				if err != nil {
 					impl.logger.Errorw("error occurred while marshalling workflowJson", "err", err)
@@ -415,7 +423,7 @@ func getTopic(workflowType string) (string, error) {
 }
 
 func (impl *K8sInformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string, nodeStatus v1alpha1.NodeStatus, clusterClient *kubernetes.Clientset) (v1alpha1.NodeStatus, bool) {
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && nodeStatus.Message == EXIT_CODE_143_ERROR {
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == EXIT_CODE_143_ERROR || nodeStatus.Message == NodeNoLongerExists) {
 		pod, err := clusterClient.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			impl.logger.Errorw("error in getting pod from clusterClient", "podName", podName, "namespace", namespace, "err", err)
@@ -590,7 +598,11 @@ func (impl *K8sInformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePh
 		}
 		t := ctr.State.Terminated
 		if t == nil {
-			// We should never get here
+			// Note: We should never get here
+			// If we do, it means the pod phase was Failed but the main container did not have terminated state we should mark it as an error
+			if ctr.Name == common.MainContainerName {
+				return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)
+			}
 			impl.logger.Warnf("Pod %s phase was Failed but %s did not have terminated state", pod.Name, ctr.Name)
 			continue
 		}
@@ -663,6 +675,69 @@ func (impl *K8sInformerImpl) getPodOwnerName(podObj *coreV1.Pod) string {
 func isResourceNotFoundErr(err error) bool {
 	if errStatus, ok := err.(*k8sErrors.StatusError); ok && errStatus.Status().Reason == metav1.StatusReasonNotFound {
 		return true
+	}
+	return false
+}
+
+func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
+	if len(conditions) == 0 {
+		return "failed"
+	}
+
+	return conditions[0].Reason
+}
+
+func significantPodChange(from *coreV1.Pod, to *coreV1.Pod) bool {
+	return from.Spec.NodeName != to.Spec.NodeName ||
+		from.Status.Phase != to.Status.Phase ||
+		from.Status.Message != to.Status.Message ||
+		from.Status.PodIP != to.Status.PodIP ||
+		from.GetDeletionTimestamp() != to.GetDeletionTimestamp() ||
+		//significantMetadataChange(from.Annotations, to.Annotations) ||
+		//significantMetadataChange(from.Labels, to.Labels) ||
+		significantContainerStatusesChange(from.Status.ContainerStatuses, to.Status.ContainerStatuses) ||
+		significantContainerStatusesChange(from.Status.InitContainerStatuses, to.Status.InitContainerStatuses) ||
+		significantConditionsChange(from.Status.Conditions, to.Status.Conditions)
+}
+
+func significantContainerStatusesChange(from []coreV1.ContainerStatus, to []coreV1.ContainerStatus) bool {
+	if len(from) != len(to) {
+		return true
+	}
+	statuses := map[string]coreV1.ContainerStatus{}
+	for _, s := range from {
+		statuses[s.Name] = s
+	}
+	for _, s := range to {
+		if significantContainerStatusChange(statuses[s.Name], s) {
+			return true
+		}
+	}
+	return false
+}
+
+func significantContainerStatusChange(from coreV1.ContainerStatus, to coreV1.ContainerStatus) bool {
+	return from.Ready != to.Ready || significantContainerStateChange(from.State, to.State)
+}
+
+func significantContainerStateChange(from coreV1.ContainerState, to coreV1.ContainerState) bool {
+	// waiting has two significant fields and either could potentially change
+	return to.Waiting != nil && (from.Waiting == nil || from.Waiting.Message != to.Waiting.Message || from.Waiting.Reason != to.Waiting.Reason) ||
+		// running only has one field which is immutable -  so any change is significant
+		(to.Running != nil && from.Running == nil) ||
+		// I'm assuming this field is immutable - so any change is significant
+		(to.Terminated != nil && from.Terminated == nil)
+}
+
+func significantConditionsChange(from []coreV1.PodCondition, to []coreV1.PodCondition) bool {
+	if len(from) != len(to) {
+		return true
+	}
+	for i, a := range from {
+		b := to[i]
+		if a.Message != b.Message || a.Reason != b.Reason {
+			return true
+		}
 	}
 	return false
 }
