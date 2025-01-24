@@ -375,6 +375,12 @@ type CiCompleteEvent struct {
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	DockerRegistryId              string              `json:"dockerRegistryId"`
+	TargetPlatforms               []string            `json:"targetPlatforms"`
+}
+
+func (event *CiCompleteEvent) WithTargetPlatforms(targetPlatforms []string) *CiCompleteEvent {
+	event.TargetPlatforms = targetPlatforms
+	return event
 }
 
 func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {
@@ -770,4 +776,15 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 type ImageScanningSteps struct {
 	Steps      []*StepObject `json:"steps"`
 	ScanToolId int           `json:"scanToolId"`
+}
+
+func GetPrePostStageDisplayName(stageName string, stepType StepType) string {
+	if stepType == STEP_TYPE_PRE {
+		return fmt.Sprintf("%s (Pre-Build Task)", stageName)
+	} else if stepType == STEP_TYPE_POST {
+		return fmt.Sprintf("%s (Post-Build Task)", stageName)
+	} else {
+
+		return fmt.Sprintf("%s", stageName)
+	}
 }
