@@ -19,7 +19,6 @@ package bean
 import (
 	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
-	"github.com/devtron-labs/common-lib/utils/bean"
 )
 
 const (
@@ -41,8 +40,4 @@ type ImageScanningExecutorBean struct {
 	ArtifactUploaded bool
 	Dest             string
 	Digest           string
-}
-
-type DockerBuildStageMetadata struct {
-	TargetPlatforms []*bean.TargetPlatform `json:"targetPlatforms"`
 }
