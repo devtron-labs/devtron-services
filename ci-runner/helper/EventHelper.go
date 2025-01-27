@@ -190,6 +190,9 @@ type CommonWorkflowRequest struct {
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
+	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
+	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
+	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
@@ -208,7 +211,6 @@ func (c *CommonWorkflowRequest) GetCdStageType() PipelineType {
 	}
 	return ""
 }
-
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
 	return &util.CloudHelperBaseConfig{
 		StorageModuleConfigured: c.BlobStorageConfigured,
@@ -769,6 +771,11 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 	}
 	event.PipelineType = stage
 	return event
+}
+
+type ImageScanningSteps struct {
+	Steps      []*StepObject `json:"steps"`
+	ScanToolId int           `json:"scanToolId"`
 }
 
 func GetPrePostStageDisplayName(stageName string, stepType StepType) string {

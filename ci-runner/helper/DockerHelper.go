@@ -30,7 +30,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
-	bean2 "github.com/devtron-labs/ci-runner/executor/stage/bean"
+	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
+
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"

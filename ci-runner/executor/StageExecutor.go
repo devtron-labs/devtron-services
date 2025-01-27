@@ -144,6 +144,9 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	var vars []*commonBean.VariableObject
 	if stepType == helper.STEP_TYPE_REF_PLUGIN {
 		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
+	} else if stepType == helper.STEP_TYPE_SCANNING {
+		// only global variables are supported here in image scanning step
+		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, nil)
 	} else {
 		log.Printf("running step : %s\n", step.Name)
 		if stepType == helper.STEP_TYPE_PRE {
