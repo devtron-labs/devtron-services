@@ -13,7 +13,7 @@ GOFLAGS       ?= $(GOFLAGS:)
 LDFLAGS       := "-X '$(PKG)/cmd.gitCommit=$(TRAVIS_COMMIT)' \
 		          -X '$(PKG)/cmd.buildDate=$(BUILD_DATE)'"
 
-default: build
+default: fetch-all-env build
 
 build:
 	CGO_ENABLED=0 GOOS=linux "$(GOCMD)" build ${GOFLAGS} -ldflags ${LDFLAGS} -o "${BINARY}"
@@ -36,3 +36,6 @@ dep-update-oss:
 	go mod edit -replace=github.com/devtron-labs/common-lib=github.com/devtron-labs/devtron-services/common-lib@$(TARGET_BRANCH)
 	go mod tidy
 	go mod vendor
+
+fetch-all-env:
+	go run fetchAllEnv/fetchAllEnv.go

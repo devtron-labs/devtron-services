@@ -1,5 +1,5 @@
 
-all: build
+all: fetch-all-env build
 
 TAG?=latest
 FLAGS=
@@ -32,3 +32,6 @@ dep-update-oss:
 	go mod tidy
 	go mod vendor
 
+
+fetch-all-env:
+	go run fetchAllEnv/fetchAllEnv.go
