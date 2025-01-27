@@ -406,10 +406,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage); err != nil {
-			return "", nil
+			return "", err
 		}
 
 		if buildxExportCacheFunc != nil {
+			//todo do we need to throw error here? discuss
 			util.ExecuteWithStageInfoLog(util.EXPORT_BUILD_CACHE, buildxExportCacheFunc)
 		}
 
@@ -470,7 +471,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		}
 
 		if err = util.ExecuteWithStageInfoLog(util.BUILD_PACK_BUILD, buildPacksImageBuildStage); err != nil {
-			return "", nil
+			return "", err
 		}
 
 	}
