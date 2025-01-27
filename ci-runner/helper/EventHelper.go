@@ -162,6 +162,7 @@ type CommonWorkflowRequest struct {
 	ImageScanRetryDelay            int                              `json:"imageScanRetryDelay,omitempty"`
 	ShouldPullDigest               bool                             `json:"shouldPullDigest,omitempty"`
 	EnableSecretMasking            bool                             `json:"enableSecretMasking"`
+	PropagateLabelsInBuildxPod     bool                             `json:"propagateLabelsInBuildxPod"`
 	// Data from CD Workflow service
 	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
 	CdPipelineId                  int                            `json:"cdPipelineId"`
