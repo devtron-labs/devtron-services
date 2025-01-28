@@ -51,7 +51,7 @@ func GetConfig() (*Config, error) {
 }
 
 func NewDbConnection(appConfig *config.AppConfig, cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
-	if !appConfig.IsDBConnectionRequired() {
+	if !appConfig.IsDBAvailable() {
 		logger.Warn("skipping db connection")
 		logger.Debugw("skipping db connection", "appConfig", appConfig)
 		return nil, nil

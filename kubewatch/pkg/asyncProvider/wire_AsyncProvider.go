@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package config
+package asyncProvider
 
-// AllClusterType represents all clusters
-const AllClusterType string = "ALL_CLUSTER"
+import (
+	"github.com/google/wire"
+)
 
-// InClusterType represents the default cluster
-const InClusterType string = "IN_CLUSTER"
+var WireSet = wire.NewSet(
+	NewAsyncRunnable,
+)

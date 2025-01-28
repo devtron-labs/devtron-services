@@ -17,18 +17,15 @@
 package workflow
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"github.com/argoproj/argo-workflows/v3/workflow/util"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/kubewatch/pkg/config"
-	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"log"
 	"time"
 )
 
@@ -108,26 +105,4 @@ func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8s
 		return workflowInformer, err
 	}
 	return workflowInformer, nil
-}
-
-func publishEventsOnRest(jsonBody []byte, topic string, externalCdConfig *config.ExternalConfig) error {
-	request := &publishRequest{
-		Topic:   topic,
-		Payload: jsonBody,
-	}
-	client := resty.New().SetDebug(true)
-	client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
-	resp, err := client.SetRetryCount(4).R().
-		SetHeader("Content-Type", "application/json").
-		SetBody(request).
-		SetAuthToken(externalCdConfig.Token).
-		//SetResult().    // or SetResult(AuthSuccess{}).
-		Post(externalCdConfig.ListenerUrl)
-
-	if err != nil {
-		log.Println("err in publishing over rest", "token ", externalCdConfig.Token, "body", request, err)
-		return err
-	}
-	log.Println("res ", string(resp.Body()))
-	return nil
 }

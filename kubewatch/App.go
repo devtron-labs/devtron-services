@@ -20,12 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
-	"github.com/devtron-labs/common-lib/utils/k8s"
+	"github.com/devtron-labs/common-lib/async"
 	api "github.com/devtron-labs/kubewatch/api/router"
 	"github.com/devtron-labs/kubewatch/pkg/config"
-	"github.com/devtron-labs/kubewatch/pkg/controller/inCluster"
-	"github.com/devtron-labs/kubewatch/pkg/controller/multiCluster"
+	"github.com/devtron-labs/kubewatch/pkg/informer"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
 	"net/http"
@@ -34,32 +32,30 @@ import (
 )
 
 type App struct {
-	muxRouter            *api.RouterImpl
-	logger               *zap.SugaredLogger
-	server               *http.Server
-	db                   *pg.DB
-	defaultTimeout       time.Duration
-	appConfig            *config.AppConfig
-	client               *pubsub.PubSubClientServiceImpl
-	httpTransportConfig  *k8s.CustomK8sHttpTransportConfig
-	multiClusterInformer multiCluster.Informer
-	inClusterInformer    inCluster.Informer
+	muxRouter      *api.RouterImpl
+	logger         *zap.SugaredLogger
+	server         *http.Server
+	db             *pg.DB
+	defaultTimeout time.Duration
+	appConfig      *config.AppConfig
+	informer       informer.Runner
+	asyncRunnable  *async.Runnable
 }
 
 func NewApp(muxRouter *api.RouterImpl,
 	logger *zap.SugaredLogger,
 	appConfig *config.AppConfig,
 	db *pg.DB,
-	multiClusterInformer multiCluster.Informer,
-	informer inCluster.Informer) *App {
+	informer informer.Runner,
+	asyncRunnable *async.Runnable) *App {
 	return &App{
-		muxRouter:            muxRouter,
-		logger:               logger,
-		appConfig:            appConfig,
-		db:                   db,
-		defaultTimeout:       time.Duration(appConfig.GetTimeout().SleepTimeout) * time.Second,
-		multiClusterInformer: multiClusterInformer,
-		inClusterInformer:    informer,
+		muxRouter:      muxRouter,
+		logger:         logger,
+		appConfig:      appConfig,
+		db:             db,
+		defaultTimeout: time.Duration(appConfig.GetTimeout().SleepTimeout) * time.Second,
+		informer:       informer,
+		asyncRunnable:  asyncRunnable,
 	}
 }
 
@@ -87,9 +83,8 @@ func (app *App) Stop() {
 		app.logger.Errorw("error in mux router shutdown", "err", err)
 	}
 	app.logger.Infow("router closed successfully")
-
-	if app.appConfig.IsMultiClusterMode() {
-		app.multiClusterInformer.Stop()
+	app.informer.Stop()
+	if app.appConfig.IsDBAvailable() {
 		app.logger.Infow("closing db connection")
 		err = app.db.Close()
 		if err != nil {

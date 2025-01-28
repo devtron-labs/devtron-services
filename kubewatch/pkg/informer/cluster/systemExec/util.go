@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package multiCluster
+package systemExec
 
 import (
 	"fmt"
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	coreV1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,9 +30,9 @@ import (
 
 func getTopic(workflowType string) (string, error) {
 	switch workflowType {
-	case CD_WORKFLOW_NAME:
+	case informerBean.CD_WORKFLOW_NAME:
 		return pubsub.CD_WORKFLOW_STATUS_UPDATE, nil
-	case CI_WORKFLOW_NAME:
+	case informerBean.CI_WORKFLOW_NAME:
 		return pubsub.WORKFLOW_STATUS_UPDATE_TOPIC, nil
 	}
 	return "", fmt.Errorf("no topic mapped to workflow type %s", workflowType)
@@ -106,7 +107,7 @@ func getWorkflowStatus(podObj *coreV1.Pod, nodeStatus v1alpha1.NodeStatus, templ
 	nodeStatus.ID = podObj.Name
 	nodeStatus.TemplateName = templateName
 	nodeStatus.Name = nodeStatus.ID
-	nodeStatus.BoundaryID = getPodOwnerNameByKind(podObj, JobKind)
+	nodeStatus.BoundaryID = getPodOwnerNameByKind(podObj, informerBean.JobKind)
 	nodeNameVsStatus[podObj.Name] = nodeStatus
 	workflowStatus.Nodes = nodeNameVsStatus
 	workflowStatus.Message = nodeStatus.Message

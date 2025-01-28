@@ -29,20 +29,17 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	go app.Start()
-
-	if app.appConfig.IsMultiClusterMode() {
-		err = app.multiClusterInformer.Start()
-		if err != nil {
-			log.Panic(err)
-		}
+	startServer := func() {
+		app.Start()
 	}
-	stopChan := make(chan int)
-	go app.inClusterInformer.Start(stopChan)
+	app.asyncRunnable.Execute(startServer)
+	err = app.informer.Start()
+	if err != nil {
+		log.Panic(err)
+	}
 	var gracefulStop = make(chan os.Signal)
 	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT)
 	sig := <-gracefulStop
-	stopChan <- 0
 	app.logger.Infow("caught sig", "sig", sig.String())
 	app.Stop()
 	time.Sleep(app.defaultTimeout)

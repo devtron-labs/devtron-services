@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-package config
+package bean
 
-// AllClusterType represents all clusters
-const AllClusterType string = "ALL_CLUSTER"
+type ClientType string
 
-// InClusterType represents the default cluster
-const InClusterType string = "IN_CLUSTER"
+const (
+	ArgoCDClientType         ClientType = "ArgoCD"
+	ArgoWorkflowClientType   ClientType = "ArgoWorkflow"
+	SystemExecutorClientType ClientType = "SystemExecutor"
+)
+
+var SupportedClientMap = map[ClientType]bool{
+	ArgoCDClientType:         true,
+	ArgoWorkflowClientType:   true,
+	SystemExecutorClientType: true,
+}

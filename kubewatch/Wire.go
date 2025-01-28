@@ -23,10 +23,11 @@ import (
 	"github.com/devtron-labs/common-lib/monitoring"
 	k8s "github.com/devtron-labs/common-lib/utils/k8s"
 	api "github.com/devtron-labs/kubewatch/api/router"
+	"github.com/devtron-labs/kubewatch/pkg/asyncProvider"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
-	"github.com/devtron-labs/kubewatch/pkg/controller/inCluster"
-	"github.com/devtron-labs/kubewatch/pkg/controller/multiCluster"
+	"github.com/devtron-labs/kubewatch/pkg/informer"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/logger"
 	"github.com/devtron-labs/kubewatch/pkg/pubsub"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
@@ -44,6 +45,8 @@ func InitializeApp() (*App, error) {
 
 		sql.NewDbConnection,
 
+		asyncProvider.WireSet,
+
 		repository.WireSet,
 
 		k8s.NewCustomK8sHttpTransportConfig,
@@ -55,11 +58,10 @@ func InitializeApp() (*App, error) {
 		resource.NewInformerClientImpl,
 		wire.Bind(new(resource.InformerClient), new(*resource.InformerClientImpl)),
 
-		multiCluster.NewMultiClusterInformerImpl,
-		wire.Bind(new(multiCluster.Informer), new(*multiCluster.InformerImpl)),
-
-		inCluster.NewStartController,
-		wire.Bind(new(inCluster.Informer), new(*inCluster.InformerImpl)),
+		cluster.WireSet,
+		
+		informer.NewRunnerImpl,
+		wire.Bind(new(informer.Runner), new(*informer.RunnerImpl)),
 
 		NewApp,
 		api.NewRouter,

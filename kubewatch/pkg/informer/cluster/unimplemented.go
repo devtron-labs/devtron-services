@@ -14,8 +14,24 @@
  * limitations under the License.
  */
 
-package multiCluster
+package cluster
 
-import "errors"
+import repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 
-var AlreadyExists = errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
+type UnimplementedAdvisor struct{}
+
+func NewUnimplementedAdvisor() *UnimplementedAdvisor {
+	return &UnimplementedAdvisor{}
+}
+
+func (impl *UnimplementedAdvisor) StartInformerForCluster(clusterInfo *repository.Cluster) error {
+	return nil
+}
+
+func (impl *UnimplementedAdvisor) StopInformerForCluster(clusterId int) error {
+	return nil
+}
+
+func (impl *UnimplementedAdvisor) StopAll() {
+	return
+}

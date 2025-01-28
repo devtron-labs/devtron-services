@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-package config
+package asyncProvider
 
-// AllClusterType represents all clusters
-const AllClusterType string = "ALL_CLUSTER"
+import (
+	"github.com/devtron-labs/common-lib/async"
+	"github.com/devtron-labs/common-lib/constants"
+	"go.uber.org/zap"
+)
 
-// InClusterType represents the default cluster
-const InClusterType string = "IN_CLUSTER"
+func NewAsyncRunnable(logger *zap.SugaredLogger) *async.Runnable {
+	return async.NewAsyncRunnable(logger, constants.Kubewatch)
+}

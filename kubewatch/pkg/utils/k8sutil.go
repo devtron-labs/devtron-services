@@ -19,6 +19,8 @@ package utils
 import (
 	"flag"
 	"github.com/devtron-labs/common-lib/utils/k8s"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
+	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"go.uber.org/zap"
 	apps_v1 "k8s.io/api/apps/v1"
 	batch_v1 "k8s.io/api/batch/v1"
@@ -35,17 +37,41 @@ import (
 type K8sUtilImpl struct {
 	logger              *zap.SugaredLogger
 	httpTransportConfig *k8s.CustomK8sHttpTransportConfig
+	defaultK8sConfig    *rest.Config
 }
 
 type K8sUtil interface {
 	GetK8sClientForConfig(config *rest.Config) (*kubernetes.Clientset, error)
+	GetK8sConfigForCluster(clusterInfo *repository.Cluster) *rest.Config
 }
 
-func NewK8sUtilImpl(logger *zap.SugaredLogger, httpTransportConfig *k8s.CustomK8sHttpTransportConfig) *K8sUtilImpl {
+func NewK8sUtilImpl(logger *zap.SugaredLogger,
+	httpTransportConfig *k8s.CustomK8sHttpTransportConfig,
+	defaultK8sConfig *rest.Config) *K8sUtilImpl {
 	return &K8sUtilImpl{
 		logger:              logger,
 		httpTransportConfig: httpTransportConfig,
+		defaultK8sConfig:    defaultK8sConfig,
 	}
+}
+
+func (impl *K8sUtilImpl) GetK8sConfigForCluster(clusterInfo *repository.Cluster) *rest.Config {
+	restConfig := &rest.Config{}
+	if clusterInfo.ClusterName == commonBean.DEFAULT_CLUSTER {
+		restConfig = impl.defaultK8sConfig
+	} else {
+		restConfig = &rest.Config{
+			Host:            clusterInfo.ServerUrl,
+			BearerToken:     clusterInfo.Config[commonBean.BearerToken],
+			TLSClientConfig: rest.TLSClientConfig{Insecure: clusterInfo.InsecureSkipTlsVerify},
+		}
+		if !restConfig.TLSClientConfig.Insecure {
+			restConfig.TLSClientConfig.KeyData = []byte(clusterInfo.Config[commonBean.TlsKey])
+			restConfig.TLSClientConfig.CertData = []byte(clusterInfo.Config[commonBean.CertData])
+			restConfig.TLSClientConfig.CAData = []byte(clusterInfo.Config[commonBean.CertificateAuthorityData])
+		}
+	}
+	return restConfig
 }
 
 func (impl *K8sUtilImpl) GetK8sClientForConfig(config *rest.Config) (*kubernetes.Clientset, error) {

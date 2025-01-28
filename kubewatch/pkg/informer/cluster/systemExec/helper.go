@@ -14,49 +14,51 @@
  * limitations under the License.
  */
 
-package multiCluster
+package systemExec
 
 import (
 	"context"
 	"fmt"
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
-	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
-	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/informer/errors"
+	"golang.org/x/exp/maps"
 	coreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sort"
 )
 
-func (impl *InformerImpl) getK8sConfigForCluster(clusterInfo *repository.Cluster) *rest.Config {
-	restConfig := &rest.Config{}
-	if clusterInfo.ClusterName == commonBean.DEFAULT_CLUSTER {
-		restConfig = impl.defaultK8sConfig
-	} else {
-		restConfig = &rest.Config{
-			Host:            clusterInfo.ServerUrl,
-			BearerToken:     clusterInfo.Config[commonBean.BearerToken],
-			TLSClientConfig: rest.TLSClientConfig{Insecure: clusterInfo.InsecureSkipTlsVerify},
-		}
-		if !restConfig.TLSClientConfig.Insecure {
-			restConfig.TLSClientConfig.KeyData = []byte(clusterInfo.Config[commonBean.TlsKey])
-			restConfig.TLSClientConfig.CertData = []byte(clusterInfo.Config[commonBean.CertData])
-			restConfig.TLSClientConfig.CAData = []byte(clusterInfo.Config[commonBean.CertificateAuthorityData])
-		}
+func (impl *InformerImpl) getSystemWfStopper(clusterId int) (*informerBean.FactoryStopper, bool) {
+	stopper, ok := impl.systemWfInformerStopper[clusterId]
+	if ok {
+		return stopper, stopper.HasInformer()
 	}
-	return restConfig
+	return stopper, false
 }
 
-func (impl *InformerImpl) getK8sClientForCluster(clusterInfo *repository.Cluster) (*kubernetes.Clientset, error) {
-	return impl.k8sUtil.GetK8sClientForConfig(impl.getK8sConfigForCluster(clusterInfo))
+func (impl *InformerImpl) getStoppableClusterIds() []int {
+	return maps.Keys(impl.systemWfInformerStopper)
+}
+
+func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInformerFactory, clusterLabels *informerBean.ClusterLabels) (chan struct{}, error) {
+	stopChannel := make(chan struct{})
+	stopper, ok := impl.systemWfInformerStopper[clusterLabels.ClusterId]
+	if ok && stopper.HasInformer() {
+		impl.logger.Debug(fmt.Sprintf("system executor informer for %s already exist", clusterLabels.ClusterName))
+		return stopChannel, errors.AlreadyExists
+	}
+	stopper = stopper.GetStopper(informerFactory, stopChannel)
+	impl.systemWfInformerStopper[clusterLabels.ClusterId] = stopper
+	return stopChannel, nil
 }
 
 func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string,
 	nodeStatus v1alpha1.NodeStatus, config *rest.Config) (v1alpha1.NodeStatus, bool) {
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && nodeStatus.Message == EXIT_CODE_143_ERROR {
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && nodeStatus.Message == informerBean.EXIT_CODE_143_ERROR {
 		clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 		if k8sErr != nil {
 			return nodeStatus, false
@@ -65,13 +67,13 @@ func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace s
 		if err != nil {
 			impl.logger.Errorw("error in getting pod from clusterClient", "podName", podName, "namespace", namespace, "err", err)
 			if isResourceNotFoundErr(err) {
-				nodeStatus.Message = POD_DELETED_MESSAGE
+				nodeStatus.Message = informerBean.POD_DELETED_MESSAGE
 				return nodeStatus, true
 			}
 			return nodeStatus, false
 		}
 		if pod.DeletionTimestamp != nil {
-			nodeStatus.Message = POD_DELETED_MESSAGE
+			nodeStatus.Message = informerBean.POD_DELETED_MESSAGE
 			return nodeStatus, true
 		}
 	}

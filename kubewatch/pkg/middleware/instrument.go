@@ -17,6 +17,7 @@
 package middleware
 
 import (
+	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"strconv"
@@ -24,9 +25,8 @@ import (
 
 // metrics name constants
 const (
-	KUBEWATCH_UNREACHABLE_CLIENT_COUNT     = "Kubewatch_unreachable_client_count"
-	KUBEWATCH_UNREGISTERED_INFORMER_COUNT  = "Kubewatch_unregistered_informer_count"
-	KUBEWATCH_UNREACHABLE_CLIENT_COUNT_API = "Kubewatch_unreachable_client_count_API"
+	KUBEWATCH_UNREACHABLE_CLIENT_COUNT    = "Kubewatch_unreachable_client_count"
+	KUBEWATCH_UNREGISTERED_INFORMER_COUNT = "Kubewatch_unregistered_informer_count"
 )
 
 // metrics labels constants
@@ -40,10 +40,6 @@ const (
 	ARGO_CD                = "ArgoCD"
 	DEFAULT_CLUSTER_SECRET = "DefaultClusterSecret"
 	SYSTEM_EXECUTOR        = "SystemExecutor"
-
-	DEFAULT_CLUSTER_MATRICS_NAME = "Default cluster"
-	HOST                         = "host"
-	PATH                         = "path"
 )
 
 var UnreachableCluster = promauto.NewCounterVec(
@@ -62,22 +58,10 @@ var UnregisteredInformers = promauto.NewCounterVec(
 	[]string{CLUSTER_NAME, CLUSTER_ID, INFORMER_NAME},
 )
 
-type ClusterLabels struct {
-	ClusterName string
-	ClusterId   int
-}
-
-func NewClusterLabels(clusterName string, clusterId int) *ClusterLabels {
-	return &ClusterLabels{
-		ClusterName: clusterName,
-		ClusterId:   clusterId,
-	}
-}
-
-func IncUnreachableCluster(clusterLabels *ClusterLabels) {
+func IncUnreachableCluster(clusterLabels *bean.ClusterLabels) {
 	UnreachableCluster.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId)).Inc()
 }
 
-func IncUnregisteredInformers(clusterLabels *ClusterLabels, informerName string) {
+func IncUnregisteredInformers(clusterLabels *bean.ClusterLabels, informerName string) {
 	UnregisteredInformers.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId), informerName).Inc()
 }

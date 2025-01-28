@@ -17,6 +17,7 @@
 package secret
 
 import (
+	bean2 "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"github.com/devtron-labs/kubewatch/pkg/utils"
@@ -41,7 +42,7 @@ func NewInformerFactoryImpl(logger *zap.SugaredLogger,
 	}
 }
 
-func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, clusterLabels *middleware.ClusterLabels,
+func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, clusterLabels *bean2.ClusterLabels,
 	eventHandlers *bean.EventHandlers[coreV1.Secret], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error) {
 	clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 	if k8sErr != nil {

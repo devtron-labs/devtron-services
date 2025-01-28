@@ -17,7 +17,7 @@
 package resource
 
 import (
-	"github.com/devtron-labs/kubewatch/pkg/middleware"
+	bean2 "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/pod"
 	"github.com/devtron-labs/kubewatch/pkg/resource/secret"
@@ -27,7 +27,7 @@ import (
 )
 
 type InformerFactory[T any] interface {
-	GetSharedInformerFactory(config *rest.Config, clusterLabels *middleware.ClusterLabels,
+	GetSharedInformerFactory(config *rest.Config, clusterLabels *bean2.ClusterLabels,
 		eventHandlers *bean.EventHandlers[T], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error)
 }
 

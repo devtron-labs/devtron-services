@@ -14,10 +14,34 @@
  * limitations under the License.
  */
 
-package config
+package bean
 
-// AllClusterType represents all clusters
-const AllClusterType string = "ALL_CLUSTER"
+type SharedStopper struct {
+	stopperChannel chan struct{}
+}
 
-// InClusterType represents the default cluster
-const InClusterType string = "IN_CLUSTER"
+func (s *SharedStopper) HasInformer() bool {
+	return s != nil && s.stopperChannel != nil
+}
+
+func (s *SharedStopper) GetStopper(stopper chan struct{}) *SharedStopper {
+	if !s.HasInformer() {
+		return newSharedStopper(stopper)
+	}
+	return s
+}
+
+func (s *SharedStopper) Stop() {
+	if !s.HasInformer() {
+		return
+	}
+	if s.stopperChannel != nil {
+		close(s.stopperChannel)
+	}
+}
+
+func newSharedStopper(stopper chan struct{}) *SharedStopper {
+	return &SharedStopper{
+		stopperChannel: stopper,
+	}
+}

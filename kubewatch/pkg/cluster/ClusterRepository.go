@@ -43,14 +43,18 @@ type Cluster struct {
 	sql.AuditLog
 }
 
-func (c *Cluster) SupportsSystemExec() bool {
-	return c.ClusterName == commonBean.DEFAULT_CLUSTER || c.CdArgoSetup
+func GetDefaultCluster() *Cluster {
+	return &Cluster{
+		Id:          1,
+		ClusterName: commonBean.DEFAULT_CLUSTER,
+	}
 }
 
-// SupportsArgoCd returns true if the cluster supports ArgoCD
-// TODO Asutosh: Discuss with product and update
-func (c *Cluster) SupportsArgoCd() bool {
-	return c.ClusterName == commonBean.DEFAULT_CLUSTER || c.CdArgoSetup
+func (c *Cluster) IsDefault() bool {
+	if c == nil {
+		return false
+	}
+	return c.ClusterName == commonBean.DEFAULT_CLUSTER
 }
 
 func NewClusterRepositoryImpl(dbConnection *pg.DB, logger *zap.SugaredLogger) *ClusterRepositoryImpl {
@@ -71,6 +75,7 @@ type ClusterRepositoryImpl struct {
 type ClusterRepository interface {
 	FindAllActive() ([]*Cluster, error)
 	FindById(id int) (*Cluster, error)
+	FindByName(name string) (*Cluster, error)
 	FindByIdWithActiveFalse(id int) (*Cluster, error)
 }
 
@@ -88,6 +93,16 @@ func (impl ClusterRepositoryImpl) FindById(id int) (*Cluster, error) {
 	err := impl.dbConnection.
 		Model(&cluster).
 		Where("id = ?", id).
+		Where("active = ?", true).
+		Select()
+	return &cluster, err
+}
+
+func (impl ClusterRepositoryImpl) FindByName(name string) (*Cluster, error) {
+	var cluster Cluster
+	err := impl.dbConnection.
+		Model(&cluster).
+		Where("cluster_name = ?", name).
 		Where("active = ?", true).
 		Select()
 	return &cluster, err

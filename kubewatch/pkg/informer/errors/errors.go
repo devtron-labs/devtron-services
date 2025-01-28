@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package config
+package errors
 
-// AllClusterType represents all clusters
-const AllClusterType string = "ALL_CLUSTER"
+import (
+	"errors"
+	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
+)
 
-// InClusterType represents the default cluster
-const InClusterType string = "IN_CLUSTER"
+var AlreadyExists = errors.New(bean.INFORMER_ALREADY_EXIST_MESSAGE)
