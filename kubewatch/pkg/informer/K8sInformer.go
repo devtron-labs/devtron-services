@@ -326,14 +326,19 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 
 			newPod, _ := newObj.(*coreV1.Pod)
 			oldPod, _ := oldObj.(*coreV1.Pod)
+			// atleast one of the pod version will be not nil
 			if !significantPodChange(oldPod, newPod) {
 				logArgs := []interface{}{}
+				podName := ""
 				if oldPod != nil {
 					logArgs = append(logArgs, "oldPodStatusObj", oldPod.Status)
+					podName = oldPod.Name
 				}
 				if newPod != nil {
 					logArgs = append(logArgs, "newPodStatusObj", newPod.Status)
+					podName = newPod.Name
 				}
+				logArgs = append(logArgs, "podName", podName)
 				impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", logArgs...)
 				return
 			}
@@ -696,6 +701,7 @@ func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
 }
 
 func significantPodChange(from *coreV1.Pod, to *coreV1.Pod) bool {
+	// always expect on of the below to be not nil
 	if from == nil || to == nil {
 		return true
 	}
