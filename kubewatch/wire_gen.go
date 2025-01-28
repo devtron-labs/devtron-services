@@ -16,7 +16,8 @@ import (
 	"github.com/devtron-labs/kubewatch/pkg/informer"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoCD"
-	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf"
+	argoWf2 "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/cd"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
 	"github.com/devtron-labs/kubewatch/pkg/logger"
 	"github.com/devtron-labs/kubewatch/pkg/pubsub"
@@ -58,8 +59,9 @@ func InitializeApp() (*App, error) {
 	runnable := asyncProvider.NewAsyncRunnable(sugaredLogger)
 	informerImpl := argoCD.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
 	argoWfInformerImpl := argoWf.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
+	informerImpl2 := argoWf2.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
 	systemExecInformerImpl := systemExec.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, pubSubClientServiceImpl, informerClientImpl)
-	clusterInformerImpl := cluster.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterRepositoryImpl, informerClientImpl, informerImpl, argoWfInformerImpl, systemExecInformerImpl)
+	clusterInformerImpl := cluster.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterRepositoryImpl, informerClientImpl, informerImpl, argoWfInformerImpl, informerImpl2, systemExecInformerImpl)
 	runnerImpl := informer.NewRunnerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterInformerImpl)
 	app := NewApp(routerImpl, sugaredLogger, appConfig, db, runnerImpl, runnable)
 	return app, nil

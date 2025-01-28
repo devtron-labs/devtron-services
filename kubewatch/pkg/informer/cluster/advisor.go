@@ -48,8 +48,10 @@ func (impl *InformerImpl) GetClientAdvisor(clientType bean.ClientType) (ClientAd
 	switch clientType {
 	case bean.ArgoCDClientType:
 		return impl.argoCdInformer, nil
-	case bean.ArgoWorkflowClientType:
-		return impl.argoWfInformer, nil
+	case bean.CiArgoWorkflowClientType:
+		return impl.ciWfInformer, nil
+	case bean.CdArgoWorkflowClientType:
+		return impl.cdWfInformer, nil
 	case bean.SystemExecutorClientType:
 		return impl.systemExecInformer, nil
 	default:
@@ -61,8 +63,10 @@ func (impl *InformerImpl) IsMultiClusterMode(clientType bean.ClientType) bool {
 	switch clientType {
 	case bean.ArgoCDClientType:
 		return impl.appConfig.IsMultiClusterArgoCD()
-	case bean.ArgoWorkflowClientType:
-		return impl.appConfig.IsMultiClusterArgoWfType()
+	case bean.CiArgoWorkflowClientType:
+		return impl.appConfig.IsMultiClusterCiArgoWfType()
+	case bean.CdArgoWorkflowClientType:
+		return impl.appConfig.IsMultiClusterCdArgoWfType()
 	case bean.SystemExecutorClientType:
 		return impl.appConfig.IsMultiClusterSystemExec()
 	default:

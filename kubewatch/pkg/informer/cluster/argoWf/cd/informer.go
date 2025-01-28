@@ -21,9 +21,12 @@ import (
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
+	resourceBean "github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"github.com/devtron-labs/kubewatch/pkg/utils"
 	"go.uber.org/zap"
+	"time"
 )
 
 type InformerImpl struct {
@@ -32,7 +35,6 @@ type InformerImpl struct {
 	k8sUtil                 utils.K8sUtil
 	informerClient          resource.InformerClient
 	asyncRunnable           *async.Runnable
-	argoWfCiInformerStopper map[int]*informerBean.SharedStopper
 	argoWfCdInformerStopper map[int]*informerBean.SharedStopper
 }
 
@@ -47,29 +49,41 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 		k8sUtil:                 k8sUtil,
 		informerClient:          informerClient,
 		asyncRunnable:           asyncRunnable,
-		argoWfCiInformerStopper: make(map[int]*informerBean.SharedStopper),
 		argoWfCdInformerStopper: make(map[int]*informerBean.SharedStopper),
 	}
 }
 
 func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluster) error {
-	if err := impl.startCiArgoWfInformer(clusterInfo); err != nil {
+	if !impl.appConfig.GetCdConfig().CdInformer {
+		impl.logger.Debugw("cd argo workflow informer is not enabled, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
+		return nil
+	}
+	startTime := time.Now()
+	defer func() {
+		impl.logger.Debugw("time taken to start cd argo workflow informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+	}()
+	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
+	cdWfInformer := impl.informerClient.GetSharedInformerClient(resourceBean.CdWorkflowResourceType)
+	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
+	workflowInformer, err := cdWfInformer.GetSharedInformer(clusterInfo.Id, impl.appConfig.GetCdWfNamespace(), restConfig)
+	if err != nil {
+		impl.logger.Errorw("error in starting workflow informer", "err", err)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.CD_STAGE_ARGO_WORLFLOW)
+	}
+	stopChan, err := impl.getCdArgoWfStopChannel(clusterLabels)
+	if err != nil {
 		return err
 	}
-	if err := impl.startCdArgoWfInformer(clusterInfo); err != nil {
-		return err
+	runnable := func() {
+		workflowInformer.Run(stopChan)
+		impl.logger.Infow("informer started for cd argo workflow", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	}
+	impl.asyncRunnable.Execute(runnable)
 	return nil
 }
 
 func (impl *InformerImpl) StopInformerForCluster(clusterId int) error {
-	stopper, found := impl.getCiArgoWfStopper(clusterId)
-	if found {
-		stopper.Stop()
-		delete(impl.argoWfCiInformerStopper, clusterId)
-		impl.logger.Infow("argo workflow ci informer stopped for cluster", "clusterId", clusterId)
-	}
-	stopper, found = impl.getCdArgoWfStopper(clusterId)
+	stopper, found := impl.getCdArgoWfStopper(clusterId)
 	if found {
 		stopper.Stop()
 		delete(impl.argoWfCdInformerStopper, clusterId)

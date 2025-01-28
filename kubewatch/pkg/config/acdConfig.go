@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package bean
+package config
 
-type ClientType string
+import "github.com/caarlos0/env"
 
-const (
-	ArgoCDClientType         ClientType = "ArgoCD"
-	CiArgoWorkflowClientType ClientType = "CiArgoWorkflow"
-	CdArgoWorkflowClientType ClientType = "CdArgoWorkflow"
-	SystemExecutorClientType ClientType = "SystemExecutor"
-)
+type AcdConfig struct {
+	// ACDNamespace is the namespace where all the ArgoCD application objects are published
+	// For multi-cluster mode, it will be set to v1.NamespaceAll
+	ACDNamespace string `env:"ACD_NAMESPACE" envDefault:"devtroncd"`
 
-var SupportedClientMap = map[ClientType]bool{
-	ArgoCDClientType:         true,
-	CiArgoWorkflowClientType: true,
-	CdArgoWorkflowClientType: true,
-	SystemExecutorClientType: true,
+	// ACDInformer is used to determine whether ArgoCD informer is enabled or not
+	ACDInformer bool `env:"ACD_INFORMER" envDefault:"true"`
+}
+
+func getAcdConfig() (*AcdConfig, error) {
+	acdCfg := &AcdConfig{}
+	err := env.Parse(acdCfg)
+	return acdCfg, err
 }

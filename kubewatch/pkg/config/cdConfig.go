@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package bean
+package config
 
-type ClientType string
+import "github.com/caarlos0/env"
 
-const (
-	ArgoCDClientType         ClientType = "ArgoCD"
-	CiArgoWorkflowClientType ClientType = "CiArgoWorkflow"
-	CdArgoWorkflowClientType ClientType = "CdArgoWorkflow"
-	SystemExecutorClientType ClientType = "SystemExecutor"
-)
+type CdConfig struct {
+	// DefaultNamespace is the namespace where all CD workflows are scheduled
+	DefaultNamespace string `env:"CD_DEFAULT_NAMESPACE" envDefault:"devtron-cd"`
 
-var SupportedClientMap = map[ClientType]bool{
-	ArgoCDClientType:         true,
-	CiArgoWorkflowClientType: true,
-	CdArgoWorkflowClientType: true,
-	SystemExecutorClientType: true,
+	// CdInformer is used to determine whether CD informer is enabled or not
+	CdInformer bool `env:"CD_INFORMER" envDefault:"true"`
+}
+
+func getCdConfig() (*CdConfig, error) {
+	cdConfig := &CdConfig{}
+	err := env.Parse(cdConfig)
+	return cdConfig, err
 }

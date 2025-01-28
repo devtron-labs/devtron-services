@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-package bean
+package config
 
-type ClientType string
-
-const (
-	ArgoCDClientType         ClientType = "ArgoCD"
-	CiArgoWorkflowClientType ClientType = "CiArgoWorkflow"
-	CdArgoWorkflowClientType ClientType = "CdArgoWorkflow"
-	SystemExecutorClientType ClientType = "SystemExecutor"
+import (
+	"fmt"
+	"github.com/caarlos0/env"
 )
 
-var SupportedClientMap = map[ClientType]bool{
-	ArgoCDClientType:         true,
-	CiArgoWorkflowClientType: true,
-	CdArgoWorkflowClientType: true,
-	SystemExecutorClientType: true,
+type Timeout struct {
+	SleepTimeout int `env:"SLEEP_TIMEOUT" envDefault:"5"`
+}
+
+func getTimeout() (*Timeout, error) {
+	cfg := &Timeout{}
+	err := env.Parse(cfg)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return cfg, err
 }

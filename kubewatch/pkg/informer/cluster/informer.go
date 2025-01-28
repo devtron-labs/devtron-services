@@ -23,7 +23,8 @@ import (
 	"github.com/devtron-labs/kubewatch/pkg/config"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoCD"
-	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf"
+	cdWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/cd"
+	ciWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
@@ -52,7 +53,8 @@ type InformerImpl struct {
 	clusterRepository      repository.ClusterRepository
 	clusterInformerStopper *informerBean.FactoryStopper
 	argoCdInformer         *argoCD.InformerImpl
-	argoWfInformer         *argoWf.InformerImpl
+	ciWfInformer           *ciWf.InformerImpl
+	cdWfInformer           *cdWf.InformerImpl
 	systemExecInformer     *systemExec.InformerImpl
 }
 
@@ -62,7 +64,8 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	clusterRepository repository.ClusterRepository,
 	informerClient resource.InformerClient,
 	argoCdInformer *argoCD.InformerImpl,
-	argoWfInformer *argoWf.InformerImpl,
+	ciWfInformer *ciWf.InformerImpl,
+	cdWfInformer *cdWf.InformerImpl,
 	systemExecInformer *systemExec.InformerImpl) *InformerImpl {
 	return &InformerImpl{
 		logger:             logger,
@@ -71,7 +74,8 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 		informerClient:     informerClient,
 		clusterRepository:  clusterRepository,
 		argoCdInformer:     argoCdInformer,
-		argoWfInformer:     argoWfInformer,
+		ciWfInformer:       ciWfInformer,
+		cdWfInformer:       cdWfInformer,
 		systemExecInformer: systemExecInformer,
 	}
 }
