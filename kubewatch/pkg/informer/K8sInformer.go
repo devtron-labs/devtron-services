@@ -612,7 +612,8 @@ func (impl *K8sInformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePh
 		t := ctr.State.Terminated
 		if t == nil {
 			// Note: We should never get here
-			// If we do, it means the pod phase was Failed but the main container did not have terminated state we should mark it as an error
+			// If we do, it means the pod phase is 'Failed' but the main container state is not in 'terminated' state,
+			// we should mark this case as an error
 			if ctr.Name == common.MainContainerName {
 				return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)
 			}
