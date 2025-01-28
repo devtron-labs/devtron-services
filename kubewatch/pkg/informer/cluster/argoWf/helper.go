@@ -24,7 +24,6 @@ import (
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	resourceBean "github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"golang.org/x/exp/maps"
-	"slices"
 	"time"
 )
 
@@ -53,9 +52,11 @@ func (impl *InformerImpl) getStoppableCdArgoWfs() []int {
 }
 
 func (impl *InformerImpl) getStoppableClusterIds() []int {
-	stoppableClusterIds := slices.Concat(impl.getStoppableCiArgoWfs(), impl.getStoppableCdArgoWfs())
 	stoppableClusterIdsMap := make(map[int]bool)
-	for _, clusterId := range stoppableClusterIds {
+	for _, clusterId := range impl.getStoppableCiArgoWfs() {
+		stoppableClusterIdsMap[clusterId] = true
+	}
+	for _, clusterId := range impl.getStoppableCdArgoWfs() {
 		stoppableClusterIdsMap[clusterId] = true
 	}
 	return maps.Keys(stoppableClusterIdsMap)
