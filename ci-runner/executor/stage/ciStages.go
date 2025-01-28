@@ -130,7 +130,10 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	// sync cache
 	uploadCache := func() error {
 		log.Println(util.DEVTRON, " cache-push")
-		err = helper.SyncCache(ciRequest)
+		log.Println("sleeping for 3 minutes")
+		time.Sleep(3 * time.Minute)
+		log.Println("slept for 3 minutes")
+		//err = helper.SyncCache(ciRequest)
 		if err != nil {
 			log.Println(err)
 			if ciCdRequest.CommonWorkflowRequest.IsExtRun {
