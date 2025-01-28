@@ -326,7 +326,7 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 
 			newPod, _ := newObj.(*coreV1.Pod)
 			oldPod, _ := oldObj.(*coreV1.Pod)
-			if !significantPodChange(oldPod, newPod) {
+			if !significantPodChange(oldPod.Status, newPod.Status) {
 				impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", "podName", oldObj)
 			}
 
@@ -687,17 +687,13 @@ func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
 	return conditions[0].Message
 }
 
-func significantPodChange(from *coreV1.Pod, to *coreV1.Pod) bool {
-	return from.Spec.NodeName != to.Spec.NodeName ||
-		from.Status.Phase != to.Status.Phase ||
-		from.Status.Message != to.Status.Message ||
-		from.Status.PodIP != to.Status.PodIP ||
-		from.GetDeletionTimestamp() != to.GetDeletionTimestamp() ||
-		//significantMetadataChange(from.Annotations, to.Annotations) ||
-		//significantMetadataChange(from.Labels, to.Labels) ||
-		significantContainerStatusesChange(from.Status.ContainerStatuses, to.Status.ContainerStatuses) ||
-		significantContainerStatusesChange(from.Status.InitContainerStatuses, to.Status.InitContainerStatuses) ||
-		significantConditionsChange(from.Status.Conditions, to.Status.Conditions)
+func significantPodChange(from coreV1.PodStatus, to coreV1.PodStatus) bool {
+	return from.Phase != to.Phase ||
+		from.Message != to.Message ||
+		from.PodIP != to.PodIP ||
+		significantContainerStatusesChange(from.ContainerStatuses, to.ContainerStatuses) ||
+		significantContainerStatusesChange(from.InitContainerStatuses, to.InitContainerStatuses) ||
+		significantConditionsChange(from.Conditions, to.Conditions)
 }
 
 func significantContainerStatusesChange(from []coreV1.ContainerStatus, to []coreV1.ContainerStatus) bool {
