@@ -75,7 +75,7 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 
 		if stageInfoLoggingRequired {
 			log.Println(util.DEVTRON, "stage logging required")
-			err = util.ExecuteWithStageInfoLog(step.Name, executeStep)
+			err = util.ExecuteWithStageInfoLog(helper.GetPrePostStageDisplayName(step.Name, stepType), executeStep)
 		} else {
 			log.Println(util.DEVTRON, "stage logging not required")
 			err = executeStep()
@@ -144,6 +144,9 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	var vars []*commonBean.VariableObject
 	if stepType == helper.STEP_TYPE_REF_PLUGIN {
 		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, stageVariable)
+	} else if stepType == helper.STEP_TYPE_SCANNING {
+		// only global variables are supported here in image scanning step
+		vars, err = deduceVariables(step.InputVars, scriptEnvVariables, nil, nil, nil)
 	} else {
 		log.Printf("running step : %s\n", step.Name)
 		if stepType == helper.STEP_TYPE_PRE {
