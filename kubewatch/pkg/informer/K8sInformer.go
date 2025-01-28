@@ -327,7 +327,14 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 			newPod, _ := newObj.(*coreV1.Pod)
 			oldPod, _ := oldObj.(*coreV1.Pod)
 			if !significantPodChange(oldPod, newPod) {
-				impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", "oldPod", oldPod, "newPod", newPod)
+				logArgs := []interface{}{}
+				if oldPod != nil {
+					logArgs = append(logArgs, "oldPodStatusObj", oldPod.Status)
+				}
+				if newPod != nil {
+					logArgs = append(logArgs, "newPodStatusObj", newPod.Status)
+				}
+				impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", logArgs...)
 				return
 			}
 
