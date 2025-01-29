@@ -521,15 +521,6 @@ func sendCIFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CiS
 	}
 }
 
-func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
-	event := adaptor.NewCdCompleteEvent(ciRequest).
-		WithIsArtifactUploaded(err.IsArtifactUploaded())
-	e := helper.SendCDEvent(ciRequest, event)
-	if e != nil {
-		log.Println(e)
-	}
-}
-
 func (impl *CiStage) pushArtifact(ciCdRequest *helper.CiCdTriggerEvent, dest string, digest string, metrics *helper.CIMetrics, artifactUploaded bool) error {
 	imageRetryCountValue := ciCdRequest.CommonWorkflowRequest.ImageRetryCount
 	imageRetryIntervalValue := ciCdRequest.CommonWorkflowRequest.ImageRetryInterval

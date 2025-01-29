@@ -449,6 +449,7 @@ type CdStageCompleteEvent struct {
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
+	IsSuccess                     bool                `json:"isSuccess"`
 }
 
 func (event *CdStageCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CdStageCompleteEvent {
