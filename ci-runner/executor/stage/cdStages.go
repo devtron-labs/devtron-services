@@ -94,7 +94,7 @@ func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	// but failure event is sent in case of error.
 	if err == nil && !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
 		log.Println(util.DEVTRON, " event")
-		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest).
+		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest, true).
 			WithPluginArtifacts(allPluginArtifacts).
 			WithIsArtifactUploaded(artifactUploaded)
 		err = helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
@@ -229,4 +229,13 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 		return allPluginArtifacts, err
 	}
 	return allPluginArtifacts, nil
+}
+
+func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
+	event := adaptor.NewCdCompleteEvent(ciRequest, false).
+		WithIsArtifactUploaded(err.IsArtifactUploaded())
+	e := helper.SendCDEvent(ciRequest, event)
+	if e != nil {
+		log.Println(e)
+	}
 }
