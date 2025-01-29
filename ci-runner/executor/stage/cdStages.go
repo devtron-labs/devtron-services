@@ -102,15 +102,8 @@ func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (bool, 
 	// specifically for isolated environment type, for IsVirtualExecution we don't send success event.
 	// but failure event is sent in case of error.
 	if err == nil && !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
-		log.Println(util.DEVTRON, " event")
-		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest, true).
-			WithPluginArtifacts(allPluginArtifacts).
-			WithIsArtifactUploaded(artifactUploaded)
-		err = helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
-		if err != nil {
-			log.Println(err)
-		}
-		log.Println(util.DEVTRON, " /event")
+		//send cd success event
+		sendCDSuccessEvent(ciCdRequest.CommonWorkflowRequest, allPluginArtifacts, artifactUploaded)
 	}
 	return artifactUploaded, err
 }
@@ -247,4 +240,16 @@ func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdS
 	if e != nil {
 		log.Println(e)
 	}
+}
+
+func sendCDSuccessEvent(commonWorkflowRequest *helper.CommonWorkflowRequest, allPluginArtifacts *helper.PluginArtifacts, artifactUploaded bool) {
+	log.Println(util.DEVTRON, " event")
+	event := adaptor.NewCdCompleteEvent(commonWorkflowRequest, true).
+		WithPluginArtifacts(allPluginArtifacts).
+		WithIsArtifactUploaded(artifactUploaded)
+	err := helper.SendCDEvent(commonWorkflowRequest, event)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(util.DEVTRON, " /event")
 }
