@@ -71,10 +71,19 @@ func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
 	var artifactUploaded bool
 	var err error
-	var allPluginArtifacts *helper.PluginArtifacts
 	defer func() {
 		*exitCode = deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, err)
 	}()
+	//deferCDEvent() handles error and artifact upload status
+	artifactUploaded, err = impl.handleCDEvent(ciCdRequest)
+	return
+}
+
+func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (bool, error) {
+	var artifactUploaded bool
+	var err error
+	var allPluginArtifacts *helper.PluginArtifacts
+
 	allPluginArtifacts, err = impl.runCDStages(ciCdRequest)
 	if err != nil {
 		log.Println("cd stage error: ", err)
@@ -103,7 +112,7 @@ func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 		}
 		log.Println(util.DEVTRON, " /event")
 	}
-	return
+	return artifactUploaded, err
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artifactUploaded bool, err error) {
