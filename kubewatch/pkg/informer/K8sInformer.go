@@ -327,18 +327,12 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 			newPod, _ := newObj.(*coreV1.Pod)
 			oldPod, _ := oldObj.(*coreV1.Pod)
 			// atleast one of the pod version will be not nil
-			if !significantPodChange(oldPod, newPod) {
-				logArgs := []interface{}{}
-				podName := ""
+			if !foundAnyUpdateInPodStatus(oldPod, newPod) {
+				podName := newPod.Name
+				logArgs := []interface{}{"podName", podName, "newPodStatusObj", newPod.Status}
 				if oldPod != nil {
 					logArgs = append(logArgs, "oldPodStatusObj", oldPod.Status)
-					podName = oldPod.Name
 				}
-				if newPod != nil {
-					logArgs = append(logArgs, "newPodStatusObj", newPod.Status)
-					podName = newPod.Name
-				}
-				logArgs = append(logArgs, "podName", podName)
 				impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", logArgs...)
 				return
 			}
@@ -701,24 +695,25 @@ func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
 	return conditions[0].Message
 }
 
-func significantPodChange(from *coreV1.Pod, to *coreV1.Pod) bool {
+// foundAnyUpdateInPodStatus return true if any of the pod status fields have changed or if the pod is new
+func foundAnyUpdateInPodStatus(from *coreV1.Pod, to *coreV1.Pod) bool {
 	// always expect on of the below to be not nil
 	if from == nil || to == nil {
 		return true
 	}
-	return significantStatusChange(&from.Status, &to.Status)
+	return isAnyChangeInPodStatus(&from.Status, &to.Status)
 }
 
-func significantStatusChange(from *coreV1.PodStatus, to *coreV1.PodStatus) bool {
+func isAnyChangeInPodStatus(from *coreV1.PodStatus, to *coreV1.PodStatus) bool {
 	return from.Phase != to.Phase ||
 		from.Message != to.Message ||
 		from.PodIP != to.PodIP ||
-		significantContainerStatusesChange(from.ContainerStatuses, to.ContainerStatuses) ||
-		significantContainerStatusesChange(from.InitContainerStatuses, to.InitContainerStatuses) ||
-		significantConditionsChange(from.Conditions, to.Conditions)
+		isAnyChangeInContainersStatus(from.ContainerStatuses, to.ContainerStatuses) ||
+		isAnyChangeInContainersStatus(from.InitContainerStatuses, to.InitContainerStatuses) ||
+		isAnyChangeInPodConditions(from.Conditions, to.Conditions)
 }
 
-func significantContainerStatusesChange(from []coreV1.ContainerStatus, to []coreV1.ContainerStatus) bool {
+func isAnyChangeInContainersStatus(from []coreV1.ContainerStatus, to []coreV1.ContainerStatus) bool {
 	if len(from) != len(to) {
 		return true
 	}
@@ -727,18 +722,18 @@ func significantContainerStatusesChange(from []coreV1.ContainerStatus, to []core
 		statuses[s.Name] = s
 	}
 	for _, s := range to {
-		if significantContainerStatusChange(statuses[s.Name], s) {
+		if isAnyChangeInContainerStatus(statuses[s.Name], s) {
 			return true
 		}
 	}
 	return false
 }
 
-func significantContainerStatusChange(from coreV1.ContainerStatus, to coreV1.ContainerStatus) bool {
-	return from.Ready != to.Ready || significantContainerStateChange(from.State, to.State)
+func isAnyChangeInContainerStatus(from coreV1.ContainerStatus, to coreV1.ContainerStatus) bool {
+	return from.Ready != to.Ready || isAnyChangeInContainerState(from.State, to.State)
 }
 
-func significantContainerStateChange(from coreV1.ContainerState, to coreV1.ContainerState) bool {
+func isAnyChangeInContainerState(from coreV1.ContainerState, to coreV1.ContainerState) bool {
 	// waiting has two significant fields and either could potentially change
 	return to.Waiting != nil && (from.Waiting == nil || from.Waiting.Message != to.Waiting.Message || from.Waiting.Reason != to.Waiting.Reason) ||
 		// running only has one field which is immutable -  so any change is significant
@@ -747,7 +742,7 @@ func significantContainerStateChange(from coreV1.ContainerState, to coreV1.Conta
 		(to.Terminated != nil && from.Terminated == nil)
 }
 
-func significantConditionsChange(from []coreV1.PodCondition, to []coreV1.PodCondition) bool {
+func isAnyChangeInPodConditions(from []coreV1.PodCondition, to []coreV1.PodCondition) bool {
 	if len(from) != len(to) {
 		return true
 	}
