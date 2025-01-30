@@ -46,40 +46,17 @@ func NewCdStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 	}
 }
 
-func deferCDEvent(cdRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
-	log.Println(util.DEVTRON, "defer CD stage data.", "err: ", err, "artifactUploaded: ", artifactUploaded)
-	if err != nil {
-		exitCode = workFlow.DefaultErrorCode
-		var stageError *helper.CdStageError
-		if errors.As(err, &stageError) {
-			// update artifact uploaded status
-			if !stageError.IsArtifactUploaded() {
-				stageError = stageError.WithArtifactUploaded(artifactUploaded)
-			}
-		} else {
-			stageError = helper.NewCdStageError(fmt.Errorf(workFlow.CdStageFailed.String(), cdRequest.GetCdStageType(), err)).
-				WithArtifactUploaded(artifactUploaded)
-		}
-		// send ci failure event, for ci failure notification
-		sendCDFailureEvent(cdRequest, stageError)
-		// populate stage error
-		util.PopulateStageError(stageError.ErrorMessage())
-	}
-	return exitCode
-}
-
 func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
-	var artifactUploaded bool
-	var err error
-	defer func() {
-		*exitCode = deferCDEvent(ciCdRequest.CommonWorkflowRequest, artifactUploaded, err)
-	}()
-	//deferCDEvent() handles error and artifact upload status
-	artifactUploaded, err = impl.handleCDEvent(ciCdRequest)
+	resp, err := impl.handleCDEvent(ciCdRequest)
+	if err != nil {
+		//log error and send completion event
+		log.Println("cd stage error: ", err)
+	}
+	*exitCode = impl.sendCDCompletionEvent(ciCdRequest, resp, err)
 	return
 }
 
-func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (bool, error) {
+func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (*helper.HandleCdEventResponse, error) {
 	var artifactUploaded bool
 	var err error
 	var allPluginArtifacts *helper.PluginArtifacts
@@ -98,14 +75,11 @@ func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (bool, 
 			err = artifactUploadErr
 		}
 	}
-	// IsVirtualExecution run flag indicates that cd stage is running in virtual mode.
-	// specifically for isolated environment type, for IsVirtualExecution we don't send success event.
-	// but failure event is sent in case of error.
-	if err == nil && !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
-		//send cd success event
-		sendCDSuccessEvent(ciCdRequest.CommonWorkflowRequest, allPluginArtifacts, artifactUploaded)
-	}
-	return artifactUploaded, err
+
+	return &helper.HandleCdEventResponse{
+		PluginArtifacts:    allPluginArtifacts,
+		IsArtifactUploaded: artifactUploaded,
+	}, err
 }
 
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artifactUploaded bool, err error) {
@@ -233,23 +207,42 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 	return allPluginArtifacts, nil
 }
 
-func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
-	event := adaptor.NewCdCompleteEvent(ciRequest, true).
-		WithIsArtifactUploaded(err.IsArtifactUploaded())
-	e := helper.SendCDEvent(ciRequest, event)
-	if e != nil {
-		log.Println(e)
-	}
-}
-
-func sendCDSuccessEvent(commonWorkflowRequest *helper.CommonWorkflowRequest, allPluginArtifacts *helper.PluginArtifacts, artifactUploaded bool) {
-	log.Println(util.DEVTRON, " event")
-	event := adaptor.NewCdCompleteEvent(commonWorkflowRequest, false).
-		WithPluginArtifacts(allPluginArtifacts).
-		WithIsArtifactUploaded(artifactUploaded)
-	err := helper.SendCDEvent(commonWorkflowRequest, event)
+func (impl *CdStage) sendCDCompletionEvent(ciCdRequest *helper.CiCdTriggerEvent, handleCdEventResp *helper.HandleCdEventResponse, err error) (exitCode int) {
+	log.Println(util.DEVTRON, "CD stage completion data.", "artifactUploaded: ", handleCdEventResp.IsArtifactUploaded, "err ", err)
 	if err != nil {
-		log.Println(err)
+		exitCode = workFlow.DefaultErrorCode
+		var stageError *helper.CdStageError
+		if errors.As(err, &stageError) {
+			// update artifact uploaded status
+			if !stageError.IsArtifactUploaded() {
+				stageError = stageError.WithArtifactUploaded(handleCdEventResp.IsArtifactUploaded)
+			}
+		} else {
+			stageError = helper.NewCdStageError(fmt.Errorf(workFlow.CdStageFailed.String(), ciCdRequest.CommonWorkflowRequest.GetCdStageType(), err)).
+				WithArtifactUploaded(handleCdEventResp.IsArtifactUploaded)
+		}
+		// send cd failure event, for ci failure notification
+		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest, true).
+			WithIsArtifactUploaded(handleCdEventResp.IsArtifactUploaded)
+		e := helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
+		if e != nil {
+			log.Println(e)
+		}
+		// populate stage error
+		util.PopulateStageError(stageError.ErrorMessage())
+	} else if err == nil && !ciCdRequest.CommonWorkflowRequest.IsVirtualExecution {
+		// IsVirtualExecution run flag indicates that cd stage is running in virtual mode.
+		// specifically for isolated environment type, for IsVirtualExecution we don't send success event.
+		// but failure event is sent in case of error.
+		// send cd success event
+		event := adaptor.NewCdCompleteEvent(ciCdRequest.CommonWorkflowRequest, false).
+			WithPluginArtifacts(handleCdEventResp.PluginArtifacts).
+			WithIsArtifactUploaded(handleCdEventResp.IsArtifactUploaded)
+		err := helper.SendCDEvent(ciCdRequest.CommonWorkflowRequest, event)
+		if err != nil {
+			log.Println(err)
+		}
 	}
-	log.Println(util.DEVTRON, " /event")
+	log.Println(util.DEVTRON, "cd stage completion event sent")
+	return exitCode
 }

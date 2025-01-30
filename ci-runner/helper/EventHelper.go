@@ -337,6 +337,11 @@ type CiCdTriggerEvent struct {
 	CommonWorkflowRequest *CommonWorkflowRequest `json:"commonWorkflowRequest"`
 }
 
+type HandleCdEventResponse struct {
+	PluginArtifacts    *PluginArtifacts
+	IsArtifactUploaded bool
+}
+
 type ExtEnvRequest struct {
 	OrchestratorHost  string `json:"orchestratorHost"`
 	OrchestratorToken string `json:"orchestratorToken"`
