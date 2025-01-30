@@ -234,7 +234,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 }
 
 func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
-	event := adaptor.NewCdCompleteEvent(ciRequest, false).
+	event := adaptor.NewCdCompleteEvent(ciRequest, true).
 		WithIsArtifactUploaded(err.IsArtifactUploaded())
 	e := helper.SendCDEvent(ciRequest, event)
 	if e != nil {
@@ -244,7 +244,7 @@ func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdS
 
 func sendCDSuccessEvent(commonWorkflowRequest *helper.CommonWorkflowRequest, allPluginArtifacts *helper.PluginArtifacts, artifactUploaded bool) {
 	log.Println(util.DEVTRON, " event")
-	event := adaptor.NewCdCompleteEvent(commonWorkflowRequest, true).
+	event := adaptor.NewCdCompleteEvent(commonWorkflowRequest, false).
 		WithPluginArtifacts(allPluginArtifacts).
 		WithIsArtifactUploaded(artifactUploaded)
 	err := helper.SendCDEvent(commonWorkflowRequest, event)
