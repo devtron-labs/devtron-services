@@ -162,6 +162,7 @@ type CommonWorkflowRequest struct {
 	ImageScanRetryDelay            int                              `json:"imageScanRetryDelay,omitempty"`
 	ShouldPullDigest               bool                             `json:"shouldPullDigest,omitempty"`
 	EnableSecretMasking            bool                             `json:"enableSecretMasking"`
+	PropagateLabelsInBuildxPod     bool                             `json:"propagateLabelsInBuildxPod"`
 	// Data from CD Workflow service
 	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
 	CdPipelineId                  int                            `json:"cdPipelineId"`
@@ -190,6 +191,9 @@ type CommonWorkflowRequest struct {
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
+	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
+	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
+	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
@@ -208,7 +212,6 @@ func (c *CommonWorkflowRequest) GetCdStageType() PipelineType {
 	}
 	return ""
 }
-
 func (c *CommonWorkflowRequest) GetCloudHelperBaseConfig(blobStorageObjectType string) *util.CloudHelperBaseConfig {
 	return &util.CloudHelperBaseConfig{
 		StorageModuleConfigured: c.BlobStorageConfigured,
@@ -378,6 +381,12 @@ type CiCompleteEvent struct {
 	IsScanEnabled                 bool                `json:"isScanEnabled"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	DockerRegistryId              string              `json:"dockerRegistryId"`
+	TargetPlatforms               []string            `json:"targetPlatforms"`
+}
+
+func (event *CiCompleteEvent) WithTargetPlatforms(targetPlatforms []string) *CiCompleteEvent {
+	event.TargetPlatforms = targetPlatforms
+	return event
 }
 
 func (event *CiCompleteEvent) WithMetrics(metrics CIMetrics) *CiCompleteEvent {
@@ -769,4 +778,20 @@ func GetImageScanningEvent(ciCdRequest CommonWorkflowRequest) ImageScanningEvent
 	}
 	event.PipelineType = stage
 	return event
+}
+
+type ImageScanningSteps struct {
+	Steps      []*StepObject `json:"steps"`
+	ScanToolId int           `json:"scanToolId"`
+}
+
+func GetPrePostStageDisplayName(stageName string, stepType StepType) string {
+	if stepType == STEP_TYPE_PRE {
+		return fmt.Sprintf("%s (Pre-Build Task)", stageName)
+	} else if stepType == STEP_TYPE_POST {
+		return fmt.Sprintf("%s (Post-Build Task)", stageName)
+	} else {
+
+		return fmt.Sprintf("%s", stageName)
+	}
 }
