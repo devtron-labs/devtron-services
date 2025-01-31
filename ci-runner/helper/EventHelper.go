@@ -337,6 +337,11 @@ type CiCdTriggerEvent struct {
 	CommonWorkflowRequest *CommonWorkflowRequest `json:"commonWorkflowRequest"`
 }
 
+type HandleCdEventResponse struct {
+	PluginArtifacts    *PluginArtifacts
+	IsArtifactUploaded bool
+}
+
 type ExtEnvRequest struct {
 	OrchestratorHost  string `json:"orchestratorHost"`
 	OrchestratorToken string `json:"orchestratorToken"`
@@ -449,6 +454,7 @@ type CdStageCompleteEvent struct {
 	PluginArtifactStage           string              `json:"pluginArtifactStage"`
 	PluginArtifacts               *PluginArtifacts    `json:"pluginArtifacts"`
 	IsArtifactUploaded            bool                `json:"isArtifactUploaded"`
+	IsFailed                      bool                `json:"isFailed"` //new flag as isFailed for backward compatibility
 }
 
 func (event *CdStageCompleteEvent) WithPluginArtifacts(pluginArtifacts *PluginArtifacts) *CdStageCompleteEvent {
