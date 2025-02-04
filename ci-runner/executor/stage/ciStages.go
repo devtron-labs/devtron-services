@@ -39,6 +39,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -166,50 +167,55 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 		_ = os.Mkdir(util.WORKINGDIR, os.ModeDir)
 	}
 
-	// Get ci cache TODO
-	pullCacheStage := func() error {
-		log.Println(util.DEVTRON, " cache-pull")
-		start = time.Now()
-		metrics.CacheDownStartTime = start
-
-		defer func() {
-			log.Println(util.DEVTRON, " /cache-pull")
-			metrics.CacheDownDuration = time.Since(start).Seconds()
-		}()
-
-		err = helper.GetCache(ciCdRequest.CommonWorkflowRequest)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if err = util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
-		return artifactUploaded, err
-	}
-
 	// change the current working directory to WORKINGDIR
 	err = os.Chdir(util.WORKINGDIR)
 	if err != nil {
 		return artifactUploaded, err
 	}
-	// git handling
-	log.Println(util.DEVTRON, " git")
 	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	buildSkipEnabled := ciBuildConfi != nil && ciBuildConfi.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	skipCheckout := ciBuildConfi != nil && ciBuildConfi.PipelineType == helper.CI_JOB
-	if !skipCheckout {
-		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
-	}
-	if err != nil {
-		log.Println(util.DEVTRON, "clone err", err)
-		return artifactUploaded, err
-	}
-	log.Println(util.DEVTRON, " /git")
 
-	// Start docker daemon TODO
-	log.Println(util.DEVTRON, " docker-build")
-	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+	var wg sync.WaitGroup
+	for i := 1; i <= 3; i++ {
+		wg.Add(1)
+		if i == 1 {
+			go func() error {
+				defer wg.Done()
+				err := pullCache(metrics, ciCdRequest)
+				if err != nil {
+					return err
+				} // pull cache
+				return nil
+			}()
+		} else if i == 2 {
+			go func() error {
+				defer wg.Done()
+				// git handling
+				log.Println(util.DEVTRON, " git")
+				if !skipCheckout {
+					err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+					if err != nil {
+						log.Println(util.DEVTRON, "clone err", err)
+						return err
+					}
+				}
+
+				log.Println(util.DEVTRON, " /git")
+				return nil
+			}()
+		} else {
+			go func() {
+				defer wg.Done()
+				// Start docker daemon TODO
+				log.Println(util.DEVTRON, " docker-build")
+				impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+			}()
+		}
+
+	}
+	wg.Wait()
+
 	extraEnvVars, err := impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
 	if err != nil {
 		return artifactUploaded, err
@@ -701,4 +707,29 @@ func GetTargetPlatformFromCiBuildConfig(ciBuildConfig *helper.CiBuildConfigBean)
 	} else {
 		return utils.ConvertTargetPlatformStringToList(ciBuildConfig.DockerBuildConfig.TargetPlatform)
 	}
+}
+
+func pullCache(metrics *helper.CIMetrics, ciCdRequest *helper.CiCdTriggerEvent) error {
+	// Get ci cache TODO
+	pullCacheStage := func() error {
+		log.Println(util.DEVTRON, " cache-pull")
+		start := time.Now()
+		metrics.CacheDownStartTime = start
+
+		defer func() {
+			log.Println(util.DEVTRON, " /cache-pull")
+			metrics.CacheDownDuration = time.Since(start).Seconds()
+		}()
+
+		err := helper.GetCache(ciCdRequest.CommonWorkflowRequest)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
+		return err
+	}
+	return nil
 }
