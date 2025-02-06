@@ -80,22 +80,23 @@ func RunGetStartedScenario(ctx context.Context, sdkConfig aws.Config, isUpload b
 	}
 	log.Println(strings.Repeat("-", 88))
 	smallKey := FileNameWithExtension
-	downloadFileName := smallKey
+	downloadFileName := FileName + "-sdk-v2-download" + FileExtension
+	uploadFileName := FileName + "-sdk-v2-upload" + FileExtension
 
 	if isUpload {
 		fmt.Println("Let's upload a file to your bucket.")
-		smallFile := FileNameWithExtension
+		smallFile := downloadFileName
 		content, err := os.ReadFile(smallFile)
 		if err != nil {
 			log.Println("error in reading source file", "sourceFile", smallFile, "destinationKey", smallFile, "err", err)
 			return
 		}
 
-		err = bucketBasics.UploadLargeObject(ctx, bucketName, smallKey, content)
+		err = bucketBasics.UploadLargeObject(ctx, bucketName, uploadFileName, content)
 		if err != nil {
 			panic(err)
 		}
-		log.Printf("Uploaded %v as %v.\n", smallFile, smallKey)
+		log.Printf("Uploaded %v as %v.\n", smallFile, uploadFileName)
 		log.Println(strings.Repeat("-", 88))
 	} else {
 		log.Printf("Let's download %v to a file.", smallKey)

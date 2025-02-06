@@ -29,9 +29,9 @@ const DefaultDownloadPartSize = 1024 * 1024 * 5
 
 func UploadToS3Bucket() {
 
-	filename := aws_v2.FileNameWithExtension
+	filename := aws_v2.FileName + "-sdk-v1-download" + aws_v2.FileExtension
 	bucket := aws_v2.BucketName
-	item := aws_v2.FileName + "-sdk-v1" + aws_v2.FileExtension
+	item := aws_v2.FileName + "-sdk-v1-upload" + aws_v2.FileExtension
 	sess, _ := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
 
 	// Create an uploader with the session and default options
@@ -67,8 +67,9 @@ func DownloadFromS3Bucket() {
 
 	bucket := aws_v2.BucketName
 	item := aws_v2.FileNameWithExtension
+	downloadFile := aws_v2.FileName + "-sdk-v1" + aws_v2.FileExtension
 
-	file, err := os.Create(item)
+	file, err := os.Create(downloadFile)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -117,7 +118,7 @@ func downloadUsingDevtronCode() {
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:    blob_storage.BLOB_STORAGE_S3,
 		SourceKey:      aws_v2.FileNameWithExtension,
-		DestinationKey: aws_v2.FileNameWithExtension,
+		DestinationKey: aws_v2.FileName + "-devtron-download" + aws_v2.FileExtension,
 		AwsS3BaseConfig: GetBlobStorageBaseS3Config(&blob_storage.BlobStorageS3Config{
 			AccessKey:                  "",
 			Passkey:                    "qWGO4K1kWYfmxqhZftRWWRsPcCcOQV2i6zRoRGmL",
@@ -153,8 +154,8 @@ func uploadUsingDevtronCode() {
 	awsS3Blob := blob_storage.AwsS3Blob{}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:    blob_storage.BLOB_STORAGE_S3,
-		SourceKey:      aws_v2.FileNameWithExtension,
-		DestinationKey: "file-upload-cli.zip",
+		SourceKey:      aws_v2.FileName + "-devtron-download" + aws_v2.FileExtension,
+		DestinationKey: aws_v2.FileName + "-devtron-upload" + aws_v2.FileExtension,
 		AwsS3BaseConfig: GetBlobStorageBaseS3Config(&blob_storage.BlobStorageS3Config{
 			AccessKey:                  os.Getenv(aws_v2.AwsAccessKey),
 			Passkey:                    os.Getenv(aws_v2.AwsSecretKey),
