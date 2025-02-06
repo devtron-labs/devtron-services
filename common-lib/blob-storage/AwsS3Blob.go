@@ -116,12 +116,13 @@ func DownLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Se
 	//defer file.Close()
 	//sess, _ := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
 	downloader := s3manager.NewDownloader(sess)
+	start := time.Now()
 	numBytes, err := downloader.Download(file,
 		&s3.GetObjectInput{
 			Bucket: aws.String("devtron-test"),
 			Key:    aws.String("argo.zip"),
 		})
-	DownloadFromS3Bucket()
+	log.Println("download through devtron took ", time.Since(start).Seconds(), " seconds")
 	log.Println("downloaded ", file.Name(), numBytes, " bytes ")
 
 	if version != nil && numBytes != size {
