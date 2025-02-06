@@ -21,8 +21,9 @@ import (
 	"github.com/caarlos0/env"
 )
 
+// CATEGORY=GRACEFUL_SHUTDOWN
 type Timeout struct {
-	SleepTimeout int `env:"SLEEP_TIMEOUT" envDefault:"5"`
+	SleepTimeout int `env:"SLEEP_TIMEOUT" envDefault:"5" description:"Graceful shutdown timeout in seconds" deprecated:"false"`
 }
 
 func getTimeout() (*Timeout, error) {

@@ -18,21 +18,22 @@ package config
 
 import "github.com/caarlos0/env"
 
+// CATEGORY=EXTERNAL_KUBEWATCH
 // ExternalConfig is used to determine whether it's an external kubewatch or internal kubewatch
 // For external kubewatch, it will sit at an external namespace and publish events to the orchestrator using REST
 // It is used by CI workflow as well as CD workflow
 type ExternalConfig struct {
 	// External is used to determine whether it's an external kubewatch or internal kubewatch
-	External bool `env:"CD_EXTERNAL_REST_LISTENER" envDefault:"false"`
+	External bool `env:"CD_EXTERNAL_REST_LISTENER" envDefault:"false" description:"Used to determine whether it's an external kubewatch or internal kubewatch" deprecated:"false"`
 
 	// Token is the token used to authenticate with the orchestrator
-	Token string `env:"CD_EXTERNAL_ORCHESTRATOR_TOKEN" envDefault:""`
+	Token string `env:"CD_EXTERNAL_ORCHESTRATOR_TOKEN" envDefault:"" description:"Token used to authenticate with the orchestrator" deprecated:"false"`
 
 	// ListenerUrl is the URL of the orchestrator
-	ListenerUrl string `env:"CD_EXTERNAL_LISTENER_URL" envDefault:"http://devtroncd-orchestrator-service-prod.devtroncd:80"`
+	ListenerUrl string `env:"CD_EXTERNAL_LISTENER_URL" envDefault:"http://devtroncd-orchestrator-service-prod.devtroncd:80" description:"URL of the orchestrator" deprecated:"false"`
 
 	// Namespace is the namespace where the external kubewatch is set up
-	Namespace string `env:"CD_EXTERNAL_NAMESPACE" envDefault:""`
+	Namespace string `env:"CD_EXTERNAL_NAMESPACE" envDefault:"" description:"Namespace where the external kubewatch is set up" deprecated:"false"`
 }
 
 func getExternalConfig() (*ExternalConfig, error) {

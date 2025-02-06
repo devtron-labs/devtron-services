@@ -18,13 +18,14 @@ package config
 
 import "github.com/caarlos0/env"
 
+// CATEGORY=ARGOCD_INFORMER
 type AcdConfig struct {
 	// ACDNamespace is the namespace where all the ArgoCD application objects are published
 	// For multi-cluster mode, it will be set to v1.NamespaceAll
-	ACDNamespace string `env:"ACD_NAMESPACE" envDefault:"devtroncd"`
+	ACDNamespace string `env:"ACD_NAMESPACE" envDefault:"devtroncd" description:"Namespace where all the ArgoCD application objects are published. For multi-cluster mode, it will be set to v1.NamespaceAll" deprecated:"false"`
 
 	// ACDInformer is used to determine whether ArgoCD informer is enabled or not
-	ACDInformer bool `env:"ACD_INFORMER" envDefault:"true"`
+	ACDInformer bool `env:"ACD_INFORMER" envDefault:"true" description:"Used to determine whether ArgoCD informer is enabled or not" deprecated:"false"`
 }
 
 func getAcdConfig() (*AcdConfig, error) {

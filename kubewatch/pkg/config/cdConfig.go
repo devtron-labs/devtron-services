@@ -18,12 +18,13 @@ package config
 
 import "github.com/caarlos0/env"
 
+// CATEGORY=CD_ARGO_WORKFLOW
 type CdConfig struct {
 	// DefaultNamespace is the namespace where all CD workflows are scheduled
-	DefaultNamespace string `env:"CD_DEFAULT_NAMESPACE" envDefault:"devtron-cd"`
+	DefaultNamespace string `env:"CD_DEFAULT_NAMESPACE" envDefault:"devtron-cd" description:"Namespace where all CD workflows objects are scheduled. For multi-cluster mode, it will be set to v1.NamespaceAll" deprecated:"false"`
 
 	// CdInformer is used to determine whether CD informer is enabled or not
-	CdInformer bool `env:"CD_INFORMER" envDefault:"true"`
+	CdInformer bool `env:"CD_INFORMER" envDefault:"true" description:"Used to determine whether CD informer is enabled or not" deprecated:"false"`
 }
 
 func getCdConfig() (*CdConfig, error) {

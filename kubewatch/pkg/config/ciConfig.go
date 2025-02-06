@@ -18,12 +18,13 @@ package config
 
 import "github.com/caarlos0/env"
 
+// CATEGORY=CI_ARGO_WORKFLOW
 type CiConfig struct {
 	// DefaultNamespace is the namespace where all CI workflows are scheduled
-	DefaultNamespace string `env:"DEFAULT_NAMESPACE" envDefault:"devtron-ci"`
+	DefaultNamespace string `env:"DEFAULT_NAMESPACE" envDefault:"devtron-ci" description:"Namespace where all CI workflows objects are scheduled. For multi-cluster mode, it will be set to v1.NamespaceAll" deprecated:"false"`
 
 	// CiInformer is used to determine whether CI informer is enabled or not
-	CiInformer bool `env:"CI_INFORMER" envDefault:"true"`
+	CiInformer bool `env:"CI_INFORMER" envDefault:"true" description:"Used to determine whether CI informer is enabled or not" deprecated:"false"`
 }
 
 func getCiConfig() (*CiConfig, error) {
