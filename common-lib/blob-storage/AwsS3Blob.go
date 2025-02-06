@@ -123,7 +123,7 @@ func DownLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Se
 			Key:    aws.String("argo.zip"),
 		})
 	log.Println("download through devtron took ", time.Since(start).Seconds(), " seconds")
-	log.Println("downloaded ", file.Name(), numBytes, " bytes ")
+	log.Println("downloaded devtron", file.Name(), numBytes, " bytes ")
 
 	if version != nil && numBytes != size {
 		log.Println("cache sizes don't match, skipping step ", " version cache size ", size, " downloaded size ", numBytes)

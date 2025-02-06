@@ -89,9 +89,9 @@ func DownloadFromS3Bucket() {
 		fmt.Println(err)
 	}
 	elapsed := time.Since(start)
-	log.Printf("download took %s", elapsed)
+	log.Printf("download-v1 took %s %s", elapsed, file.Name())
 
-	fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
+	fmt.Println("Downloaded-v1", file.Name(), numBytes, "bytes")
 }
 
 func main() {
@@ -116,8 +116,8 @@ func downloadUsingDevtronCode() {
 
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:    blob_storage.BLOB_STORAGE_S3,
-		SourceKey:      "argo.zip",
-		DestinationKey: "file-download.zip",
+		SourceKey:      aws_v2.FileNameWithExtension,
+		DestinationKey: aws_v2.FileNameWithExtension,
 		AwsS3BaseConfig: GetBlobStorageBaseS3Config(&blob_storage.BlobStorageS3Config{
 			AccessKey:                  "",
 			Passkey:                    "qWGO4K1kWYfmxqhZftRWWRsPcCcOQV2i6zRoRGmL",

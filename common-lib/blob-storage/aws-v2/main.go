@@ -79,7 +79,7 @@ func RunGetStartedScenario(ctx context.Context, sdkConfig aws.Config, isUpload b
 		}
 	}
 	log.Println(strings.Repeat("-", 88))
-	const smallKey = FileName + "-sdk-v2" + FileExtension
+	smallKey := FileNameWithExtension
 	downloadFileName := smallKey
 
 	if isUpload {
@@ -110,7 +110,7 @@ func RunGetStartedScenario(ctx context.Context, sdkConfig aws.Config, isUpload b
 			}
 		}
 
-		log.Printf("File %v downloaded.", downloadFileName)
+		log.Printf("File %v downloaded. -v2", downloadFileName)
 		log.Println(strings.Repeat("-", 88))
 	}
 
