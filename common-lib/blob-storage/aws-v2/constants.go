@@ -7,7 +7,7 @@ import (
 
 const BucketName = "devtron-test"
 const FileNameWithExtension = FileName + FileExtension
-const FileName = "500mb-fake"
+const FileName = "1gb-fake"
 const FileExtension = ".pdf"
 
 const OneMB = 1024 * 1024
