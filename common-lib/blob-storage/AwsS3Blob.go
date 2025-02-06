@@ -120,7 +120,7 @@ func DownLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Se
 	numBytes, err := downloader.Download(file,
 		&s3.GetObjectInput{
 			Bucket: aws.String("devtron-test"),
-			Key:    aws.String("argo.zip"),
+			Key:    aws.String(request.SourceKey),
 		})
 	log.Println("download through devtron took ", time.Since(start).Seconds(), " seconds")
 	log.Println("downloaded devtron", file.Name(), numBytes, " bytes ")
