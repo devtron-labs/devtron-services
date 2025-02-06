@@ -140,9 +140,9 @@ func (basics BucketBasics) UploadFile(ctx context.Context, bucketName string, ob
 // The upload manager breaks large data into parts and uploads the parts concurrently.
 func (basics BucketBasics) UploadLargeObject(ctx context.Context, bucketName string, objectKey string, largeObject []byte) error {
 	largeBuffer := bytes.NewReader(largeObject)
-	var partMiBs int64 = 10
 	uploader := manager.NewUploader(basics.S3Client, func(u *manager.Uploader) {
-		u.PartSize = partMiBs * 1024 * 1024
+		u.PartSize = GetPartSize()
+		u.Concurrency = GetConcurrency()
 	})
 	start := time.Now()
 	_, err := uploader.Upload(ctx, &s3.PutObjectInput{
