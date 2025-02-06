@@ -80,7 +80,7 @@ func RunGetStartedScenario(ctx context.Context, sdkConfig aws.Config, isUpload b
 	}
 	log.Println(strings.Repeat("-", 88))
 	smallKey := FileNameWithExtension
-	downloadFileName := FileName + "-sdk-v2-download" + FileExtension
+	downloadFileName := FileName + "-sdk-v1" + FileExtension
 	uploadFileName := FileName + "-sdk-v2-upload" + FileExtension
 
 	if isUpload {
