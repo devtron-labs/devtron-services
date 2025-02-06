@@ -66,6 +66,8 @@ const (
 	WORKFLOW_TYPE_LABEL_KEY          = "workflowType"
 	JobKind                          = "Job"
 	NodeNoLongerExists               = "PodGC: node no longer exists"
+	UPDATE_EVENT                     = "update_event"
+	DELETE_EVENT                     = "delete_event"
 )
 
 type K8sInformer interface {
@@ -345,8 +347,12 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 					}
 				}
 				impl.logger.Debugw("Event received in Pods update informer", "time", time.Now(), "podName", newPod.Name, "podObjStatus", newPod.Status)
-				nodeStatus := impl.assessNodeStatus(newPod)
+				nodeStatus := impl.assessNodeStatus(UPDATE_EVENT, newPod)
 				workflowStatus := impl.getWorkflowStatus(newPod, nodeStatus, workflowType)
+				if workflowStatus.Message == "" && workflowStatus.Phase == v1alpha1.WorkflowFailed {
+					impl.logger.Debugw("skipping the failed workflow update event as message is empty", "workflow", workflowStatus)
+					return
+				}
 				wfJson, err := json.Marshal(workflowStatus)
 				if err != nil {
 					impl.logger.Errorw("error occurred while marshalling workflowJson", "err", err)
@@ -381,7 +387,7 @@ func (impl *K8sInformerImpl) startSystemWorkflowInformer(clusterId int) error {
 					}
 				}
 				impl.logger.Debugw("Event received in Pods delete informer", "time", time.Now(), "podName", podObj.Name, "podObjStatus", podObj.Status)
-				nodeStatus := impl.assessNodeStatus(podObj)
+				nodeStatus := impl.assessNodeStatus(DELETE_EVENT, podObj)
 				nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, clusterClient)
 				if !reTriggerRequired {
 					//not sending this deleted event if it's not a re-trigger case
@@ -468,7 +474,7 @@ func (impl *K8sInformerImpl) getK8sClientForCluster(clusterInfo *repository.Clus
 	return impl.getK8sClientForConfig(restConfig)
 }
 
-func (impl *K8sInformerImpl) assessNodeStatus(pod *coreV1.Pod) v1alpha1.NodeStatus {
+func (impl *K8sInformerImpl) assessNodeStatus(eventType string, pod *coreV1.Pod) v1alpha1.NodeStatus {
 
 	nodeStatus := v1alpha1.NodeStatus{}
 	switch pod.Status.Phase {
@@ -478,7 +484,7 @@ func (impl *K8sInformerImpl) assessNodeStatus(pod *coreV1.Pod) v1alpha1.NodeStat
 	case coreV1.PodSucceeded:
 		nodeStatus.Phase = v1alpha1.NodeSucceeded
 	case coreV1.PodFailed:
-		nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(pod)
+		nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(eventType, pod)
 		impl.logger.Infof("Pod %s failed: %s", pod.Name, nodeStatus.Message)
 	case coreV1.PodRunning:
 		nodeStatus.Phase = v1alpha1.NodeRunning
@@ -570,7 +576,7 @@ func getPendingReason(pod *coreV1.Pod) string {
 	return ""
 }
 
-func (impl *K8sInformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePhase, string) {
+func (impl *K8sInformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (v1alpha1.NodePhase, string) {
 	if pod.Status.Message != "" {
 		// Pod has a nice error message. Use that.
 		return v1alpha1.NodeFailed, pod.Status.Message
@@ -607,9 +613,18 @@ func (impl *K8sInformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePh
 		if t == nil {
 			// Note: We should never get here
 			// If we do, it means the pod phase is 'Failed' but the main container state is not in 'terminated' state,
-			// we should mark this case as an error
-			if ctr.Name == common.MainContainerName {
-				return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)
+
+			// there is a known issue.
+			// when the spot node gets terminated, there can be 2 possible scenarios.
+			// case1: we get the last[n] event from pod informer with the pod phase as failed and the main container state as running.
+			// case2: we get the above event[n-1] and last[n] event with pod phase as failed and the main container state as terminated.
+
+			// we want to handle the below case in last[n] event only,last event is always caught by DELETE_EVENT informer.
+			if eventType == DELETE_EVENT {
+				// we should mark this case as an error
+				if ctr.Name == common.MainContainerName {
+					return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)
+				}
 			}
 			impl.logger.Warnf("Pod %s phase was Failed but %s did not have terminated state", pod.Name, ctr.Name)
 			continue
