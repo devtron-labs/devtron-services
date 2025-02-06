@@ -176,6 +176,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	buildSkipEnabled := ciBuildConfi != nil && ciBuildConfi.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	skipCheckout := ciBuildConfi != nil && ciBuildConfi.PipelineType == helper.CI_JOB
 
+	start = time.Now()
 	var wg sync.WaitGroup
 	for i := 1; i <= 3; i++ {
 		wg.Add(1)
@@ -215,6 +216,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 
 	}
 	wg.Wait()
+	log.Println("total time for cache, git and docker start", time.Since(start).Seconds())
 
 	extraEnvVars, err := impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
 	if err != nil {
