@@ -20,7 +20,6 @@
 /cmd/external-app/devtron-ea
 
 *.zip
-*.pdf
 
 #binaries
 authenticator/authenticator

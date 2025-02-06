@@ -29,7 +29,7 @@ const DefaultDownloadPartSize = 1024 * 1024 * 5
 
 func UploadToS3Bucket() {
 
-	filename := aws_v2.FileName + "-sdk-v1-download" + aws_v2.FileExtension
+	filename := aws_v2.FileName + "-sdk-v1" + aws_v2.FileExtension
 	bucket := aws_v2.BucketName
 	item := aws_v2.FileName + "-sdk-v1-upload" + aws_v2.FileExtension
 	sess, _ := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
@@ -159,7 +159,7 @@ func uploadUsingDevtronCode() {
 	awsS3Blob := blob_storage.AwsS3Blob{}
 	request := &blob_storage.BlobStorageRequest{
 		StorageType:    blob_storage.BLOB_STORAGE_S3,
-		SourceKey:      aws_v2.FileName + "-devtron-download" + aws_v2.FileExtension,
+		SourceKey:      aws_v2.FileName + "-sdk-v1" + aws_v2.FileExtension,
 		DestinationKey: aws_v2.FileName + "-devtron-upload" + aws_v2.FileExtension,
 		AwsS3BaseConfig: GetBlobStorageBaseS3Config(&blob_storage.BlobStorageS3Config{
 			AccessKey:                  os.Getenv(aws_v2.AwsAccessKey),
