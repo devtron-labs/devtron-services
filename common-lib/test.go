@@ -101,12 +101,12 @@ func main() {
 
 	if isUpload == "true" {
 		log.Println("Starting Uploading file from S3 bucket")
-		aws_v2.RunGetStartedScenario(context.Background(), aws2.Config{Region: "ap-south-1"}, true)
-		UploadToS3Bucket()
 		uploadUsingDevtronCode()
+		UploadToS3Bucket()
+		aws_v2.RunGetStartedScenario(context.Background(), aws2.Config{Region: "ap-south-1"}, true)
 	} else {
 		log.Println("Starting  downloading file from S3 bucket")
-		downloadUsingDevtronCode()
+		//downloadUsingDevtronCode()
 		DownloadFromS3Bucket()
 		aws_v2.RunGetStartedScenario(context.Background(), aws2.Config{Region: "ap-south-1"}, false)
 	}
