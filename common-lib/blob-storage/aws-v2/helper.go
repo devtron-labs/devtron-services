@@ -209,8 +209,8 @@ func (basics BucketBasics) DownloadFile(ctx context.Context, bucketName string, 
 func (basics BucketBasics) DownloadLargeObject(ctx context.Context, bucketName string, objectKey string) ([]byte, error) {
 	//var partMiBs int64 = 10
 	downloader := manager.NewDownloader(basics.S3Client, func(d *manager.Downloader) {
-		d.PartSize = PartSize
-		d.Concurrency = Concurrency
+		d.PartSize = GetPartSize()
+		d.Concurrency = GetConcurrency()
 	})
 	//buffer := manager.NewWriteAtBuffer([]byte{})
 	file, err := os.Create(FileNameWithExtension)

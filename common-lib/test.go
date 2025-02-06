@@ -36,8 +36,8 @@ func UploadToS3Bucket() {
 
 	// Create an uploader with the session and default options
 	uploader := s3manager.NewUploader(sess, func(d *s3manager.Uploader) {
-		d.PartSize = aws_v2.PartSize
-		d.Concurrency = aws_v2.Concurrency
+		d.PartSize = aws_v2.GetPartSize()
+		d.Concurrency = aws_v2.GetConcurrency()
 	})
 
 	content, err := os.ReadFile(filename)
@@ -76,8 +76,8 @@ func DownloadFromS3Bucket() {
 
 	sess, _ := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
 	downloader := s3manager.NewDownloader(sess, func(d *s3manager.Downloader) {
-		d.PartSize = aws_v2.PartSize
-		d.Concurrency = aws_v2.Concurrency
+		d.PartSize = aws_v2.GetPartSize()
+		d.Concurrency = aws_v2.GetConcurrency()
 	})
 	start := time.Now()
 	numBytes, err := downloader.Download(file,
@@ -95,8 +95,11 @@ func DownloadFromS3Bucket() {
 }
 
 func main() {
-	//downloadUsingDevtronCode()
-	//DownloadFromS3Bucket()
+	log.Println("Starting Uploading and downloading file from S3 bucket")
+	log.Println("config", "partSize", aws_v2.GetPartSize(), "concurrency", aws_v2.GetConcurrency())
+
+	downloadUsingDevtronCode()
+	DownloadFromS3Bucket()
 	aws_v2.RunGetStartedScenario(context.Background(), aws2.Config{Region: "ap-south-1"}, false)
 
 	//aws_v2.RunGetStartedScenario(context.Background(), awsSdkV2.Config{Region: "ap-south-1"}, true)
