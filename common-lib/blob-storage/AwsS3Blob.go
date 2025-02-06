@@ -30,6 +30,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 )
 
 type AwsS3Blob struct{}
@@ -48,14 +49,16 @@ func (impl *AwsS3Blob) UploadBlob(request *BlobStorageRequest, err error) error 
 
 	command := exec.Command("aws", cmdArgs...)
 	setAWSEnvironmentVariables(s3BaseConfig, command)
+	startTime := time.Now()
 	err = utils.RunCommand(command)
+	log.Println("time taken to upload file to S3 via cli ", time.Since(startTime).Seconds(), " seconds")
 	return err
 }
 
 func (impl *AwsS3Blob) DownloadBlob(request *BlobStorageRequest, downloadSuccess bool, numBytes int64, err error, file *os.File) (bool, int64, error) {
 	s3BaseConfig := request.AwsS3BaseConfig
 	awsCfg := &aws.Config{
-		Region: aws.String(s3BaseConfig.Region),
+		Region: aws.String("ap-south-1"),
 	}
 	if s3BaseConfig.AccessKey != "" {
 		awsCfg.Credentials = credentials.NewStaticCredentials(s3BaseConfig.AccessKey, s3BaseConfig.Passkey, "")
@@ -66,18 +69,18 @@ func (impl *AwsS3Blob) DownloadBlob(request *BlobStorageRequest, downloadSuccess
 		awsCfg.DisableSSL = aws.Bool(s3BaseConfig.IsInSecure)
 		awsCfg.S3ForcePathStyle = aws.Bool(true)
 	}
-	sess := session.Must(session.NewSession(awsCfg))
-	downloadSuccess, numBytes, err = downLoadFromS3(file, request, sess)
+	sess, _ := session.NewSession(awsCfg)
+	downloadSuccess, numBytes, err = DownLoadFromS3(file, request, sess)
 	return downloadSuccess, numBytes, err
 }
 
 // TODO KB need to verify for versioning not enabled
-func downLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Session) (success bool, bytesSize int64, err error) {
-	svc := s3.New(sess)
+func DownLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Session) (success bool, bytesSize int64, err error) {
 	s3BaseConfig := request.AwsS3BaseConfig
 	var version *string
 	var size int64
 	if s3BaseConfig.VersioningEnabled {
+		svc := s3.New(sess)
 		input := &s3.ListObjectVersionsInput{
 			Bucket: aws.String(s3BaseConfig.BucketName),
 			Prefix: aws.String(request.SourceKey),
@@ -105,19 +108,20 @@ func downLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Se
 		}
 	}
 
+	sess, _ = session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
+	//file, err = os.Create("argo.zip")
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//defer file.Close()
+	//sess, _ := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
 	downloader := s3manager.NewDownloader(sess)
-	input := &s3.GetObjectInput{
-		Bucket: aws.String(s3BaseConfig.BucketName),
-		Key:    aws.String(request.SourceKey),
-	}
-	if version != nil {
-		input.VersionId = version
-	}
-	numBytes, err := downloader.Download(file, input)
-	if err != nil {
-		log.Println("Couldn't download cache file")
-		return false, 0, err
-	}
+	numBytes, err := downloader.Download(file,
+		&s3.GetObjectInput{
+			Bucket: aws.String("devtron-test"),
+			Key:    aws.String("argo.zip"),
+		})
+	DownloadFromS3Bucket()
 	log.Println("downloaded ", file.Name(), numBytes, " bytes ")
 
 	if version != nil && numBytes != size {
@@ -177,4 +181,29 @@ func (impl *AwsS3Blob) UploadWithSession(request *BlobStorageRequest) (*s3manage
 	}
 	return output, err
 
+}
+
+func DownloadFromS3Bucket() {
+
+	bucket := "devtron-test"
+	item := "argo.zip"
+
+	file, err := os.Create(item)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	sess, _ := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
+	downloader := s3manager.NewDownloader(sess)
+	numBytes, err := downloader.Download(file,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(item),
+		})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("Downloaded", file.Name(), numBytes, "bytes")
 }
