@@ -143,7 +143,10 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 		log.Println(util.DEVTRON, " /cache-push")
 		return nil
 	}
-	util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	err = util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	if err != nil {
+		log.Println("error in cache push", err)
+	}
 	return
 }
 
