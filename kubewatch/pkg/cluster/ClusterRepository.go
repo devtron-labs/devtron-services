@@ -20,6 +20,7 @@ import (
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/kubewatch/pkg/sql"
 	"github.com/go-pg/pg"
+	"github.com/go-pg/pg/orm"
 	"go.uber.org/zap"
 )
 
@@ -40,6 +41,7 @@ type Cluster struct {
 	K8sVersion             string            `sql:"k8s_version"`
 	ErrorInConnecting      string            `sql:"error_in_connecting"`
 	InsecureSkipTlsVerify  bool              `sql:"insecure_skip_tls_verify"`
+	IsVirtualCluster       bool              `sql:"is_virtual_cluster"`
 	sql.AuditLog
 }
 
@@ -84,6 +86,10 @@ func (impl ClusterRepositoryImpl) FindAllActive() ([]*Cluster, error) {
 	err := impl.dbConnection.
 		Model(&clusters).
 		Where("active = ?", true).
+		WhereGroup(func(query *orm.Query) (*orm.Query, error) {
+			return query.WhereOr("is_virtual_cluster = ?", false).
+				WhereOr("is_virtual_cluster IS NULL"), nil
+		}).
 		Select()
 	return clusters, err
 }
@@ -94,6 +100,10 @@ func (impl ClusterRepositoryImpl) FindById(id int) (*Cluster, error) {
 		Model(&cluster).
 		Where("id = ?", id).
 		Where("active = ?", true).
+		WhereGroup(func(query *orm.Query) (*orm.Query, error) {
+			return query.WhereOr("is_virtual_cluster = ?", false).
+				WhereOr("is_virtual_cluster IS NULL"), nil
+		}).
 		Select()
 	return &cluster, err
 }
@@ -104,6 +114,10 @@ func (impl ClusterRepositoryImpl) FindByName(name string) (*Cluster, error) {
 		Model(&cluster).
 		Where("cluster_name = ?", name).
 		Where("active = ?", true).
+		WhereGroup(func(query *orm.Query) (*orm.Query, error) {
+			return query.WhereOr("is_virtual_cluster = ?", false).
+				WhereOr("is_virtual_cluster IS NULL"), nil
+		}).
 		Select()
 	return &cluster, err
 }
@@ -114,6 +128,10 @@ func (impl ClusterRepositoryImpl) FindByIdWithActiveFalse(id int) (*Cluster, err
 		Model(&cluster).
 		Where("id = ?", id).
 		Where("active = ?", false).
+		WhereGroup(func(query *orm.Query) (*orm.Query, error) {
+			return query.WhereOr("is_virtual_cluster = ?", false).
+				WhereOr("is_virtual_cluster IS NULL"), nil
+		}).
 		Select()
 	return &cluster, err
 }

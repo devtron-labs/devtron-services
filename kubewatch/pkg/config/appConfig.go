@@ -19,20 +19,20 @@ package config
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type AppConfig struct {
-	externalConfig *ExternalConfig
-	clusterCfg     *ClusterConfig
-	ciConfig       *CiConfig
-	cdConfig       *CdConfig
-	acdConfig      *AcdConfig
-	timeout        *Timeout
+	ExternalConfig *ExternalConfig
+	ClusterCfg     *ClusterConfig
+	CiConfig       *CiConfig
+	CdConfig       *CdConfig
+	AcdConfig      *AcdConfig
+	Timeout        *Timeout
 }
 
 func (app *AppConfig) GetClusterConfig() *ClusterConfig {
-	return app.clusterCfg
+	return app.ClusterCfg
 }
 
 func (app *AppConfig) GetExternalConfig() *ExternalConfig {
-	return app.externalConfig
+	return app.ExternalConfig
 }
 
 func (app *AppConfig) GetCiWfNamespace() string {
@@ -56,27 +56,27 @@ func (app *AppConfig) GetCdWfNamespace() string {
 }
 
 func (app *AppConfig) GetCiConfig() *CiConfig {
-	return app.ciConfig
+	return app.CiConfig
 }
 
 func (app *AppConfig) GetCdConfig() *CdConfig {
-	return app.cdConfig
+	return app.CdConfig
 }
 
 func (app *AppConfig) GetAcdConfig() *AcdConfig {
-	return app.acdConfig
+	return app.AcdConfig
 }
 
 func (app *AppConfig) GetACDNamespace() string {
 	if app.IsMultiClusterArgoCD() {
 		return metav1.NamespaceAll
 	} else {
-		return app.acdConfig.ACDNamespace
+		return app.AcdConfig.ACDNamespace
 	}
 }
 
 func (app *AppConfig) GetTimeout() *Timeout {
-	return app.timeout
+	return app.Timeout
 }
 
 func (app *AppConfig) IsDBAvailable() bool {
@@ -125,11 +125,11 @@ func GetAppConfig() (*AppConfig, error) {
 		return nil, err
 	}
 	return &AppConfig{
-		clusterCfg:     clusterConfig,
-		externalConfig: externalConfig,
-		ciConfig:       ciConfig,
-		cdConfig:       cdConfig,
-		acdConfig:      acdConfig,
-		timeout:        timeout,
+		ClusterCfg:     clusterConfig,
+		ExternalConfig: externalConfig,
+		CiConfig:       ciConfig,
+		CdConfig:       cdConfig,
+		AcdConfig:      acdConfig,
+		Timeout:        timeout,
 	}, nil
 }

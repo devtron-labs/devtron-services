@@ -34,7 +34,7 @@ type ClientAdvisor interface {
 
 func (impl *InformerImpl) GetClient(clientType bean.ClientType, clusterInfo *repository.Cluster) (ClientAdvisor, error) {
 	if !impl.IsMultiClusterMode(clientType) && !clusterInfo.IsDefault() {
-		impl.logger.Debugw("informer is not supported for cluster, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
+		impl.logger.Debugw("informer is not supported for cluster, skipping...", "clientType", clientType, "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
 		return NewUnimplementedAdvisor(), nil
 	}
 	return impl.GetClientAdvisor(clientType)
