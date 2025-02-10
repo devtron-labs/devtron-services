@@ -144,6 +144,9 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 		return nil
 	}
 	err = util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	if err != nil {
+		log.Println("error in cache push", err)
+	}
 	return
 }
 
@@ -549,15 +552,6 @@ func sendCIFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CiS
 		WithIsArtifactUploaded(err.IsArtifactUploaded()).
 		WithFailureReason(err.GetFailureMessage())
 	e := helper.SendCiCompleteEvent(ciRequest, event)
-	if e != nil {
-		log.Println(e)
-	}
-}
-
-func sendCDFailureEvent(ciRequest *helper.CommonWorkflowRequest, err *helper.CdStageError) {
-	event := adaptor.NewCdCompleteEvent(ciRequest).
-		WithIsArtifactUploaded(err.IsArtifactUploaded())
-	e := helper.SendCDEvent(ciRequest, event)
 	if e != nil {
 		log.Println(e)
 	}

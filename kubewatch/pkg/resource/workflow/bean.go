@@ -14,23 +14,11 @@
  * limitations under the License.
  */
 
-package utils
+package workflow
 
-import (
-	"math/rand"
-	"strings"
-	"time"
-)
+import "encoding/json"
 
-var chars = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-
-// Generates random string
-func Generate(size int) string {
-	rand.Seed(time.Now().UnixNano())
-	var b strings.Builder
-	for i := 0; i < size; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
-	}
-	str := b.String()
-	return str
+type publishRequest struct {
+	Topic   string          `json:"topic"`
+	Payload json.RawMessage `json:"payload"`
 }
