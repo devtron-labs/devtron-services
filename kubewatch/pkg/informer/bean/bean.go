@@ -40,6 +40,9 @@ const (
 	WORKFLOW_LABEL_SELECTOR = "devtron.ai/purpose==workflow"
 	WORKFLOW_TYPE_LABEL_KEY = "workflowType"
 	JobKind                 = "Job"
+	NodeNoLongerExists      = "PodGC: node no longer exists"
+	UPDATE_EVENT            = "update_event"
+	DELETE_EVENT            = "delete_event"
 )
 
 type ClusterLabels struct {

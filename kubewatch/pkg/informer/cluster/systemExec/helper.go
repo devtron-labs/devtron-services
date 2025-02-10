@@ -58,7 +58,8 @@ func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInf
 
 func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string,
 	nodeStatus v1alpha1.NodeStatus, config *rest.Config) (v1alpha1.NodeStatus, bool) {
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && nodeStatus.Message == informerBean.EXIT_CODE_143_ERROR {
+
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == informerBean.EXIT_CODE_143_ERROR || nodeStatus.Message == informerBean.NodeNoLongerExists) {
 		clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 		if k8sErr != nil {
 			return nodeStatus, false
@@ -80,7 +81,7 @@ func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace s
 	return nodeStatus, false
 }
 
-func (impl *InformerImpl) assessNodeStatus(pod *coreV1.Pod) v1alpha1.NodeStatus {
+func (impl *InformerImpl) assessNodeStatus(eventType string, pod *coreV1.Pod) v1alpha1.NodeStatus {
 	nodeStatus := v1alpha1.NodeStatus{}
 	switch pod.Status.Phase {
 	case coreV1.PodPending:
@@ -89,7 +90,7 @@ func (impl *InformerImpl) assessNodeStatus(pod *coreV1.Pod) v1alpha1.NodeStatus 
 	case coreV1.PodSucceeded:
 		nodeStatus.Phase = v1alpha1.NodeSucceeded
 	case coreV1.PodFailed:
-		nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(pod)
+		nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(eventType, pod)
 		impl.logger.Infof("Pod %s failed: %s", pod.Name, nodeStatus.Message)
 	case coreV1.PodRunning:
 		nodeStatus.Phase = v1alpha1.NodeRunning
@@ -133,7 +134,7 @@ func (impl *InformerImpl) assessNodeStatus(pod *coreV1.Pod) v1alpha1.NodeStatus 
 	return nodeStatus
 }
 
-func (impl *InformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePhase, string) {
+func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (v1alpha1.NodePhase, string) {
 	if pod.Status.Message != "" {
 		// Pod has a nice error message. Use that.
 		return v1alpha1.NodeFailed, pod.Status.Message
@@ -173,6 +174,22 @@ func (impl *InformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePhase
 			continue
 		}
 		if t.ExitCode == 0 {
+			// Note: We should never get here
+			// If we do, it means the pod phase is 'Failed' but the main container state is not in 'terminated' state,
+
+			// there is a known issue.
+			// when the spot node gets terminated, there can be 2 possible scenarios.
+			// case1: we get the last[n] event from pod informer with the pod phase as failed and the main container state as running.
+			// case2: we get the above event[n-1] and last[n] event with pod phase as failed and the main container state as terminated.
+
+			// we want to handle the below case in last[n] event only,last event is always caught by DELETE_EVENT informer.
+			if eventType == informerBean.DELETE_EVENT {
+				// we should mark this case as an error
+				if ctr.Name == common.MainContainerName {
+					return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)
+				}
+			}
+			impl.logger.Warnf("Pod %s phase was Failed but %s did not have terminated state", pod.Name, ctr.Name)
 			continue
 		}
 
@@ -205,4 +222,72 @@ func (impl *InformerImpl) inferFailedReason(pod *coreV1.Pod) (v1alpha1.NodePhase
 	// resulting in a 137 exit code (which we had ignored earlier). If failMessages is empty, it
 	// indicates that this is the case and we return Success instead of Failure.
 	return v1alpha1.NodeSucceeded, ""
+}
+
+func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
+	if len(conditions) == 0 {
+		return "failed"
+	}
+
+	return conditions[0].Message
+}
+
+// foundAnyUpdateInPodStatus return true if any of the pod status fields have changed or if the pod is new
+func foundAnyUpdateInPodStatus(from *coreV1.Pod, to *coreV1.Pod) bool {
+	// always expect on of the below to be not nil
+	if from == nil || to == nil {
+		return true
+	}
+	return isAnyChangeInPodStatus(&from.Status, &to.Status)
+}
+
+func isAnyChangeInPodStatus(from *coreV1.PodStatus, to *coreV1.PodStatus) bool {
+	return from.Phase != to.Phase ||
+		from.Message != to.Message ||
+		from.PodIP != to.PodIP ||
+		isAnyChangeInContainersStatus(from.ContainerStatuses, to.ContainerStatuses) ||
+		isAnyChangeInContainersStatus(from.InitContainerStatuses, to.InitContainerStatuses) ||
+		isAnyChangeInPodConditions(from.Conditions, to.Conditions)
+}
+
+func isAnyChangeInContainersStatus(from []coreV1.ContainerStatus, to []coreV1.ContainerStatus) bool {
+	if len(from) != len(to) {
+		return true
+	}
+	statuses := map[string]coreV1.ContainerStatus{}
+	for _, s := range from {
+		statuses[s.Name] = s
+	}
+	for _, s := range to {
+		if isAnyChangeInContainerStatus(statuses[s.Name], s) {
+			return true
+		}
+	}
+	return false
+}
+
+func isAnyChangeInContainerStatus(from coreV1.ContainerStatus, to coreV1.ContainerStatus) bool {
+	return from.Ready != to.Ready || isAnyChangeInContainerState(from.State, to.State)
+}
+
+func isAnyChangeInContainerState(from coreV1.ContainerState, to coreV1.ContainerState) bool {
+	// waiting has two significant fields and either could potentially change
+	return to.Waiting != nil && (from.Waiting == nil || from.Waiting.Message != to.Waiting.Message || from.Waiting.Reason != to.Waiting.Reason) ||
+		// running only has one field which is immutable -  so any change is significant
+		(to.Running != nil && from.Running == nil) ||
+		// I'm assuming this field is immutable - so any change is significant
+		(to.Terminated != nil && from.Terminated == nil)
+}
+
+func isAnyChangeInPodConditions(from []coreV1.PodCondition, to []coreV1.PodCondition) bool {
+	if len(from) != len(to) {
+		return true
+	}
+	for i, a := range from {
+		b := to[i]
+		if a.Message != b.Message || a.Reason != b.Reason {
+			return true
+		}
+	}
+	return false
 }

@@ -18,6 +18,7 @@ package systemExec
 
 import (
 	"encoding/json"
+	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
@@ -74,36 +75,53 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	})
 	// updateFunc is called when an existing pod is updated
 	updateFunc := func(oldPodObj, newPodObj *coreV1.Pod) {
-		var workflowType string
-		if newPodObj.Labels != nil {
-			if val, ok := newPodObj.Labels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
-				workflowType = val
+		// atleast one of the pod version will be not nil
+		if !foundAnyUpdateInPodStatus(oldPodObj, newPodObj) {
+			podName := newPodObj.Name
+			logArgs := []interface{}{"podName", podName, "newPodStatusObj", newPodObj.Status}
+			if oldPodObj != nil {
+				logArgs = append(logArgs, "oldPodStatusObj", oldPodObj.Status)
 			}
-		}
-		impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
-		nodeStatus := impl.assessNodeStatus(newPodObj)
-		workflowStatus := getWorkflowStatus(newPodObj, nodeStatus, workflowType)
-		wfJson, err := json.Marshal(workflowStatus)
-		if err != nil {
-			impl.logger.Errorw("error occurred while marshalling workflowJson", "err", err)
+			impl.logger.Debugw("no significant pod updates are detected so skipping the pod update event", logArgs...)
 			return
 		}
-		impl.logger.Debugw("sending system executor workflow update event", "workflow", string(wfJson))
-		if impl.pubSubClient == nil {
-			log.Println("don't publish")
-			return
+
+		if newPodObj != nil {
+			var workflowType string
+			if newPodObj.Labels != nil {
+				if val, ok := newPodObj.Labels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
+					workflowType = val
+				}
+			}
+			impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
+			nodeStatus := impl.assessNodeStatus(informerBean.UPDATE_EVENT, newPodObj)
+			workflowStatus := getWorkflowStatus(newPodObj, nodeStatus, workflowType)
+			if workflowStatus.Message == "" && workflowStatus.Phase == v1alpha1.WorkflowFailed {
+				impl.logger.Debugw("skipping the failed workflow update event as message is empty", "workflow", workflowStatus)
+				return
+			}
+			wfJson, err := json.Marshal(workflowStatus)
+			if err != nil {
+				impl.logger.Errorw("error occurred while marshalling workflowJson", "err", err)
+				return
+			}
+			impl.logger.Debugw("sending system executor workflow update event", "workflow", string(wfJson))
+			if impl.pubSubClient == nil {
+				log.Println("don't publish")
+				return
+			}
+			topic, err := getTopic(workflowType)
+			if err != nil {
+				impl.logger.Errorw("error while getting Topic")
+				return
+			}
+			err = impl.pubSubClient.Publish(topic, string(wfJson))
+			if err != nil {
+				impl.logger.Errorw("error while publishing Request", "err", err)
+				return
+			}
+			impl.logger.Debugw("system executor workflow update sent", "workflowType", workflowType)
 		}
-		topic, err := getTopic(workflowType)
-		if err != nil {
-			impl.logger.Errorw("error while getting Topic")
-			return
-		}
-		err = impl.pubSubClient.Publish(topic, string(wfJson))
-		if err != nil {
-			impl.logger.Errorw("error while publishing Request", "err", err)
-			return
-		}
-		impl.logger.Debugw("system executor workflow update sent", "workflowType", workflowType)
 	}
 	// deleteFunc is called when an existing pod is deleted
 	deleteFunc := func(podObj *coreV1.Pod) {
@@ -114,7 +132,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 			}
 		}
 		impl.logger.Debugw("event received in Pods delete informer", "time", time.Now(), "podObjStatus", podObj.Status)
-		nodeStatus := impl.assessNodeStatus(podObj)
+		nodeStatus := impl.assessNodeStatus(informerBean.DELETE_EVENT, podObj)
 		nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, restConfig)
 		if !reTriggerRequired {
 			//not sending this deleted event if it's not a re-trigger case
