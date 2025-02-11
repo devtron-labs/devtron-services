@@ -20,6 +20,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	credentialsv2 "github.com/aws/aws-sdk-go-v2/credentials"
+	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -30,6 +34,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 )
 
 type AwsS3Blob struct{}
@@ -105,7 +112,10 @@ func downLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Se
 		}
 	}
 
-	downloader := s3manager.NewDownloader(sess)
+	downloader := s3manager.NewDownloader(sess, func(d *s3manager.Downloader) {
+		d.PartSize = request.AwsS3BaseConfig.PartSize
+		d.Concurrency = request.AwsS3BaseConfig.Concurrency
+	})
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(s3BaseConfig.BucketName),
 		Key:    aws.String(request.SourceKey),
@@ -177,4 +187,77 @@ func (impl *AwsS3Blob) UploadWithSession(request *BlobStorageRequest) (*s3manage
 	}
 	return output, err
 
+}
+
+// BucketBasics encapsulates the Amazon Simple Storage Service (Amazon S3) actions
+// It contains S3Client, an Amazon S3 service client that is used to perform bucket
+// and object actions using aws-sdk-v2.
+type BucketBasics struct {
+	S3Client *s3v2.Client
+}
+
+func GetS3BucketBasicsClient(ctx context.Context, sdkConfig awsv2.Config, accessKey, secretKey string) (BucketBasics, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(credentialsv2.NewStaticCredentialsProvider(accessKey, secretKey, "")))
+	if err != nil {
+		panic(err)
+	}
+	sdkConfig.Credentials = cfg.Credentials
+
+	s3Client := s3v2.NewFromConfig(sdkConfig)
+	bucketBasics := BucketBasics{S3Client: s3Client}
+	return bucketBasics, nil
+}
+
+// UploadFileV2 uses an upload manager to upload data to an object in a bucket using aws-sdk-v2.
+// The upload manager breaks large data into parts and uploads the parts concurrently.
+func (basics BucketBasics) UploadFileV2(ctx context.Context, bucketName string, objectKey string, largeObject []byte, partSize int64, concurrency int) error {
+	largeBuffer := bytes.NewReader(largeObject)
+	uploader := manager.NewUploader(basics.S3Client, func(u *manager.Uploader) {
+		u.PartSize = partSize
+		u.Concurrency = concurrency
+	})
+	start := time.Now()
+	_, err := uploader.Upload(ctx, &s3v2.PutObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+		Body:   largeBuffer,
+	})
+	if err != nil {
+		log.Printf("Couldn't upload large object to %v:%v. Here's why: %v\n",
+			bucketName, objectKey, err)
+	}
+	elapsed := time.Since(start)
+	log.Printf("upload v2 took %s", elapsed)
+
+	return err
+}
+
+// DownloadFileV2 uses a download manager to download an object from a bucket using aws-sdk-v2.
+// The download manager gets the data in parts and writes them to a buffer until all of
+// the data has been downloaded.
+func (basics BucketBasics) DownloadFileV2(ctx context.Context, bucketName string, objectKey string, partSize int64, concurrency int) ([]byte, error) {
+	//var partMiBs int64 = 10
+	downloader := manager.NewDownloader(basics.S3Client, func(d *manager.Downloader) {
+		d.PartSize = partSize
+		d.Concurrency = concurrency
+	})
+	//buffer := manager.NewWriteAtBuffer([]byte{})
+	file, err := os.Create(objectKey)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	start := time.Now()
+	_, err = downloader.Download(ctx, file, &s3v2.GetObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(objectKey),
+	})
+	if err != nil {
+		log.Printf("Couldn't download large object from %v:%v. Here's why: %v\n",
+			bucketName, objectKey, err)
+	}
+	elapsed := time.Since(start)
+	log.Printf("download v2 took %s", elapsed)
+	return nil, err
 }
