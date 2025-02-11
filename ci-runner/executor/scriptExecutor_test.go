@@ -17,7 +17,9 @@
 package executor
 
 import (
+	context2 "context"
 	"fmt"
+	"github.com/devtron-labs/ci-runner/executor/context"
 	"github.com/devtron-labs/ci-runner/helper"
 	"io/ioutil"
 	"os"
@@ -28,6 +30,8 @@ import (
 
 func TestRunScripts(t *testing.T) {
 	t.SkipNow()
+	commandExecutorImpl := helper.NewCommandExecutorImpl()
+	scriptExecutorImpl := NewScriptExecutorImpl(commandExecutorImpl)
 	type args struct {
 		workDirectory  string
 		scriptFileName string
@@ -78,7 +82,8 @@ func TestRunScripts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RunScripts(tt.args.workDirectory, tt.args.scriptFileName, tt.args.script, tt.args.envVars, tt.args.outputVars)
+			ciCtx := context.BuildCiContext(context2.Background(), false)
+			got, err := scriptExecutorImpl.RunScripts(ciCtx, tt.args.workDirectory, tt.args.scriptFileName, tt.args.script, tt.args.envVars, tt.args.outputVars)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunScripts() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -192,6 +197,9 @@ func TestRunScriptsInDocker(t *testing.T) {
 	type args struct {
 		executionConf *executionConf
 	}
+	commandExecutorImpl := helper.NewCommandExecutorImpl()
+	scriptExecutorImpl := NewScriptExecutorImpl(commandExecutorImpl)
+	stageExecutorImpl := NewStageExecutorImpl(commandExecutorImpl, scriptExecutorImpl)
 	tests := []struct {
 		name    string
 		args    args
@@ -219,7 +227,8 @@ func TestRunScriptsInDocker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RunScriptsInDocker(tt.args.executionConf)
+			ciCtx := context.BuildCiContext(context2.Background(), false)
+			got, err := RunScriptsInDocker(ciCtx, stageExecutorImpl, tt.args.executionConf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunScriptsInDocker() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -294,6 +303,94 @@ func Test_writeToEnvFile(t *testing.T) {
 				for k, v := range tt.args.envMap {
 					if !strings.Contains(string(contents), fmt.Sprintf("%s=%s", k, v)) {
 						t.Errorf("Expected to find env var %s=%s in file, but it was not found", k, v)
+					}
+				}
+			}
+		})
+	}
+}
+
+func Test_writeToEnvFile1(t *testing.T) {
+	type args struct {
+		envMap   map[string]string
+		filename string
+	}
+	tests := []struct {
+		name         string
+		args         args
+		wantErr      bool
+		fileContents []string
+	}{
+		{
+			name:         "empty_env_map",
+			args:         args{envMap: map[string]string{}, filename: "test1.env"},
+			wantErr:      false,
+			fileContents: []string{},
+		},
+		{
+			name:         "single_env_var",
+			args:         args{envMap: map[string]string{"FOO": "BAR"}, filename: "test2.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO="BAR"`},
+		},
+		{
+			name:         "multiple_env_vars",
+			args:         args{envMap: map[string]string{"FOO": "BAR", "BAR": "FOO"}, filename: "test3.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO="BAR"`, `BAR="FOO"`},
+		},
+		{
+			name:         "error_creating_file",
+			args:         args{envMap: map[string]string{"FOO": "BAR"}, filename: "/dev/null/abcd"},
+			wantErr:      true,
+			fileContents: []string{},
+		},
+		{
+			name:         "multiline_env_vars",
+			args:         args{envMap: map[string]string{"FOO": "BAR\n\"BAZ\"%%s\n\t\b", "BAR": "FOO"}, filename: "test4.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO="BAR\n\"BAZ\"%%s\n\t\b"`, `BAR="FOO"`},
+		},
+		{
+			name:         "emoji_env_vars",
+			args:         args{envMap: map[string]string{"FOO": "BA👍R\n\"BAZ\"%%s\n\t\b", "BAR": "FOO"}, filename: "test5.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO="BA👍R\n\"BAZ\"%%s\n\t\b"`, `BAR="FOO"`},
+		},
+		{
+			name:         "pos_integer_env_vars",
+			args:         args{envMap: map[string]string{"FOO": "1", "BAR": "2"}, filename: "test6.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO=1`, `BAR=2`},
+		},
+		{
+			name:         "neg_integer_env_vars",
+			args:         args{envMap: map[string]string{"FOO": "-1", "BAR": "-2"}, filename: "test7.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO=-1`, `BAR=-2`},
+		},
+		{
+			name:         "float_env_vars",
+			args:         args{envMap: map[string]string{"FOO": "1.0", "BAR": "2.0"}, filename: "test8.env"},
+			wantErr:      false,
+			fileContents: []string{`FOO="1.0"`, `BAR="2.0"`},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := writeToEnvFile(tt.args.envMap, tt.args.filename); (err != nil) != tt.wantErr {
+				t.Errorf("writeToEnvFile() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			content, err := os.ReadFile(tt.args.filename)
+			if tt.wantErr && err == nil {
+				t.Errorf("writeToEnvFile(); wanted error = %v; got nil", err)
+			} else if !tt.wantErr && err != nil {
+				t.Errorf("writeToEnvFile(); wanted no error; got = %v", err)
+			}
+			if err == nil {
+				for _, line := range tt.fileContents {
+					if !strings.Contains(string(content), line) {
+						t.Errorf("writeToEnvFile() not found = %v, content = %v", line, string(content))
 					}
 				}
 			}
