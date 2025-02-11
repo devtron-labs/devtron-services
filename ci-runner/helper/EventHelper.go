@@ -194,6 +194,8 @@ type CommonWorkflowRequest struct {
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
 	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
 	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
+	PartSize                      int64                          `json:"partSize,omitempty"`
+	ConcurrencyMultiplier         int                            `json:"concurrencyMultiplier,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
