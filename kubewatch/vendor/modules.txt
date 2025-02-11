@@ -211,8 +211,9 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250203130011-85ad45027e1c
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250206065052-254cc368b17b
 ## explicit; go 1.21
+github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
 github.com/devtron-labs/common-lib/git-manager/util
@@ -230,6 +231,7 @@ github.com/devtron-labs/common-lib/utils/k8s/commonBean
 github.com/devtron-labs/common-lib/utils/k8s/health
 github.com/devtron-labs/common-lib/utils/k8sObjectsUtil
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
+github.com/devtron-labs/common-lib/utils/runTime
 github.com/devtron-labs/common-lib/utils/yaml
 # github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
 ## explicit
@@ -1754,4 +1756,4 @@ upper.io/db.v3/postgresql
 # k8s.io/mount-utils => k8s.io/mount-utils v0.29.7
 # k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.7
 # k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250203130011-85ad45027e1c
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250206065052-254cc368b17b

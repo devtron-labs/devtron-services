@@ -144,6 +144,9 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 		return nil
 	}
 	err = util.ExecuteWithStageInfoLog(util.PUSH_CACHE, uploadCache)
+	if err != nil {
+		log.Println("error in cache push", err)
+	}
 	return
 }
 
