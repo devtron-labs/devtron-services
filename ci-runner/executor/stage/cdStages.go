@@ -138,20 +138,8 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+	impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
 	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
-	err = impl.dockerHelper.DockerLogin(ciContext, &helper.DockerCredentials{
-		DockerUsername:     ciCdRequest.CommonWorkflowRequest.DockerUsername,
-		DockerPassword:     ciCdRequest.CommonWorkflowRequest.DockerPassword,
-		AwsRegion:          ciCdRequest.CommonWorkflowRequest.AwsRegion,
-		AccessKey:          ciCdRequest.CommonWorkflowRequest.AccessKey,
-		SecretKey:          ciCdRequest.CommonWorkflowRequest.SecretKey,
-		DockerRegistryURL:  ciCdRequest.CommonWorkflowRequest.IntermediateDockerRegistryUrl,
-		DockerRegistryType: ciCdRequest.CommonWorkflowRequest.DockerRegistryType,
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {

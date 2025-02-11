@@ -196,11 +196,12 @@ type BucketBasics struct {
 	S3Client *s3v2.Client
 }
 
-func GetS3BucketBasicsClient(ctx context.Context, sdkConfig awsv2.Config, accessKey, secretKey string) (BucketBasics, error) {
+func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secretKey string) (BucketBasics, error) {
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(credentialsv2.NewStaticCredentialsProvider(accessKey, secretKey, "")))
 	if err != nil {
 		panic(err)
 	}
+	sdkConfig := awsv2.Config{Region: region}
 	sdkConfig.Credentials = cfg.Credentials
 
 	s3Client := s3v2.NewFromConfig(sdkConfig)

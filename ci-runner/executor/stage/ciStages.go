@@ -213,7 +213,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 				defer wg.Done()
 				// Start docker daemon TODO
 				log.Println(util.DEVTRON, " docker-build")
-				impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+				impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
 			}()
 		}
 

@@ -44,7 +44,7 @@ const (
 const (
 	CACHE_PULL                           = "Pulling Cache"
 	GIT_CLONE_CHECKOUT                   = "Git Clone & Checkout"
-	DOCKER_DAEMON                        = "Starting Docker Daemon"
+	DOCKER_DAEMON                        = "Starting Docker Daemon and then Docker Login"
 	DOCKER_LOGIN_STAGE                   = "Docker Login"
 	DOCKER_PUSH                          = "Docker Push"
 	DOCKER_BUILD                         = "Docker Build"
