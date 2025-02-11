@@ -79,6 +79,7 @@ func (impl *BlobStorageServiceImpl) Get(request *BlobStorageRequest) (bool, int6
 	}
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
+		s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig)
 		awsS3Blob := AwsS3Blob{}
 		downloadSuccess, numBytes, err = awsS3Blob.DownloadBlob(request, downloadSuccess, numBytes, err, file)
 	case BLOB_STORAGE_AZURE:
