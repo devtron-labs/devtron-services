@@ -17,7 +17,6 @@
 package executor
 
 import (
-	util2 "github.com/devtron-labs/ci-runner/executor/util"
 	"github.com/devtron-labs/ci-runner/helper"
 	commonBean "github.com/devtron-labs/common-lib/workflow"
 	"reflect"
@@ -101,12 +100,7 @@ func Test_deduceVariables(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scriptEnvVariables := &util2.ScriptEnvVariables{
-				SystemEnv:         map[string]string{},
-				RuntimeEnv:        tt.args.globalVars,
-				ExistingScriptEnv: map[string]string{},
-			}
-			got, err := deduceVariables(tt.args.desiredVars, scriptEnvVariables, tt.args.preeCiStageVariable, tt.args.postCiStageVariables, nil)
+			got, err := deduceVariables(tt.args.desiredVars, tt.args.globalVars, tt.args.preeCiStageVariable, tt.args.postCiStageVariables, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("deduceVariables() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -123,7 +117,7 @@ func TestRunCiSteps(t *testing.T) {
 		stageType                  helper.StepType
 		req                        *helper.CommonWorkflowRequest
 		globalEnvironmentVariables map[string]string
-		preCiStageVariable         map[int]map[string]*commonBean.VariableObject
+		preeCiStageVariable        map[int]map[string]*commonBean.VariableObject
 	}
 	tests := []struct {
 		name                       string
@@ -137,18 +131,13 @@ func TestRunCiSteps(t *testing.T) {
 	for _, tt := range tests {
 		stageExecutor := NewStageExecutorImpl(nil, nil)
 		t.Run(tt.name, func(t *testing.T) {
-			scriptEnvVariables := &util2.ScriptEnvVariables{
-				SystemEnv:         map[string]string{},
-				RuntimeEnv:        tt.args.globalEnvironmentVariables,
-				ExistingScriptEnv: map[string]string{},
-			}
-			gotPreCiStageVariableOut, gotPostCiStageVariable, _, err := stageExecutor.RunCiCdSteps(tt.args.stageType, tt.args.req, tt.args.req.PreCiSteps, nil, scriptEnvVariables, tt.args.preCiStageVariable, false)
+			gotPreeCiStageVariableOut, gotPostCiStageVariable, _, err := stageExecutor.RunCiCdSteps(tt.args.stageType, nil, tt.args.req.PreCiSteps, nil, tt.args.globalEnvironmentVariables, tt.args.preeCiStageVariable)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RunCiCdSteps() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(gotPreCiStageVariableOut, tt.wantPreeCiStageVariableOut) {
-				t.Errorf("RunCiCdSteps() gotPreCiStageVariableOut = %v, want %v", gotPreCiStageVariableOut, tt.wantPreeCiStageVariableOut)
+			if !reflect.DeepEqual(gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut) {
+				t.Errorf("RunCiCdSteps() gotPreeCiStageVariableOut = %v, want %v", gotPreeCiStageVariableOut, tt.wantPreeCiStageVariableOut)
 			}
 			if !reflect.DeepEqual(gotPostCiStageVariable, tt.wantPostCiStageVariable) {
 				t.Errorf("RunCiCdSteps() gotPostCiStageVariable = %v, want %v", gotPostCiStageVariable, tt.wantPostCiStageVariable)

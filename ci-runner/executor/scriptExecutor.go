@@ -340,7 +340,7 @@ func formatEnvironmentVariables(envMap map[string]string) string {
 		d, err := strconv.Atoi(v)
 		if err != nil {
 			//received string
-			lines = append(lines, fmt.Sprintf(`%s=%q`, k, v))
+			lines = append(lines, fmt.Sprintf(`%s=%s`, k, v))
 		} else {
 			//received integer
 			lines = append(lines, fmt.Sprintf(`%s=%d`, k, d))
