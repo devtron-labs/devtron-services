@@ -50,8 +50,8 @@ func (impl *BlobStorageServiceImpl) PutWithCommand(request *BlobStorageRequest) 
 	var err error
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
-		awsS3Blob := AwsS3Blob{}
-		err = awsS3Blob.UploadBlob(request, err)
+		s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig.Region, request.AwsS3BaseConfig.AccessKey, request.AwsS3BaseConfig.Passkey)
+		err = s3BasicsClient.UploadFileV2(context.Background(), request, err)
 	case BLOB_STORAGE_AZURE:
 		azureBlob := AzureBlob{}
 		err = azureBlob.UploadBlob(context.Background(), request.DestinationKey, request.AzureBlobBaseConfig, request.SourceKey, request.AzureBlobBaseConfig.BlobContainerName)
@@ -79,9 +79,8 @@ func (impl *BlobStorageServiceImpl) Get(request *BlobStorageRequest) (bool, int6
 	}
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
-		s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig)
-		awsS3Blob := AwsS3Blob{}
-		downloadSuccess, numBytes, err = awsS3Blob.DownloadBlob(request, downloadSuccess, numBytes, err, file)
+		s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig.Region, request.AwsS3BaseConfig.AccessKey, request.AwsS3BaseConfig.Passkey)
+		downloadSuccess, numBytes, err = s3BasicsClient.DownloadFileV2(context.Background(), request, downloadSuccess, numBytes, err, file)
 	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}
 		downloadSuccess, err = b.DownloadBlob(context.Background(), request.SourceKey, request.AzureBlobBaseConfig, file)

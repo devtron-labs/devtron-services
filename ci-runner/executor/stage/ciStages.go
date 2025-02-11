@@ -178,48 +178,10 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	ciBuildConfi := ciCdRequest.CommonWorkflowRequest.CiBuildConfig
 	buildSkipEnabled := ciBuildConfi != nil && ciBuildConfi.CiBuildType == helper.BUILD_SKIP_BUILD_TYPE
 	skipCheckout := ciBuildConfi != nil && ciBuildConfi.PipelineType == helper.CI_JOB
-
-	start = time.Now()
-	var wg sync.WaitGroup
-	for i := 1; i <= 3; i++ {
-		wg.Add(1)
-		if i == 1 {
-			go func() error {
-				defer wg.Done()
-				err := pullCache(metrics, ciCdRequest)
-				if err != nil {
-					return err
-				} // pull cache
-				return nil
-			}()
-		} else if i == 2 {
-			go func() error {
-				defer wg.Done()
-				// git handling
-				log.Println(util.DEVTRON, " git")
-				if !skipCheckout {
-					err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
-					if err != nil {
-						log.Println(util.DEVTRON, "clone err", err)
-						return err
-					}
-				}
-
-				log.Println(util.DEVTRON, " /git")
-				return nil
-			}()
-		} else {
-			go func() {
-				defer wg.Done()
-				// Start docker daemon TODO
-				log.Println(util.DEVTRON, " docker-build")
-				impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
-			}()
-		}
-
+	err = impl.prepareStep(ciCdRequest, metrics, skipCheckout)
+	if err != nil {
+		return artifactUploaded, err
 	}
-	wg.Wait()
-	log.Println("total time for cache, git and docker start", time.Since(start).Seconds())
 
 	extraEnvVars, err := impl.AddExtraEnvVariableFromRuntimeParamsToCiCdEvent(ciCdRequest.CommonWorkflowRequest)
 	if err != nil {
@@ -727,5 +689,79 @@ func pullCache(metrics *helper.CIMetrics, ciCdRequest *helper.CiCdTriggerEvent) 
 	if err := util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, skipCheckout bool) error {
+	useBuildx := ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
+	start := time.Now()
+	var wg sync.WaitGroup
+
+	if useBuildx {
+		//we can run all stages in parallel
+		for i := 1; i <= 3; i++ {
+			wg.Add(1)
+			if i == 1 {
+				go func() error {
+					defer wg.Done()
+					return pullCache(metrics, ciCdRequest)
+				}()
+			} else if i == 2 {
+				go func() error {
+					defer wg.Done()
+					return gitCloneStep(ciCdRequest, impl, skipCheckout)
+				}()
+			} else {
+				go func() error {
+					defer wg.Done()
+					log.Println(util.DEVTRON, " docker-build")
+					impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
+					return nil
+				}()
+			}
+
+		}
+	} else {
+		//first run pull cache and then git clone and docker start in parallel
+		err := pullCache(metrics, ciCdRequest)
+		if err != nil {
+			return err
+		}
+		for i := 1; i <= 2; i++ {
+			if i == 1 {
+				wg.Add(1)
+				go func() error {
+					defer wg.Done()
+					return gitCloneStep(ciCdRequest, impl, skipCheckout)
+				}()
+			} else {
+				wg.Add(1)
+				go func() error {
+					defer wg.Done()
+					log.Println(util.DEVTRON, " docker-build")
+					impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
+					return nil
+				}()
+			}
+		}
+	}
+
+	wg.Wait()
+	log.Println("total time for cache, git and docker start", time.Since(start).Seconds())
+	return nil
+}
+
+func gitCloneStep(ciCdRequest *helper.CiCdTriggerEvent, impl *CiStage, skipCheckout bool) error {
+	// git handling
+	log.Println(util.DEVTRON, " git")
+	if !skipCheckout {
+		err := impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+		if err != nil {
+			log.Println(util.DEVTRON, "clone err", err)
+			return err
+		}
+	}
+
+	log.Println(util.DEVTRON, " /git")
 	return nil
 }

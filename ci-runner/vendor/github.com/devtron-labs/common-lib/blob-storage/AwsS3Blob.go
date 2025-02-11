@@ -211,21 +211,26 @@ func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secr
 
 // UploadFileV2 uses an upload manager to upload data to an object in a bucket using aws-sdk-v2.
 // The upload manager breaks large data into parts and uploads the parts concurrently.
-func (basics BucketBasics) UploadFileV2(ctx context.Context, bucketName string, objectKey string, largeObject []byte, partSize int64, concurrency int) error {
-	largeBuffer := bytes.NewReader(largeObject)
+func (basics BucketBasics) UploadFileV2(ctx context.Context, request *BlobStorageRequest, err error) error {
+	content, err := os.ReadFile(request.SourceKey)
+	if err != nil {
+		log.Println("error in reading source file", "sourceFile", request.SourceKey, "destinationKey", request.DestinationKey, "err", err)
+		return err
+	}
+	largeBuffer := bytes.NewReader(content)
 	uploader := manager.NewUploader(basics.S3Client, func(u *manager.Uploader) {
-		u.PartSize = partSize
-		u.Concurrency = concurrency
+		u.PartSize = request.AwsS3BaseConfig.PartSize
+		u.Concurrency = request.AwsS3BaseConfig.Concurrency
 	})
 	start := time.Now()
-	_, err := uploader.Upload(ctx, &s3v2.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(objectKey),
+	_, err = uploader.Upload(ctx, &s3v2.PutObjectInput{
+		Bucket: aws.String(request.AwsS3BaseConfig.BucketName),
+		Key:    aws.String(request.DestinationKey),
 		Body:   largeBuffer,
 	})
 	if err != nil {
 		log.Printf("Couldn't upload large object to %v:%v. Here's why: %v\n",
-			bucketName, objectKey, err)
+			request.AwsS3BaseConfig.BucketName, request.DestinationKey, err)
 	}
 	elapsed := time.Since(start)
 	log.Printf("upload v2 took %s", elapsed)
@@ -236,29 +241,23 @@ func (basics BucketBasics) UploadFileV2(ctx context.Context, bucketName string, 
 // DownloadFileV2 uses a download manager to download an object from a bucket using aws-sdk-v2.
 // The download manager gets the data in parts and writes them to a buffer until all of
 // the data has been downloaded.
-func (basics BucketBasics) DownloadFileV2(ctx context.Context, bucketName string, objectKey string, partSize int64, concurrency int) ([]byte, error) {
-	//var partMiBs int64 = 10
+func (basics BucketBasics) DownloadFileV2(ctx context.Context, request *BlobStorageRequest, downloadSuccess bool, numBytes int64, err error, file *os.File) (bool, int64, error) {
 	downloader := manager.NewDownloader(basics.S3Client, func(d *manager.Downloader) {
-		d.PartSize = partSize
-		d.Concurrency = concurrency
+		d.PartSize = request.AwsS3BaseConfig.PartSize
+		d.Concurrency = request.AwsS3BaseConfig.Concurrency
 	})
-	//buffer := manager.NewWriteAtBuffer([]byte{})
-	file, err := os.Create(objectKey)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer file.Close()
 
 	start := time.Now()
-	_, err = downloader.Download(ctx, file, &s3v2.GetObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(objectKey),
+	numBytes, err = downloader.Download(ctx, file, &s3v2.GetObjectInput{
+		Bucket: aws.String(request.AwsS3BaseConfig.BucketName),
+		Key:    aws.String(request.SourceKey),
 	})
 	if err != nil {
 		log.Printf("Couldn't download large object from %v:%v. Here's why: %v\n",
-			bucketName, objectKey, err)
+			request.AwsS3BaseConfig.BucketName, request.SourceKey, err)
+		return false, 0, err
 	}
 	elapsed := time.Since(start)
 	log.Printf("download v2 took %s", elapsed)
-	return nil, err
+	return true, numBytes, err
 }

@@ -19,6 +19,7 @@ package util
 import (
 	"github.com/caarlos0/env"
 	blob_storage "github.com/devtron-labs/common-lib/blob-storage"
+	"runtime"
 )
 
 const (
@@ -118,11 +119,14 @@ func (c *CloudHelperBaseConfig) SetGcpBlobStorageConfig(blobStorageConfig *BlobS
 }
 
 func GetBlobStorageBaseS3Config(b *blob_storage.BlobStorageS3Config, blobStorageObjectType string) *blob_storage.AwsS3BaseConfig {
+	cores := runtime.NumCPU()
 	awsS3BaseConfig := &blob_storage.AwsS3BaseConfig{
 		AccessKey:   b.AccessKey,
 		Passkey:     b.Passkey,
 		EndpointUrl: b.EndpointUrl,
 		IsInSecure:  b.IsInSecure,
+		PartSize:    64 * 1024 * 1024, //todo make it configurable. Currently 64MB
+		Concurrency: cores * 2,        //todo make multiplier configurable,
 	}
 	switch blobStorageObjectType {
 	case BlobStorageObjectTypeCache:
