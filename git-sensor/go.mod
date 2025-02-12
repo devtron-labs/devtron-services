@@ -13,6 +13,7 @@ require (
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-git/go-git/v5 v5.11.0
 	github.com/go-pg/pg v6.15.1+incompatible
+	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.8.0
