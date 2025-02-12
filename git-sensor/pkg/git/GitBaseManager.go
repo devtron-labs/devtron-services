@@ -211,9 +211,9 @@ func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (re
 		impl.logger.Errorw("error in git cli operation", "msg", string(outBytes), "err", err)
 		errMsg = output
 		if errors.Is(gitCtx.Err(), context.DeadlineExceeded) {
-			impl.logger.Errorw("command completed", "startTime", startTime, "processingTime", time.Since(startTime).Seconds(), "cmd", cmd.String())
-
 			errMsg = "command timed out"
+			impl.logger.Errorw(errMsg, "startTime", startTime, "processingTime", time.Since(startTime).Seconds(), "cmd", cmd.String())
+
 			// prometheus event count for timeout
 			middleware.GitFetchTimeoutCounter.WithLabelValues().Inc()
 			return output, errMsg, err
