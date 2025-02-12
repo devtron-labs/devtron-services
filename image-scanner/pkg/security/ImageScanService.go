@@ -270,7 +270,7 @@ func (impl *ImageScanServiceImpl) CreateFolderForOutputData(executionHistoryMode
 	return executionHistoryDirPath
 }
 
-func (impl *ImageScanServiceImpl) saveImageScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory, toolId int) error {
+func (impl *ImageScanServiceImpl) saveImageScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory, toolId int, executionMappingState bean.ScanExecutionProcessState) error {
 	//creating execution history
 	tx, err := impl.ScanHistoryRepository.GetConnection().Begin()
 	if err != nil {
@@ -284,7 +284,7 @@ func (impl *ImageScanServiceImpl) saveImageScanExecutionHistoryAndState(executio
 		impl.Logger.Errorw("Failed to save executionHistory", "model", executionHistoryModel, "err", err)
 		return err
 	}
-	executionHistoryMappingModel := adaptor.GetScanToolExecutionHistoryMapping(executionHistoryModel, bean.ScanExecutionProcessStateCompleted, "", toolId)
+	executionHistoryMappingModel := adaptor.GetScanToolExecutionHistoryMapping(executionHistoryModel, executionMappingState, "", toolId)
 	err = impl.ScanToolExecutionHistoryMappingRepository.Save(tx, executionHistoryMappingModel)
 	if err != nil {
 		impl.Logger.Errorw("Failed to save executionHistoryMappingModel", "err", err)
@@ -301,7 +301,7 @@ func (impl *ImageScanServiceImpl) saveImageScanExecutionHistoryAndState(executio
 func (impl *ImageScanServiceImpl) RegisterScanExecutionHistoryAndState(executionHistoryModel *repository.ImageScanExecutionHistory,
 	toolId int) (*repository.ImageScanExecutionHistory, string, error) {
 	executionHistoryDirPath := ""
-	err := impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, toolId)
+	err := impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, toolId, bean.ScanExecutionProcessStateRunning)
 	if err != nil {
 		impl.Logger.Errorw("error in saving image scan exec history and it's state", "executionHistoryModel", executionHistoryModel, "err", err)
 		return nil, executionHistoryDirPath, err
@@ -1030,7 +1030,7 @@ func (impl *ImageScanServiceImpl) RegisterAndSaveScannedResult(scanResultPayload
 		return 0, err
 	}
 	executionHistoryModel := adaptor.GetImageScanExecutionHistory(scanResultPayload.ImageScanEvent, scanEventJson, time.Now())
-	err = impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, scanResultPayload.ScanToolId)
+	err = impl.saveImageScanExecutionHistoryAndState(executionHistoryModel, scanResultPayload.ScanToolId, bean.ScanExecutionProcessStateCompleted)
 	if err != nil {
 		impl.Logger.Errorw("error in saving scan execution history and state mapping", "executionHistoryModel", executionHistoryModel, "toolId", scanResultPayload.ScanToolId, "err", err)
 		return 0, err
