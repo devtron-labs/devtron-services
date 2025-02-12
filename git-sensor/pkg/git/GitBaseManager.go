@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type GitManager interface {
@@ -196,7 +197,16 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitCont
 
 func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
+	// logging when command starts executing
+	impl.logger.Debugw("executing command", "startTime", time.DateTime, "cmd", cmd.String())
+	// logging context deadline for the command
+	deadline, ok := gitCtx.Deadline()
+	if ok {
+		impl.logger.Debugw("context deadline", "deadline", deadline)
+	}
 	outBytes, err := cmd.CombinedOutput()
+	// logging when command execution completes
+	impl.logger.Debugw("command completed", "endTime", time.DateTime, "cmd", cmd.String())
 	output := string(outBytes)
 	output = strings.TrimSpace(output)
 	if err != nil {
