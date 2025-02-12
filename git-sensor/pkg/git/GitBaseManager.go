@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type GitManager interface {
@@ -196,7 +197,14 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitCont
 
 func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
+	startTime := time.Now()
+	// logging context deadline for the command
+	deadline, ok := gitCtx.Deadline()
+	if ok {
+		impl.logger.Infow("context deadline", "deadline", deadline)
+	}
 	outBytes, err := cmd.CombinedOutput()
+	// logging when command execution completes
 	output := string(outBytes)
 	output = strings.TrimSpace(output)
 	if err != nil {
@@ -204,7 +212,8 @@ func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (re
 		errMsg = output
 		if errors.Is(gitCtx.Err(), context.DeadlineExceeded) {
 			errMsg = "command timed out"
-			impl.logger.Errorw("command timed out", "cmd", cmd.String())
+			impl.logger.Errorw(errMsg, "startTime", startTime, "processingTime", time.Since(startTime).Seconds(), "cmd", cmd.String())
+
 			// prometheus event count for timeout
 			middleware.GitFetchTimeoutCounter.WithLabelValues().Inc()
 			return output, errMsg, err
