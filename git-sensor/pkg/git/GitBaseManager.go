@@ -204,7 +204,6 @@ func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (re
 		impl.logger.Infow("context deadline", "deadline", deadline)
 	}
 	outBytes, err := cmd.CombinedOutput()
-	// logging when command execution completes
 	output := string(outBytes)
 	output = strings.TrimSpace(output)
 	if err != nil {
