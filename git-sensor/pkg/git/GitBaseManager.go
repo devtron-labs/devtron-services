@@ -197,22 +197,22 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitCont
 
 func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
-	// logging when command starts executing
-	impl.logger.Debugw("executing command", "startTime", time.DateTime, "cmd", cmd.String())
+	startTime := time.Now()
 	// logging context deadline for the command
 	deadline, ok := gitCtx.Deadline()
 	if ok {
-		impl.logger.Debugw("context deadline", "deadline", deadline)
+		impl.logger.Infow("context deadline", "deadline", deadline)
 	}
 	outBytes, err := cmd.CombinedOutput()
 	// logging when command execution completes
-	impl.logger.Debugw("command completed", "endTime", time.DateTime, "cmd", cmd.String())
 	output := string(outBytes)
 	output = strings.TrimSpace(output)
 	if err != nil {
 		impl.logger.Errorw("error in git cli operation", "msg", string(outBytes), "err", err)
 		errMsg = output
 		if errors.Is(gitCtx.Err(), context.DeadlineExceeded) {
+			impl.logger.Infow("command completed", "startTime", startTime, "processingTime", time.Since(startTime).Seconds(), "cmd", cmd.String())
+
 			errMsg = "command timed out"
 			impl.logger.Errorw("command timed out", "cmd", cmd.String())
 			// prometheus event count for timeout
