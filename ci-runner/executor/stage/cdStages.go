@@ -85,7 +85,7 @@ func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (*helpe
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artifactUploaded bool, err error) {
 	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
-		return helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
+		return helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName, cdRequest.PartSize, cdRequest.ConcurrencyMultiplier)
 	}
 
 	// to support stage YAML outputs
@@ -108,7 +108,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artif
 		}
 	}
 	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
+	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName, cdRequest.PartSize, cdRequest.ConcurrencyMultiplier)
 }
 
 func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.PluginArtifacts, error) {

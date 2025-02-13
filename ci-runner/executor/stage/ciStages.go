@@ -34,12 +34,12 @@ import (
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
 	commonBean "github.com/devtron-labs/common-lib/workflow"
+	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -111,7 +111,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	var artifactUploadErr error
 	if !artifactUploaded {
 		cloudHelperBaseConfig := ciRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
-		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+		artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName, ciRequest.PartSize, ciRequest.ConcurrencyMultiplier)
 	}
 
 	if err != nil {
@@ -250,7 +250,7 @@ func (impl *CiStage) runCIStages(ciContext cicxt.CiContext, ciCdRequest *helper.
 	log.Println(util.DEVTRON, " artifact-upload")
 	cloudHelperBaseConfig := ciCdRequest.CommonWorkflowRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
 	var artifactUploadErr error
-	artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName)
+	artifactUploaded, artifactUploadErr = helper.ZipAndUpload(cloudHelperBaseConfig, ciCdRequest.CommonWorkflowRequest.CiArtifactFileName, ciCdRequest.CommonWorkflowRequest.PartSize, ciCdRequest.CommonWorkflowRequest.ConcurrencyMultiplier)
 	if artifactUploadErr != nil {
 		return artifactUploaded, nil
 	}
@@ -695,58 +695,65 @@ func pullCache(metrics *helper.CIMetrics, ciCdRequest *helper.CiCdTriggerEvent) 
 func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, skipCheckout bool) error {
 	useBuildx := ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
 	start := time.Now()
-	var wg sync.WaitGroup
+	eg := new(errgroup.Group)
 
 	if useBuildx {
 		//we can run all stages in parallel
-		for i := 1; i <= 3; i++ {
-			wg.Add(1)
-			if i == 1 {
-				go func() error {
-					defer wg.Done()
-					return pullCache(metrics, ciCdRequest)
-				}()
-			} else if i == 2 {
-				go func() error {
-					defer wg.Done()
-					return gitCloneStep(ciCdRequest, impl, skipCheckout)
-				}()
-			} else {
-				go func() error {
-					defer wg.Done()
-					log.Println(util.DEVTRON, " docker-build")
-					impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
-					return nil
-				}()
-			}
 
-		}
-	} else {
-		//first run pull cache and then git clone and docker start in parallel
-		err := pullCache(metrics, ciCdRequest)
-		if err != nil {
+		//first parallel stage - pull cache
+		eg.Go(func() error {
+			err := pullCache(metrics, ciCdRequest)
+			if err != nil {
+				log.Println("cache pull fails, continuing with other stages", "err", err)
+			}
+			//intentionally not returning error here as we want to continue with other stages even if cache pull fails
+			return nil
+		})
+
+		//second parallel stage - git clone
+		eg.Go(func() error {
+			return gitCloneStep(ciCdRequest, impl, skipCheckout)
+		})
+
+		//third parallel stage - docker start
+		eg.Go(func() error {
+			log.Println(util.DEVTRON, " docker-build")
+			return impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
+		})
+
+		if err := eg.Wait(); err != nil {
+			log.Println("Error in executing initial steps", "err", err)
 			return err
 		}
-		for i := 1; i <= 2; i++ {
-			if i == 1 {
-				wg.Add(1)
-				go func() error {
-					defer wg.Done()
-					return gitCloneStep(ciCdRequest, impl, skipCheckout)
-				}()
-			} else {
-				wg.Add(1)
-				go func() error {
-					defer wg.Done()
-					log.Println(util.DEVTRON, " docker-build")
-					impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
-					return nil
-				}()
+
+	} else {
+		//first run pull cache git clone in parallel and docker start in sequence
+
+		//first parallel stage - pull cache
+		eg.Go(func() error {
+			err := pullCache(metrics, ciCdRequest)
+			if err != nil {
+				log.Println("cache pull fails, continuing with other stages", "err", err)
 			}
+			//intentionally not returning error here as we want to continue with other stages even if cache pull fails
+			return nil
+		})
+
+		//second parallel stage - git clone
+		eg.Go(func() error {
+			return gitCloneStep(ciCdRequest, impl, skipCheckout)
+		})
+		if err := eg.Wait(); err != nil {
+			log.Println("Error in executing initial steps", "err", err)
+			return err
 		}
+
+		//third stage in sequence - docker start
+		log.Println(util.DEVTRON, " docker-build")
+		return impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
+
 	}
 
-	wg.Wait()
 	log.Println("total time for cache, git and docker start", time.Since(start).Seconds())
 	return nil
 }
