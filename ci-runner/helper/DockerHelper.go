@@ -183,12 +183,12 @@ func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequ
 	}
 
 	if isSubStep {
+		return startDockerDaemon()
+	} else {
 		if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
 			return err
 		}
 		return nil
-	} else {
-		return startDockerDaemon()
 	}
 
 }
