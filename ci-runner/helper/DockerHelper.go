@@ -64,7 +64,7 @@ const (
 )
 
 type DockerHelper interface {
-	StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest) error
+	StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest, isSubStep bool) error
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
@@ -92,7 +92,7 @@ func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonW
 	return dest, nil
 }
 
-func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest) error {
+func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest, isSubStep bool) error {
 	startDockerDaemon := func() error {
 		connection := commonWorkflowRequest.DockerConnection
 		dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
@@ -182,10 +182,15 @@ func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequ
 		return nil
 	}
 
-	if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
-		return err
+	if isSubStep {
+		if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return startDockerDaemon()
 	}
-	return nil
+
 }
 
 const CertDir = "/etc/docker/certs.d"

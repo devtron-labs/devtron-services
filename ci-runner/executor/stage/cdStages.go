@@ -129,7 +129,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 	skipCheckout := ciCdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
 	if !skipCheckout {
 		log.Println(util.DEVTRON, " git")
-		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails, false)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err: ", err)
 			return nil, err
@@ -138,7 +138,7 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
+	impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest, false)
 	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)

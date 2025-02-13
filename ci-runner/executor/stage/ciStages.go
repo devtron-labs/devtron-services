@@ -669,100 +669,102 @@ func GetTargetPlatformFromCiBuildConfig(ciBuildConfig *helper.CiBuildConfigBean)
 
 func pullCache(metrics *helper.CIMetrics, ciCdRequest *helper.CiCdTriggerEvent) error {
 	// Get ci cache TODO
-	pullCacheStage := func() error {
-		log.Println(util.DEVTRON, " cache-pull")
-		start := time.Now()
-		metrics.CacheDownStartTime = start
+	log.Println(util.DEVTRON, " cache-pull")
+	start := time.Now()
+	metrics.CacheDownStartTime = start
 
-		defer func() {
-			log.Println(util.DEVTRON, " /cache-pull")
-			metrics.CacheDownDuration = time.Since(start).Seconds()
-		}()
+	defer func() {
+		log.Println(util.DEVTRON, " /cache-pull")
+		metrics.CacheDownDuration = time.Since(start).Seconds()
+	}()
 
-		err := helper.GetCache(ciCdRequest.CommonWorkflowRequest)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if err := util.ExecuteWithStageInfoLog(util.CACHE_PULL, pullCacheStage); err != nil {
+	err := helper.GetCache(ciCdRequest.CommonWorkflowRequest)
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
 func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, skipCheckout bool) error {
-	useBuildx := ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
-	start := time.Now()
-	eg := new(errgroup.Group)
+	prepareStep := func() error {
+		useBuildx := ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
+		start := time.Now()
+		eg := new(errgroup.Group)
 
-	if useBuildx {
-		//we can run all stages in parallel
+		if useBuildx {
+			//we can run all stages in parallel
 
-		//first parallel stage - pull cache
-		eg.Go(func() error {
-			err := pullCache(metrics, ciCdRequest)
-			if err != nil {
-				log.Println("cache pull fails, continuing with other stages", "err", err)
+			//first parallel stage - pull cache
+			eg.Go(func() error {
+				err := pullCache(metrics, ciCdRequest)
+				if err != nil {
+					log.Println("cache pull fails, continuing with other stages", "err", err)
+				}
+				//intentionally not returning error here as we want to continue with other stages even if cache pull fails
+				return nil
+			})
+
+			//second parallel stage - git clone
+			eg.Go(func() error {
+				return gitCloneStep(ciCdRequest, impl, skipCheckout)
+			})
+
+			//third parallel stage - docker start
+			eg.Go(func() error {
+				log.Println(util.DEVTRON, " docker-build")
+				return impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest, true)
+			})
+
+			if err := eg.Wait(); err != nil {
+				log.Println("Error in executing initial steps", "err", err)
+				return err
 			}
-			//intentionally not returning error here as we want to continue with other stages even if cache pull fails
-			return nil
-		})
 
-		//second parallel stage - git clone
-		eg.Go(func() error {
-			return gitCloneStep(ciCdRequest, impl, skipCheckout)
-		})
+		} else {
+			//first run pull cache git clone in parallel and docker start in sequence
 
-		//third parallel stage - docker start
-		eg.Go(func() error {
+			//first parallel stage - pull cache
+			eg.Go(func() error {
+				err := pullCache(metrics, ciCdRequest)
+				if err != nil {
+					log.Println("cache pull fails, continuing with other stages", "err", err)
+				}
+				//intentionally not returning error here as we want to continue with other stages even if cache pull fails
+				return nil
+			})
+
+			//second parallel stage - git clone
+			eg.Go(func() error {
+				return gitCloneStep(ciCdRequest, impl, skipCheckout)
+			})
+			if err := eg.Wait(); err != nil {
+				log.Println("Error in executing initial steps", "err", err)
+				return err
+			}
+
+			//third stage in sequence - docker start
 			log.Println(util.DEVTRON, " docker-build")
-			return impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
-		})
+			return impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest, true)
 
-		if err := eg.Wait(); err != nil {
-			log.Println("Error in executing initial steps", "err", err)
-			return err
 		}
 
-	} else {
-		//first run pull cache git clone in parallel and docker start in sequence
-
-		//first parallel stage - pull cache
-		eg.Go(func() error {
-			err := pullCache(metrics, ciCdRequest)
-			if err != nil {
-				log.Println("cache pull fails, continuing with other stages", "err", err)
-			}
-			//intentionally not returning error here as we want to continue with other stages even if cache pull fails
-			return nil
-		})
-
-		//second parallel stage - git clone
-		eg.Go(func() error {
-			return gitCloneStep(ciCdRequest, impl, skipCheckout)
-		})
-		if err := eg.Wait(); err != nil {
-			log.Println("Error in executing initial steps", "err", err)
-			return err
-		}
-
-		//third stage in sequence - docker start
-		log.Println(util.DEVTRON, " docker-build")
-		return impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
-
+		log.Println("total time for cache, git and docker start", time.Since(start).Seconds())
+		return nil
 	}
 
-	log.Println("total time for cache, git and docker start", time.Since(start).Seconds())
-	return nil
+	err := util.ExecuteWithStageInfoLog(util.PREPARE_STEP, prepareStep)
+	if err != nil {
+		log.Println(util.DEVTRON, "error in PREPARE_STEP ", "err : ", err)
+	}
+	return err
+
 }
 
 func gitCloneStep(ciCdRequest *helper.CiCdTriggerEvent, impl *CiStage, skipCheckout bool) error {
 	// git handling
 	log.Println(util.DEVTRON, " git")
 	if !skipCheckout {
-		err := impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+		err := impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails, true)
 		if err != nil {
 			log.Println(util.DEVTRON, "clone err", err)
 			return err
