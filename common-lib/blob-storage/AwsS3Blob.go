@@ -112,10 +112,7 @@ func downLoadFromS3(file *os.File, request *BlobStorageRequest, sess *session.Se
 		}
 	}
 
-	downloader := s3manager.NewDownloader(sess, func(d *s3manager.Downloader) {
-		d.PartSize = request.AwsS3BaseConfig.PartSize
-		d.Concurrency = request.AwsS3BaseConfig.Concurrency
-	})
+	downloader := s3manager.NewDownloader(sess)
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(s3BaseConfig.BucketName),
 		Key:    aws.String(request.SourceKey),
@@ -199,7 +196,7 @@ type BucketBasics struct {
 func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secretKey string) (BucketBasics, error) {
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(credentialsv2.NewStaticCredentialsProvider(accessKey, secretKey, "")))
 	if err != nil {
-		panic(err)
+		return BucketBasics{}, err
 	}
 	sdkConfig := awsv2.Config{Region: region}
 	sdkConfig.Credentials = cfg.Credentials
@@ -212,12 +209,12 @@ func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secr
 // UploadFileV2 uses an upload manager to upload data to an object in a bucket using aws-sdk-v2.
 // The upload manager breaks large data into parts and uploads the parts concurrently.
 func (basics BucketBasics) UploadFileV2(ctx context.Context, request *BlobStorageRequest, err error) error {
-	content, err := os.ReadFile(request.SourceKey)
+	file, err := os.Open(request.SourceKey)
 	if err != nil {
 		log.Println("error in reading source file", "sourceFile", request.SourceKey, "destinationKey", request.DestinationKey, "err", err)
 		return err
 	}
-	largeBuffer := bytes.NewReader(content)
+	defer file.Close()
 	uploader := manager.NewUploader(basics.S3Client, func(u *manager.Uploader) {
 		u.PartSize = request.AwsS3BaseConfig.PartSize
 		u.Concurrency = request.AwsS3BaseConfig.Concurrency
@@ -226,7 +223,7 @@ func (basics BucketBasics) UploadFileV2(ctx context.Context, request *BlobStorag
 	_, err = uploader.Upload(ctx, &s3v2.PutObjectInput{
 		Bucket: aws.String(request.AwsS3BaseConfig.BucketName),
 		Key:    aws.String(request.DestinationKey),
-		Body:   largeBuffer,
+		Body:   file,
 	})
 	if err != nil {
 		log.Printf("Couldn't upload large object to %v:%v. Here's why: %v\n",
