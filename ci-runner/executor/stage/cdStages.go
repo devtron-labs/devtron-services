@@ -85,7 +85,7 @@ func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (*helpe
 func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artifactUploaded bool, err error) {
 	cloudHelperBaseConfig := cdRequest.GetCloudHelperBaseConfig(util.BlobStorageObjectTypeArtifact)
 	if cdRequest.PrePostDeploySteps != nil && len(cdRequest.PrePostDeploySteps) > 0 {
-		return helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName)
+		return helper.ZipAndUpload(cloudHelperBaseConfig, cdRequest.CiArtifactFileName, cdRequest.PartSize, cdRequest.ConcurrencyMultiplier)
 	}
 
 	// to support stage YAML outputs
@@ -108,7 +108,7 @@ func collectAndUploadCDArtifacts(cdRequest *helper.CommonWorkflowRequest) (artif
 		}
 	}
 	log.Println(util.DEVTRON, " artifacts", artifactFiles)
-	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName)
+	return helper.UploadArtifact(cloudHelperBaseConfig, artifactFiles, cdRequest.CiArtifactFileName, cdRequest.PartSize, cdRequest.ConcurrencyMultiplier)
 }
 
 func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.PluginArtifacts, error) {
@@ -138,20 +138,8 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
 	log.Println(util.DEVTRON, " docker-start")
-	impl.dockerHelper.StartDockerDaemon(ciCdRequest.CommonWorkflowRequest)
+	impl.dockerHelper.StartDockerDaemonAndDockerLogin(ciCdRequest.CommonWorkflowRequest)
 	ciContext := cictx.BuildCiContext(context.Background(), ciCdRequest.CommonWorkflowRequest.EnableSecretMasking)
-	err = impl.dockerHelper.DockerLogin(ciContext, &helper.DockerCredentials{
-		DockerUsername:     ciCdRequest.CommonWorkflowRequest.DockerUsername,
-		DockerPassword:     ciCdRequest.CommonWorkflowRequest.DockerPassword,
-		AwsRegion:          ciCdRequest.CommonWorkflowRequest.AwsRegion,
-		AccessKey:          ciCdRequest.CommonWorkflowRequest.AccessKey,
-		SecretKey:          ciCdRequest.CommonWorkflowRequest.SecretKey,
-		DockerRegistryURL:  ciCdRequest.CommonWorkflowRequest.IntermediateDockerRegistryUrl,
-		DockerRegistryType: ciCdRequest.CommonWorkflowRequest.DockerRegistryType,
-	})
-	if err != nil {
-		return nil, err
-	}
 
 	scriptEnvs, err := util2.GetGlobalEnvVariables(ciCdRequest)
 	if err != nil {

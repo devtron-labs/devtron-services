@@ -64,8 +64,7 @@ const (
 )
 
 type DockerHelper interface {
-	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
-	DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error
+	StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest) error
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
@@ -93,7 +92,7 @@ func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonW
 	return dest, nil
 }
 
-func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest) {
+func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest) error {
 	startDockerDaemon := func() error {
 		connection := commonWorkflowRequest.DockerConnection
 		dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
@@ -167,13 +166,26 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 			util.PrintFileContent(DOCKERD_OUTPUT_FILE_PATH)
 			return err
 		}
+		ciContext := cicxt.BuildCiContext(context.Background(), commonWorkflowRequest.EnableSecretMasking)
+		err = impl.DockerLogin(ciContext, &DockerCredentials{
+			DockerUsername:     commonWorkflowRequest.DockerUsername,
+			DockerPassword:     commonWorkflowRequest.DockerPassword,
+			AwsRegion:          commonWorkflowRequest.AwsRegion,
+			AccessKey:          commonWorkflowRequest.AccessKey,
+			SecretKey:          commonWorkflowRequest.SecretKey,
+			DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
+			DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
 	if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
-		log.Fatal(err)
+		return err
 	}
-	return
+	return nil
 }
 
 const CertDir = "/etc/docker/certs.d"
@@ -274,7 +286,7 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 		return nil
 	}
 
-	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
+	return performDockerLogin()
 }
 
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
