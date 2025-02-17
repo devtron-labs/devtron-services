@@ -886,7 +886,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
 	}
 
-	var chartName, repoURL, username, password string
+	var chartName, username, password string
 	var allowInsecureConnection bool
 	switch request.IsOCIRepo {
 	case true:
@@ -896,8 +896,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 			return "", err
 		}
 	case false:
-		chartName = request.ChartName
-		repoURL = request.ChartRepository.Url
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
@@ -909,7 +908,6 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 		ChartName:               chartName,
 		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
 		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		Username:                username,
