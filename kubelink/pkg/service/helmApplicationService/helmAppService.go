@@ -1192,8 +1192,8 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 			return "", nil, err
 		}
 	case false:
-		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
-		//chartName = fmt.Sprintf("%s/%s", request.ChartName,request.ChartRepository.Name)
+		//chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
+		chartName = fmt.Sprintf("%s/%s", request.ChartName, request.ChartRepository.Name)
 
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
