@@ -1192,9 +1192,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 			return "", nil, err
 		}
 	case false:
-		//chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
-		chartName = fmt.Sprintf("%s/%s", request.ChartName, request.ChartRepository.Name)
-
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
@@ -1206,7 +1204,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		ChartName:     chartName,
 		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
 		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		//RepoURL:                 repoURL,
+		//RepoURL:                 repoUrl, // not using repoUrl at this level
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		RegistryClient:          registryClient,
