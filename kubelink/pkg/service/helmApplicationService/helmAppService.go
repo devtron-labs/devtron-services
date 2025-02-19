@@ -1206,10 +1206,10 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
-		impl.logger.Debug("Adding/Updating Chart repo")
+		impl.logger.Debug("Adding/Updating Chart repo", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest)
 		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
 		if err != nil {
-			impl.logger.Errorw("Error in add/update chart repo ", "err", err)
+			impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
 			return "", nil, err
 		}
 	}
