@@ -886,7 +886,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
 	}
 
-	var chartName, repoURL, username, password string
+	var chartName, username, password string
 	var allowInsecureConnection bool
 	switch request.IsOCIRepo {
 	case true:
@@ -896,8 +896,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 			return "", err
 		}
 	case false:
-		chartName = request.ChartName
-		repoURL = request.ChartRepository.Url
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
@@ -909,7 +908,6 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 		ChartName:               chartName,
 		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
 		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		Username:                username,
@@ -1182,7 +1180,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
 	}
 
-	var chartName, repoURL, username, password string
+	var chartName, username, password string
 	var allowInsecureConnection bool
 	switch request.IsOCIRepo {
 	case true:
@@ -1192,20 +1190,37 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 			return "", nil, err
 		}
 	case false:
-		chartName = request.ChartName
-		repoURL = request.ChartRepository.Url
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
+		chartRepoRequest := request.ChartRepository
+		chartRepoName := chartRepoRequest.Name
+		// Add or update chart repo starts
+		chartRepo := repo.Entry{
+			Name:     chartRepoName,
+			URL:      chartRepoRequest.Url,
+			Username: request.ChartRepository.Username,
+			Password: request.ChartRepository.Password,
+			// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
+			PassCredentialsAll:    true,
+			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
+		}
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
+		impl.logger.Debug("Adding/Updating Chart repo", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest)
+		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
+		if err != nil {
+			impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
+			return "", nil, err
+		}
 	}
 
 	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:             releaseIdentifier.ReleaseName,
-		Namespace:               releaseIdentifier.ReleaseNamespace,
-		ChartName:               chartName,
-		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ChartName:     chartName,
+		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
+		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
+		//RepoURL:                 repoUrl, // not using repoUrl at this level
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		RegistryClient:          registryClient,
