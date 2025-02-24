@@ -49,6 +49,11 @@ const (
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 
+// IsSkipBuildType checks if the CiBuildType is of skip build type
+func (c CiBuildType) IsSkipBuildType() bool {
+	return c == BUILD_SKIP_BUILD_TYPE
+}
+
 const CI_JOB string = "CI_JOB"
 
 type CiBuildConfigBean struct {

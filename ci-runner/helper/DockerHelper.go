@@ -166,19 +166,22 @@ func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequ
 			util.PrintFileContent(DOCKERD_OUTPUT_FILE_PATH)
 			return err
 		}
-		ciContext := cicxt.BuildCiContext(context.Background(), commonWorkflowRequest.EnableSecretMasking)
-		err = impl.DockerLogin(ciContext, &DockerCredentials{
-			DockerUsername:     commonWorkflowRequest.DockerUsername,
-			DockerPassword:     commonWorkflowRequest.DockerPassword,
-			AwsRegion:          commonWorkflowRequest.AwsRegion,
-			AccessKey:          commonWorkflowRequest.AccessKey,
-			SecretKey:          commonWorkflowRequest.SecretKey,
-			DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
-			DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
-		})
-		if err != nil {
-			return err
+		if commonWorkflowRequest.CiBuildConfig != nil && !commonWorkflowRequest.CiBuildConfig.CiBuildType.IsSkipBuildType() {
+			ciContext := cicxt.BuildCiContext(context.Background(), commonWorkflowRequest.EnableSecretMasking)
+			err = impl.DockerLogin(ciContext, &DockerCredentials{
+				DockerUsername:     commonWorkflowRequest.DockerUsername,
+				DockerPassword:     commonWorkflowRequest.DockerPassword,
+				AwsRegion:          commonWorkflowRequest.AwsRegion,
+				AccessKey:          commonWorkflowRequest.AccessKey,
+				SecretKey:          commonWorkflowRequest.SecretKey,
+				DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
+				DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
+			})
+			if err != nil {
+				return err
+			}
 		}
+
 		return nil
 	}
 
