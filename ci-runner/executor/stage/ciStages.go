@@ -687,7 +687,13 @@ func pullCache(metrics *helper.CIMetrics, ciCdRequest *helper.CiCdTriggerEvent) 
 
 func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, skipCheckout bool) error {
 	prepareStep := func() error {
-		useBuildx := ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
+		var useBuildx bool
+		if ciCdRequest.Type == util.JOBEVENT || (ciCdRequest.CommonWorkflowRequest.CiBuildConfig != nil && ciCdRequest.CommonWorkflowRequest.CiBuildConfig.PipelineType == helper.CI_JOB) {
+			// in these cases we don't get docker build config, so setting useBuildx as false explicitly
+			useBuildx = false
+		} else {
+			useBuildx = ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
+		}
 		start := time.Now()
 		eg := new(errgroup.Group)
 
@@ -737,6 +743,7 @@ func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *
 			eg.Go(func() error {
 				return gitCloneStep(ciCdRequest, impl, skipCheckout)
 			})
+
 			if err := eg.Wait(); err != nil {
 				log.Println("Error in executing initial steps", "err", err)
 				return err
