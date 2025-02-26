@@ -123,10 +123,10 @@ func GetBlobStorageBaseS3Config(b *blob_storage.BlobStorageS3Config, blobStorage
 	if concurrencyMultiplier == 0 {
 		concurrencyMultiplier = 2
 	}
-	
+
 	//below handling is also inside sdk, but we are doing it here to avoid sdk dependency
 	if partSize == 0 {
-		partSize = 5 * 1024 * 1024 //Default 5 MB
+		partSize = 5 //Default 5 MB
 	}
 
 	awsS3BaseConfig := &blob_storage.AwsS3BaseConfig{
@@ -134,7 +134,7 @@ func GetBlobStorageBaseS3Config(b *blob_storage.BlobStorageS3Config, blobStorage
 		Passkey:     b.Passkey,
 		EndpointUrl: b.EndpointUrl,
 		IsInSecure:  b.IsInSecure,
-		PartSize:    partSize,
+		PartSize:    partSize * 1024 * 1024,
 		Concurrency: cores * concurrencyMultiplier,
 	}
 	switch blobStorageObjectType {

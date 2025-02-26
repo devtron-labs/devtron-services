@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type BlobStorageService interface {
@@ -50,9 +51,16 @@ func (impl *BlobStorageServiceImpl) PutWithCommand(request *BlobStorageRequest) 
 	var err error
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
-		s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig.Region, request.AwsS3BaseConfig.AccessKey, request.AwsS3BaseConfig.Passkey)
-		if err == nil {
-			err = s3BasicsClient.UploadFileV2(context.Background(), request, err)
+		//if endpoint url is not empty and contains word minio then use old aws client
+		if request.AwsS3BaseConfig.EndpointUrl != "" && strings.Contains(request.AwsS3BaseConfig.EndpointUrl, "minio") {
+			log.Println("Using old aws client for minio upload")
+			awsS3Blob := AwsS3Blob{}
+			err = awsS3Blob.UploadBlob(request, err)
+		} else {
+			s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig.Region, request.AwsS3BaseConfig.AccessKey, request.AwsS3BaseConfig.Passkey)
+			if err == nil {
+				err = s3BasicsClient.UploadFileV2(context.Background(), request, err)
+			}
 		}
 	case BLOB_STORAGE_AZURE:
 		azureBlob := AzureBlob{}
@@ -81,9 +89,15 @@ func (impl *BlobStorageServiceImpl) Get(request *BlobStorageRequest) (bool, int6
 	}
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
-		s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig.Region, request.AwsS3BaseConfig.AccessKey, request.AwsS3BaseConfig.Passkey)
-		if err == nil {
-			downloadSuccess, numBytes, err = s3BasicsClient.DownloadFileV2(context.Background(), request, downloadSuccess, numBytes, err, file)
+		if request.AwsS3BaseConfig.EndpointUrl != "" && strings.Contains(request.AwsS3BaseConfig.EndpointUrl, "minio") {
+			log.Println("Using old aws client for minio download")
+			awsS3Blob := AwsS3Blob{}
+			downloadSuccess, numBytes, err = awsS3Blob.DownloadBlob(request, downloadSuccess, numBytes, err, file)
+		} else {
+			s3BasicsClient, err := GetS3BucketBasicsClient(context.Background(), request.AwsS3BaseConfig.Region, request.AwsS3BaseConfig.AccessKey, request.AwsS3BaseConfig.Passkey)
+			if err == nil {
+				downloadSuccess, numBytes, err = s3BasicsClient.DownloadFileV2(context.Background(), request, downloadSuccess, numBytes, err, file)
+			}
 		}
 	case BLOB_STORAGE_AZURE:
 		b := AzureBlob{}

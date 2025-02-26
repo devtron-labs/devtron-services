@@ -89,6 +89,7 @@ func (impl *BlobStorageServiceImpl) Get(request *BlobStorageRequest) (bool, int6
 	}
 	switch request.StorageType {
 	case BLOB_STORAGE_S3:
+		//if endpoint url is not empty and contains word minio then use old aws client
 		if request.AwsS3BaseConfig.EndpointUrl != "" && strings.Contains(request.AwsS3BaseConfig.EndpointUrl, "minio") {
 			log.Println("Using old aws client for minio download")
 			awsS3Blob := AwsS3Blob{}
