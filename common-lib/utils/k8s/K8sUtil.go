@@ -797,7 +797,11 @@ func (impl *K8sServiceImpl) GetResourceInfoByLabelSelector(ctx context.Context, 
 }
 
 func (impl *K8sServiceImpl) GetK8sInClusterRestConfig() (*rest.Config, error) {
-	//impl.logger.Debug("getting k8s rest config")
+	impl.logger.Infow("impl", "impl", impl)
+	impl.logger.Infow("impl.logger", "impl.logger", impl.logger)
+	impl.logger.Infow("impl.runTimeConfig", "impl.runTimeConfig", impl.runTimeConfig)
+
+	impl.logger.Debug("getting k8s rest config")
 	if impl.runTimeConfig.LocalDevMode {
 		restConfig, err := clientcmd.BuildConfigFromFlags("", *impl.kubeconfig)
 		if err != nil {
@@ -1059,6 +1063,7 @@ func (impl *K8sServiceImpl) GetKubeVersion() (*version.Info, error) {
 
 func (impl *K8sServiceImpl) GetCoreV1ClientInCluster() (*v12.CoreV1Client, error) {
 	restConfig := &rest.Config{}
+	impl.logger.Infow("impl", "impl", impl)
 	restConfig, err := impl.GetK8sInClusterRestConfig()
 	if err != nil {
 		impl.logger.Error("Error in creating config for default cluster", "err", err)
