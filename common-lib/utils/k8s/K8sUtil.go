@@ -797,7 +797,7 @@ func (impl *K8sServiceImpl) GetResourceInfoByLabelSelector(ctx context.Context, 
 }
 
 func (impl *K8sServiceImpl) GetK8sInClusterRestConfig() (*rest.Config, error) {
-	impl.logger.Debug("getting k8s rest config")
+	//impl.logger.Debug("getting k8s rest config")
 	if impl.runTimeConfig.LocalDevMode {
 		restConfig, err := clientcmd.BuildConfigFromFlags("", *impl.kubeconfig)
 		if err != nil {
