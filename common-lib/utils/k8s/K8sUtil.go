@@ -151,6 +151,7 @@ type K8sService interface {
 func NewK8sUtil(logger *zap.SugaredLogger, runTimeConfig *RuntimeConfig) *K8sServiceImpl {
 	usr, err := user.Current()
 	if err != nil {
+		logger.Errorw("error getting current user", "err", err)
 		return nil
 	}
 	var kubeconfig *string
