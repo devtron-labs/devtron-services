@@ -30,8 +30,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	transport "github.com/aws/smithy-go/endpoints"
 	"github.com/devtron-labs/common-lib/utils"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"time"
@@ -193,15 +195,38 @@ type BucketBasics struct {
 	S3Client *s3v2.Client
 }
 
-func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secretKey string) (BucketBasics, error) {
+type Resolver struct {
+	URL *url.URL
+}
+
+func (r *Resolver) ResolveEndpoint(_ context.Context, params s3v2.EndpointParameters) (transport.Endpoint, error) {
+	u := *r.URL
+	u.Path += "/" + *params.Bucket
+	return transport.Endpoint{URI: u}, nil
+}
+
+func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secretKey string, endpointUrl string) (BucketBasics, error) {
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(credentialsv2.NewStaticCredentialsProvider(accessKey, secretKey, "")))
 	if err != nil {
 		return BucketBasics{}, err
 	}
 	sdkConfig := awsv2.Config{Region: region}
 	sdkConfig.Credentials = cfg.Credentials
+	var s3Client *s3v2.Client
+	if len(endpointUrl) > 0 {
+		if len(region) == 0 {
+			region = "us-east-1" //for minio
+			sdkConfig = awsv2.Config{Region: region}
+		}
+		endpointURL, _ := url.Parse("http://34.47.202.209:9000")
+		s3Client = s3v2.NewFromConfig(sdkConfig, func(o *s3v2.Options) {
+			o.UsePathStyle = true
+			o.EndpointResolverV2 = &Resolver{URL: endpointURL}
+		})
+	} else {
+		s3Client = s3v2.NewFromConfig(sdkConfig)
+	}
 
-	s3Client := s3v2.NewFromConfig(sdkConfig)
 	bucketBasics := BucketBasics{S3Client: s3Client}
 	return bucketBasics, nil
 }
