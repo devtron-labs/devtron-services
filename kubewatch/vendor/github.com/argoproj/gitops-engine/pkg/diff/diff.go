@@ -7,6 +7,7 @@ package diff
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"github.com/argoproj/gitops-engine/pkg/sync/resource"
 	jsonutil "github.com/argoproj/gitops-engine/pkg/utils/json"
 	gescheme "github.com/argoproj/gitops-engine/pkg/utils/kube/scheme"
+	kubescheme "github.com/argoproj/gitops-engine/pkg/utils/kube/scheme"
 )
 
 const (
@@ -207,10 +209,6 @@ func removeWebhookMutation(predictedLive, live *unstructured.Unstructured, gvkPa
 	}
 	gvk := predictedLive.GetObjectKind().GroupVersionKind()
 	pt := gvkParser.Type(gvk)
-	if pt == nil {
-		return nil, fmt.Errorf("unable to resolve parseableType for GroupVersionKind: %s", gvk)
-	}
-
 	typedPredictedLive, err := pt.FromUnstructured(predictedLive.Object)
 	if err != nil {
 		return nil, fmt.Errorf("error converting predicted live state from unstructured to %s: %w", gvk, err)
@@ -319,9 +317,6 @@ func structuredMergeDiff(p *SMDParams) (*DiffResult, error) {
 
 	gvk := p.config.GetObjectKind().GroupVersionKind()
 	pt := gescheme.ResolveParseableType(gvk, p.gvkParser)
-	if pt == nil {
-		return nil, fmt.Errorf("unable to resolve parseableType for GroupVersionKind: %s", gvk)
-	}
 
 	// Build typed value from live and config unstructures
 	tvLive, err := pt.FromUnstructured(p.live.Object)
@@ -486,7 +481,7 @@ func generateSchemeDefaultPatch(kubeObj runtime.Object) ([]byte, error) {
 
 	// 1) Call scheme defaulter functions on a clone of our k8s resource object
 	patched := kubeObj.DeepCopyObject()
-	gescheme.Scheme.Default(patched)
+	kubescheme.Scheme.Default(patched)
 
 	// 2) Compare the original object (pre-defaulter funcs) with patched object (post-default funcs),
 	// and generate a patch that can be applied against the original
@@ -864,6 +859,32 @@ func NormalizeSecret(un *unstructured.Unstructured, opts ...Option) {
 	if gvk.Group != "" || gvk.Kind != "Secret" {
 		return
 	}
+
+	// move stringData to data section
+	if stringData, found, err := unstructured.NestedMap(un.Object, "stringData"); found && err == nil {
+		var data map[string]interface{}
+		data, found, _ = unstructured.NestedMap(un.Object, "data")
+		if !found {
+			data = make(map[string]interface{})
+		}
+
+		// base64 encode string values and add non-string values as is.
+		// This ensures that the apply fails if the secret is invalid.
+		for k, v := range stringData {
+			strVal, ok := v.(string)
+			if ok {
+				data[k] = base64.StdEncoding.EncodeToString([]byte(strVal))
+			} else {
+				data[k] = v
+			}
+		}
+
+		err := unstructured.SetNestedField(un.Object, data, "data")
+		if err == nil {
+			delete(un.Object, "stringData")
+		}
+	}
+
 	o := applyOptions(opts)
 	var secret corev1.Secret
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.Object, &secret)
@@ -876,15 +897,6 @@ func NormalizeSecret(un *unstructured.Unstructured, opts ...Option) {
 		if len(v) == 0 {
 			secret.Data[k] = []byte("")
 		}
-	}
-	if len(secret.StringData) > 0 {
-		if secret.Data == nil {
-			secret.Data = make(map[string][]byte)
-		}
-		for k, v := range secret.StringData {
-			secret.Data[k] = []byte(v)
-		}
-		delete(un.Object, "stringData")
 	}
 	newObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&secret)
 	if err != nil {

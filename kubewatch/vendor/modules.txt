@@ -67,8 +67,8 @@ github.com/antonmedv/expr/parser/operator
 github.com/antonmedv/expr/parser/utils
 github.com/antonmedv/expr/vm
 github.com/antonmedv/expr/vm/runtime
-# github.com/argoproj/argo-cd/v2 v2.9.21
-## explicit; go 1.19
+# github.com/argoproj/argo-cd/v2 v2.11.13
+## explicit; go 1.21
 github.com/argoproj/argo-cd/v2/common
 github.com/argoproj/argo-cd/v2/pkg/apis/application
 github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1
@@ -87,6 +87,7 @@ github.com/argoproj/argo-cd/v2/util/exec
 github.com/argoproj/argo-cd/v2/util/git
 github.com/argoproj/argo-cd/v2/util/glob
 github.com/argoproj/argo-cd/v2/util/helm
+github.com/argoproj/argo-cd/v2/util/http
 github.com/argoproj/argo-cd/v2/util/io
 github.com/argoproj/argo-cd/v2/util/io/files
 github.com/argoproj/argo-cd/v2/util/io/path
@@ -133,8 +134,8 @@ github.com/argoproj/argo-workflows/v3/workflow/packer
 github.com/argoproj/argo-workflows/v3/workflow/templateresolution
 github.com/argoproj/argo-workflows/v3/workflow/util
 github.com/argoproj/argo-workflows/v3/workflow/validate
-# github.com/argoproj/gitops-engine v0.7.1-0.20240718175351-6b2984ebc470
-## explicit; go 1.21
+# github.com/argoproj/gitops-engine v0.7.1-0.20250129155113-a4b7cc110bf1
+## explicit; go 1.19
 github.com/argoproj/gitops-engine/internal/kubernetes_vendor/pkg/api/v1/endpoints
 github.com/argoproj/gitops-engine/internal/kubernetes_vendor/pkg/util/hash
 github.com/argoproj/gitops-engine/pkg/diff
@@ -261,7 +262,7 @@ github.com/emirpasic/gods/lists/arraylist
 github.com/emirpasic/gods/trees
 github.com/emirpasic/gods/trees/binaryheap
 github.com/emirpasic/gods/utils
-# github.com/evanphx/json-patch v5.6.0+incompatible
+# github.com/evanphx/json-patch v5.9.0+incompatible
 ## explicit
 github.com/evanphx/json-patch
 # github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d
@@ -440,7 +441,7 @@ github.com/google/gofuzz/bytesource
 # github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 ## explicit; go 1.13
 github.com/google/shlex
-# github.com/google/uuid v1.3.0
+# github.com/google/uuid v1.3.1
 ## explicit
 github.com/google/uuid
 # github.com/google/wire v0.6.0
@@ -676,8 +677,8 @@ github.com/skeema/knownhosts
 github.com/spf13/afero
 github.com/spf13/afero/internal/common
 github.com/spf13/afero/mem
-# github.com/spf13/cast v1.5.1
-## explicit; go 1.18
+# github.com/spf13/cast v1.6.0
+## explicit; go 1.19
 github.com/spf13/cast
 # github.com/spf13/cobra v1.7.0
 ## explicit; go 1.15
@@ -737,7 +738,7 @@ github.com/xlab/treeprint
 ## explicit; go 1.19
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil
-# go.opentelemetry.io/otel v1.19.0
+# go.opentelemetry.io/otel v1.21.0
 ## explicit; go 1.20
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
@@ -749,13 +750,14 @@ go.opentelemetry.io/otel/internal/baggage
 go.opentelemetry.io/otel/internal/global
 go.opentelemetry.io/otel/propagation
 go.opentelemetry.io/otel/semconv/v1.17.0
-# go.opentelemetry.io/otel/metric v1.19.0
+# go.opentelemetry.io/otel/metric v1.21.0
 ## explicit; go 1.20
 go.opentelemetry.io/otel/metric
 go.opentelemetry.io/otel/metric/embedded
-# go.opentelemetry.io/otel/trace v1.19.0
+# go.opentelemetry.io/otel/trace v1.21.0
 ## explicit; go 1.20
 go.opentelemetry.io/otel/trace
+go.opentelemetry.io/otel/trace/embedded
 # go.starlark.net v0.0.0-20230525235612-a134d8f9ddca
 ## explicit; go 1.16
 go.starlark.net/internal/compile
@@ -860,8 +862,8 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.3.0
-## explicit
+# golang.org/x/time v0.5.0
+## explicit; go 1.18
 golang.org/x/time/rate
 # golang.org/x/tools v0.23.0
 ## explicit; go 1.19
@@ -882,16 +884,16 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/tokeninternal
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5
+# google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d
 ## explicit; go 1.19
 google.golang.org/genproto/protobuf/field_mask
-# google.golang.org/genproto/googleapis/api v0.0.0-20230726155614-23370e0ffb3e
+# google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api/httpbody
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.58.3
+# google.golang.org/grpc v1.59.0
 ## explicit; go 1.19
 google.golang.org/grpc/attributes
 google.golang.org/grpc/codes
@@ -1422,8 +1424,7 @@ k8s.io/klog/v2/internal/dbg
 k8s.io/klog/v2/internal/serialize
 k8s.io/klog/v2/internal/severity
 k8s.io/klog/v2/internal/sloghandler
-k8s.io/klog/v2/internal/verbosity
-k8s.io/klog/v2/textlogger
+k8s.io/klog/v2/klogr
 # k8s.io/kube-aggregator v0.29.6 => k8s.io/kube-aggregator v0.29.7
 ## explicit; go 1.21
 k8s.io/kube-aggregator/pkg/apis/apiregistration
@@ -1720,9 +1721,10 @@ sigs.k8s.io/structured-merge-diff/v4/merge
 sigs.k8s.io/structured-merge-diff/v4/schema
 sigs.k8s.io/structured-merge-diff/v4/typed
 sigs.k8s.io/structured-merge-diff/v4/value
-# sigs.k8s.io/yaml v1.3.0
+# sigs.k8s.io/yaml v1.4.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+sigs.k8s.io/yaml/goyaml.v2
 # upper.io/db.v3 v3.8.0+incompatible
 ## explicit
 upper.io/db.v3
