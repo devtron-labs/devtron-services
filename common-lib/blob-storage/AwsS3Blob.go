@@ -30,8 +30,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	transport "github.com/aws/smithy-go/endpoints"
 	"github.com/devtron-labs/common-lib/utils"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"time"
@@ -193,15 +195,47 @@ type BucketBasics struct {
 	S3Client *s3v2.Client
 }
 
+type Resolver struct {
+	URL *url.URL
+}
+
+func (r *Resolver) ResolveEndpoint(_ context.Context, params s3v2.EndpointParameters) (transport.Endpoint, error) {
+	u := *r.URL
+	u.Path += "/" + *params.Bucket
+	return transport.Endpoint{URI: u}, nil
+}
+
 func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secretKey string) (BucketBasics, error) {
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(credentialsv2.NewStaticCredentialsProvider(accessKey, secretKey, "")))
+	//endpoint := "http://34.47.202.209:9000"
+	endpointURL, _ := url.Parse("http://34.47.202.209:9000")
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithCredentialsProvider(credentialsv2.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+		//config.WithEndpointResolver(
+		//	awsv2.EndpointResolverFunc(func(service, region string) (awsv2.Endpoint, error) {
+		//		return awsv2.Endpoint{URL: endpoint}, nil
+		//	})),
+	)
+	s3v2.NewFromConfig(
+		cfg,
+		func(o *s3v2.Options) {
+			o.UsePathStyle = true
+			o.EndpointOptions.DisableHTTPS = true // <-- here!
+		},
+	)
+
 	if err != nil {
 		return BucketBasics{}, err
 	}
+
 	sdkConfig := awsv2.Config{Region: region}
 	sdkConfig.Credentials = cfg.Credentials
+	//sdkConfig.BaseEndpoint = &endpoint
 
-	s3Client := s3v2.NewFromConfig(sdkConfig)
+	s3Client := s3v2.NewFromConfig(sdkConfig, func(o *s3v2.Options) {
+		o.UsePathStyle = true
+		//o.BaseEndpoint = aws.String(endpoint)
+		o.EndpointResolverV2 = &Resolver{URL: endpointURL}
+	})
 	bucketBasics := BucketBasics{S3Client: s3Client}
 	return bucketBasics, nil
 }
