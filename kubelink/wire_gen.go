@@ -52,7 +52,10 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	k8sK8sServiceImpl := k8s.NewK8sUtil(sugaredLogger, runtimeConfig)
+	k8sK8sServiceImpl, err := k8s.NewK8sUtil(sugaredLogger, runtimeConfig)
+	if err != nil {
+		return nil, err
+	}
 	clusterBeanConverterImpl := converter.NewConverterImpl()
 	runnable := asyncProvider.NewAsyncRunnable(sugaredLogger)
 	k8sInformerImpl, err := k8sInformer.Newk8sInformerImpl(sugaredLogger, clusterRepositoryImpl, helmReleaseConfig, k8sK8sServiceImpl, clusterBeanConverterImpl, runnable)
