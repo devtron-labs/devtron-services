@@ -35,11 +35,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/yaml"
 
-	"github.com/argoproj/argo-cd/v2/util/env"
-
 	"github.com/argoproj/argo-cd/v2/common"
 	"github.com/argoproj/argo-cd/v2/util/collections"
+	"github.com/argoproj/argo-cd/v2/util/env"
 	"github.com/argoproj/argo-cd/v2/util/helm"
+	utilhttp "github.com/argoproj/argo-cd/v2/util/http"
 	"github.com/argoproj/argo-cd/v2/util/security"
 )
 
@@ -230,9 +230,17 @@ func (a *ApplicationSpec) HasMultipleSources() bool {
 	return a.Sources != nil && len(a.Sources) > 0
 }
 
-func (a *ApplicationSpec) GetSourcePtr() *ApplicationSource {
+func (a *ApplicationSpec) GetSourcePtrByPosition(sourcePosition int) *ApplicationSource {
+	// if Application has multiple sources, return the first source in sources
+	return a.GetSourcePtrByIndex(sourcePosition - 1)
+}
+
+func (a *ApplicationSpec) GetSourcePtrByIndex(sourceIndex int) *ApplicationSource {
 	// if Application has multiple sources, return the first source in sources
 	if a.HasMultipleSources() {
+		if sourceIndex > 0 {
+			return &a.Sources[sourceIndex]
+		}
 		return &a.Sources[0]
 	}
 	return a.Source
@@ -467,6 +475,10 @@ type ApplicationSourceKustomize struct {
 	Replicas KustomizeReplicas `json:"replicas,omitempty" protobuf:"bytes,11,opt,name=replicas"`
 	// Patches is a list of Kustomize patches
 	Patches KustomizePatches `json:"patches,omitempty" protobuf:"bytes,12,opt,name=patches"`
+	// Components specifies a list of kustomize components to add to the kustomization before building
+	Components []string `json:"components,omitempty" protobuf:"bytes,13,rep,name=components"`
+	//LabelWithoutSelector specifies whether to apply common labels to resource selectors or not
+	LabelWithoutSelector bool `json:"labelWithoutSelector,omitempty" protobuf:"bytes,14,opt,name=labelWithoutSelector"`
 }
 
 type KustomizeReplica struct {
@@ -556,7 +568,8 @@ func (k *ApplicationSourceKustomize) AllowsConcurrentProcessing() bool {
 		k.NamePrefix == "" &&
 		k.Namespace == "" &&
 		k.NameSuffix == "" &&
-		len(k.Patches) == 0
+		len(k.Patches) == 0 &&
+		len(k.Components) == 0
 }
 
 // IsZero returns true when the Kustomize options are considered empty
@@ -570,7 +583,8 @@ func (k *ApplicationSourceKustomize) IsZero() bool {
 			len(k.Replicas) == 0 &&
 			len(k.CommonLabels) == 0 &&
 			len(k.CommonAnnotations) == 0 &&
-			len(k.Patches) == 0
+			len(k.Patches) == 0 &&
+			len(k.Components) == 0
 }
 
 // MergeImage merges a new Kustomize image identifier in to a list of images
@@ -913,6 +927,12 @@ type ApplicationDestination struct {
 	isServerInferred bool `json:"-"`
 }
 
+// SetIsServerInferred sets the isServerInferred flag. This is used to allow comparison between two destinations where
+// one server is inferred and the other is not.
+func (d *ApplicationDestination) SetIsServerInferred(inferred bool) {
+	d.isServerInferred = inferred
+}
+
 type ResourceHealthLocation string
 
 var (
@@ -967,15 +987,15 @@ func (a *ApplicationStatus) GetRevisions() []string {
 
 // BuildComparedToStatus will build a ComparedTo object based on the current
 // Application state.
-func (app *Application) BuildComparedToStatus() ComparedTo {
+func (spec *ApplicationSpec) BuildComparedToStatus() ComparedTo {
 	ct := ComparedTo{
-		Destination:       app.Spec.Destination,
-		IgnoreDifferences: app.Spec.IgnoreDifferences,
+		Destination:       spec.Destination,
+		IgnoreDifferences: spec.IgnoreDifferences,
 	}
-	if app.Spec.HasMultipleSources() {
-		ct.Sources = app.Spec.Sources
+	if spec.HasMultipleSources() {
+		ct.Sources = spec.Sources
 	} else {
-		ct.Source = app.Spec.GetSource()
+		ct.Source = spec.GetSource()
 	}
 	return ct
 }
@@ -1085,6 +1105,8 @@ type SyncOperation struct {
 	// Revisions is the list of revision (Git) or chart version (Helm) which to sync each source in sources field for the application to
 	// If omitted, will use the revision specified in app spec.
 	Revisions []string `json:"revisions,omitempty" protobuf:"bytes,11,opt,name=revisions"`
+	// SelfHealAttemptsCount contains the number of auto-heal attempts
+	SelfHealAttemptsCount int64 `json:"autoHealAttemptsCount,omitempty" protobuf:"bytes,12,opt,name=autoHealAttemptsCount"`
 }
 
 // IsApplyStrategy returns true if the sync strategy is "apply"
@@ -1397,6 +1419,8 @@ type RevisionHistory struct {
 	Sources ApplicationSources `json:"sources,omitempty" protobuf:"bytes,8,opt,name=sources"`
 	// Revisions holds the revision of each source in sources field the sync was performed against
 	Revisions []string `json:"revisions,omitempty" protobuf:"bytes,9,opt,name=revisions"`
+	// InitiatedBy contains information about who initiated the operations
+	InitiatedBy OperationInitiator `json:"initiatedBy,omitempty" protobuf:"bytes,10,opt,name=initiatedBy"`
 }
 
 // ApplicationWatchEvent contains information about application change.
@@ -1493,8 +1517,7 @@ type SyncStatus struct {
 	// Status is the sync state of the comparison
 	Status SyncStatusCode `json:"status" protobuf:"bytes,1,opt,name=status,casttype=SyncStatusCode"`
 	// ComparedTo contains information about what has been compared
-	// +patchStrategy=replace
-	ComparedTo ComparedTo `json:"comparedTo,omitempty" protobuf:"bytes,2,opt,name=comparedTo" patchStrategy:"replace"`
+	ComparedTo ComparedTo `json:"comparedTo,omitempty" protobuf:"bytes,2,opt,name=comparedTo"`
 	// Revision contains information about the revision the comparison has been performed to
 	Revision string `json:"revision,omitempty" protobuf:"bytes,3,opt,name=revision"`
 	// Revisions contains information about the revisions of multiple sources the comparison has been performed to
@@ -1851,6 +1874,9 @@ type AWSAuthConfig struct {
 
 	// RoleARN contains optional role ARN. If set then AWS IAM Authenticator assume a role to perform cluster operations instead of the default AWS credential provider chain.
 	RoleARN string `json:"roleARN,omitempty" protobuf:"bytes,2,opt,name=roleARN"`
+
+	// Profile contains optional role ARN. If set then AWS IAM Authenticator uses the profile to perform cluster operations instead of the default AWS credential provider chain.
+	Profile string `json:"profile,omitempty" protobuf:"bytes,3,opt,name=profile"`
 }
 
 // ExecProviderConfig is config used to call an external command to perform cluster authentication
@@ -2648,6 +2674,18 @@ func (app *Application) IsRefreshRequested() (RefreshType, bool) {
 	return refreshType, true
 }
 
+func (app *Application) HasPostDeleteFinalizer(stage ...string) bool {
+	return getFinalizerIndex(app.ObjectMeta, strings.Join(append([]string{PostDeleteFinalizerName}, stage...), "/")) > -1
+}
+
+func (app *Application) SetPostDeleteFinalizer(stage ...string) {
+	setFinalizer(&app.ObjectMeta, strings.Join(append([]string{PostDeleteFinalizerName}, stage...), "/"), true)
+}
+
+func (app *Application) UnSetPostDeleteFinalizer(stage ...string) {
+	setFinalizer(&app.ObjectMeta, strings.Join(append([]string{PostDeleteFinalizerName}, stage...), "/"), false)
+}
+
 // SetCascadedDeletion will enable cascaded deletion by setting the propagation policy finalizer
 func (app *Application) SetCascadedDeletion(finalizer string) {
 	setFinalizer(&app.ObjectMeta, finalizer, true)
@@ -2922,6 +2960,12 @@ func SetK8SConfigDefaults(config *rest.Config) error {
 	config.Timeout = K8sServerSideTimeout
 
 	config.Transport = tr
+	maxRetries := env.ParseInt64FromEnv(utilhttp.EnvRetryMax, 0, 1, math.MaxInt64)
+	if maxRetries > 0 {
+		backoffDurationMS := env.ParseInt64FromEnv(utilhttp.EnvRetryBaseBackoff, 100, 1, math.MaxInt64)
+		backoffDuration := time.Duration(backoffDurationMS) * time.Millisecond
+		config.WrapTransport = utilhttp.WithRetry(maxRetries, backoffDuration)
+	}
 	return nil
 }
 
@@ -2963,6 +3007,9 @@ func (c *Cluster) RawRestConfig() *rest.Config {
 			args := []string{"aws", "--cluster-name", c.Config.AWSAuthConfig.ClusterName}
 			if c.Config.AWSAuthConfig.RoleARN != "" {
 				args = append(args, "--role-arn", c.Config.AWSAuthConfig.RoleARN)
+			}
+			if c.Config.AWSAuthConfig.Profile != "" {
+				args = append(args, "--profile", c.Config.AWSAuthConfig.Profile)
 			}
 			config = &rest.Config{
 				Host:            c.Server,
