@@ -15,7 +15,7 @@ require (
 	github.com/google/go-containerregistry v0.6.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/mux v1.8.0
-	github.com/juju/errors v0.0.0-20210818161939-5560c4c073ff
+	github.com/juju/errors v1.0.0
 	github.com/optiopay/klar v2.4.0+incompatible
 	github.com/prometheus/client_golang v1.16.0
 	github.com/quay/claircore v1.3.1
@@ -74,4 +74,4 @@ require (
 	mellium.im/sasl v0.3.2 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250228094452-5243a7fe0771
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250303124806-d67cf6227f00
