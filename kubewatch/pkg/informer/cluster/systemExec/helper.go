@@ -169,11 +169,6 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 		}
 		t := ctr.State.Terminated
 		if t == nil {
-			// We should never get here
-			impl.logger.Warnf("Pod %s phase was Failed but %s did not have terminated state", pod.Name, ctr.Name)
-			continue
-		}
-		if t.ExitCode == 0 {
 			// Note: We should never get here
 			// If we do, it means the pod phase is 'Failed' but the main container state is not in 'terminated' state,
 
@@ -190,6 +185,10 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 				}
 			}
 			impl.logger.Warnf("Pod %s phase was Failed but %s did not have terminated state", pod.Name, ctr.Name)
+			continue
+		}
+
+		if t.ExitCode == 0 {
 			continue
 		}
 
