@@ -103,6 +103,8 @@ func parseDeployedAppDetail(clusterId int32, clusterName string, helmRelease *re
 			ClusterId:   clusterId,
 			Namespace:   helmRelease.Namespace,
 		},
+		ReleaseStatus: string(helmRelease.Info.Status),
+		Home:          helmRelease.Chart.Metadata.Home,
 	}
 	return appDetail
 }

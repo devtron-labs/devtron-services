@@ -442,6 +442,8 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 						ClusterName: clusterModel.ClusterName,
 						Namespace:   releaseDTO.Namespace,
 					},
+					ReleaseStatus: string(releaseDTO.Info.Status),
+					Home:          releaseDTO.Chart.Metadata.Home,
 				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
@@ -469,6 +471,8 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 						ClusterName: clusterModel.ClusterName,
 						Namespace:   releaseDTO.Namespace,
 					},
+					ReleaseStatus: string(releaseDTO.Info.Status),
+					Home:          releaseDTO.Chart.Metadata.Home,
 				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
