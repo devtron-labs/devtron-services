@@ -30,6 +30,7 @@ import (
 	"github.com/devtron-labs/git-sensor/internals/sql"
 	util2 "github.com/devtron-labs/git-sensor/util"
 	"github.com/gammazero/workerpool"
+	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"runtime/debug"
@@ -112,16 +113,17 @@ func (impl GitWatcherImpl) StopCron() {
 }
 
 func (impl GitWatcherImpl) Watch() {
-	impl.logger.Infow("starting git watch thread")
+	watchID := uuid.New().String()
+	impl.logger.Infow("starting git watch thread", "watchID", watchID)
 	materials, err := impl.materialRepo.FindActive()
 	if err != nil {
-		impl.logger.Error("error in fetching watchlist", "err", err)
+		impl.logger.Error("error in fetching watchlist", "err", err, "watchID", watchID)
 		return
 	}
 	// impl.Publish(materials)
 	middleware.ActiveGitRepoCount.WithLabelValues().Set(float64(len(materials)))
 	impl.RunOnWorker(materials)
-	impl.logger.Infow("stop git watch thread")
+	impl.logger.Infow("stop git watch thread", "watchID", watchID)
 }
 
 func (impl *GitWatcherImpl) RunOnWorker(materials []*sql.GitMaterial) {
