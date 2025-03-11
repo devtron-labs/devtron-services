@@ -24,7 +24,6 @@ RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && ap
     apk --purge -v del py-pip && \
     rm /var/cache/apk/*
 
-COPY --from=docker/compose:1.29.2 /usr/local/bin/docker-compose /usr/bin/docker-compose
 
 COPY ./buildpack.json /git-ask-pass.sh /
 
@@ -33,8 +32,11 @@ RUN chmod +x /git-ask-pass.sh && \
     (curl -sSL "https://github.com/buildpacks/pack/releases/download/v0.27.0/pack-v0.27.0-linux.tgz" | tar -C /usr/local/bin/ --no-same-owner -xzv pack)
 
 COPY --from=build-env /go/bin/cirunner .
-COPY ./ssh-config /root/.ssh/config
-RUN chmod 644 /root/.ssh/config
+COPY --chmod=644 ./ssh-config /root/.ssh/config
+RUN mkdir -p /etc/docker
+COPY docker-daemon.json /etc/docker/daemon.json
+RUN mkdir -p /root/.docker/buildx
+COPY buildkitd.default.toml /root/.docker/buildx/buildkitd.default.toml
 
 # passing PARENT_MODE as argument to cirunner as default behavior
 ENTRYPOINT ["./cirunner", "PARENT_MODE"]
