@@ -19,4 +19,5 @@
  | PG_PORT | string |5432 |  |  | false |
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string |user |  |  | false |
+ | SHUTDOWN_INTERVAL | int |120 |  |  | false |
 

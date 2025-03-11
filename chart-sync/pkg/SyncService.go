@@ -134,6 +134,9 @@ func extractChartRepoRepositoryList(repositoryList string) []string {
 }
 
 func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error {
+	// prometheus event for OCI registry sync
+	internals.SyncOCIRepo.WithLabelValues().Inc()
+
 	applications, err := impl.appStoreRepository.FindByStoreId(ociRepo.Id)
 	if err != nil {
 		impl.logger.Errorw("error in fetching app for repo", "OCI registry", ociRepo.Id, "err", err)
@@ -258,6 +261,9 @@ func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error
 }
 
 func (impl *SyncServiceImpl) syncRepo(repo *sql.ChartRepo) error {
+	// prometheus event for registry sync
+	internals.SyncRepo.WithLabelValues().Inc()
+
 	indexFile, err := impl.helmRepoManager.LoadIndexFile(repo)
 	if err != nil {
 		impl.logger.Errorw("error in loading index file", "repo", repo.Name, "err", err)
