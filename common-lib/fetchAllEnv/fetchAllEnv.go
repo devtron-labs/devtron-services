@@ -46,9 +46,10 @@ type CategoryField struct {
 }
 
 const (
-	categoryCommentStructPrefix = "CATEGORY="
-	defaultCategory             = "DEVTRON"
-	deprecatedDefaultValue      = "false"
+	categoryCommentStructPrefix    = "CATEGORY="
+	defaultCategory                = "DEVTRON"
+	deprecatedDefaultValue         = "false"
+	envDefaultEmptyDataPlaceholder = "NA"
 
 	envFieldTypeTag               = "env"
 	envDefaultFieldTypeTag        = "envDefault"
@@ -138,9 +139,12 @@ func processGoFile(filePath string, categoryFieldsMap map[string][]EnvField, uni
 
 func getEnvKeyAndValue(field *ast.Field) EnvField {
 	tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`")) // remove surrounding backticks
-
+	envValueTag, envValueSet := tag.Lookup(envDefaultFieldTypeTag)
+	if envValueSet && len(envValueTag) == 0 { //tag explicitly set up but empty value
+		envValueTag = envDefaultEmptyDataPlaceholder
+	}
 	envKey := addReadmeTableDelimiterEscapeChar(tag.Get(envFieldTypeTag))
-	envValue := addReadmeTableDelimiterEscapeChar(tag.Get(envDefaultFieldTypeTag))
+	envValue := addReadmeTableDelimiterEscapeChar(envValueTag)
 	envDescription := addReadmeTableDelimiterEscapeChar(tag.Get(envDescriptionFieldTypeTag))
 	envPossibleValues := addReadmeTableDelimiterEscapeChar(tag.Get(envPossibleValuesFieldTypeTag))
 	envDeprecated := addReadmeTableDelimiterEscapeChar(tag.Get(envDeprecatedFieldTypeTag))
