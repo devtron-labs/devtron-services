@@ -71,6 +71,11 @@ func (impl *SyncServiceImpl) Sync() (interface{}, error) {
 		ociRegistries []*sql.DockerArtifactStore
 		ociRegistry   *sql.DockerArtifactStore
 	)
+	// Track overall sync time
+	start := time.Now()
+	defer func() {
+		internals.RepoSyncDuration.WithLabelValues("all", "all").Observe(time.Since(start).Seconds())
+	}()
 	if impl.configuration.ChartProviderId == "*" {
 		ociRegistries, err = impl.dockerArtifactStoreRepository.FindAllChartProviders()
 		if err != nil {
@@ -134,8 +139,14 @@ func extractChartRepoRepositoryList(repositoryList string) []string {
 }
 
 func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error {
-	// prometheus event for OCI registry sync
-	internals.SyncOCIRepo.WithLabelValues().Inc()
+	// Track OCI repo sync time
+	start := time.Now()
+	defer func() {
+		internals.RepoSyncDuration.WithLabelValues("oci", ociRepo.RegistryURL).Observe(time.Since(start).Seconds())
+	}()
+
+	// prometheus event for OCI registry sync (already present)
+	internals.SyncOCIRepo.WithLabelValues(ociRepo.RegistryURL).Inc()
 
 	applications, err := impl.appStoreRepository.FindByStoreId(ociRepo.Id)
 	if err != nil {
@@ -239,6 +250,8 @@ func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error
 					impl.logger.Errorw("error in saving app", "app", app, "err", err)
 					continue
 				}
+				// Increment app stores created counter
+				internals.AppStoresCreated.Inc()
 			} else {
 				continue
 			}
@@ -253,6 +266,7 @@ func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error
 			err = impl.updateOCIRegistryChartVersionsV2(client, id, chartVersions, ociRepo, chartName)
 		}
 		if err != nil {
+			internals.RepoSyncErrors.WithLabelValues("oci", "process_error").Inc()
 			impl.logger.Errorw("error in updating chart versions", "err", err, "appId", id)
 			continue
 		}
@@ -261,8 +275,14 @@ func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error
 }
 
 func (impl *SyncServiceImpl) syncRepo(repo *sql.ChartRepo) error {
-	// prometheus event for registry sync
-	internals.SyncRepo.WithLabelValues().Inc()
+	// Track standard repo sync time
+	start := time.Now()
+	defer func() {
+		internals.RepoSyncDuration.WithLabelValues("standard", repo.Name).Observe(time.Since(start).Seconds())
+	}()
+
+	// prometheus event for registry sync (already present)
+	internals.SyncRepo.WithLabelValues(repo.Name).Inc()
 
 	indexFile, err := impl.helmRepoManager.LoadIndexFile(repo)
 	if err != nil {
@@ -294,6 +314,9 @@ func (impl *SyncServiceImpl) syncRepo(repo *sql.ChartRepo) error {
 				impl.logger.Errorw("error in saving app", "app", app, "err", err)
 				continue
 			}
+			// Increment app stores created counter
+			internals.AppStoresCreated.Inc()
+
 			applicationId[name] = app.Id
 			id = app.Id
 		}
@@ -301,6 +324,7 @@ func (impl *SyncServiceImpl) syncRepo(repo *sql.ChartRepo) error {
 		impl.logger.Infow("handling all versions of chart", "repoName", repo.Name, "chartName", name, "chartVersions", len(chartVersions))
 		err := impl.updateChartVersions(id, &chartVersions, repo.Url, repo.Username, repo.Password, repo.AllowInsecureConnection)
 		if err != nil {
+			internals.RepoSyncErrors.WithLabelValues("standard", "process_error").Inc()
 			impl.logger.Errorw("error in updating chart versions", "err", err, "appId", id)
 			continue
 		}
@@ -388,9 +412,12 @@ func (impl *SyncServiceImpl) updateChartVersions(appId int, chartVersions *repo.
 			impl.logger.Infow("saving chart versions into DB", "versions", len(appVersions))
 			err = impl.appStoreApplicationVersionRepository.Save(&appVersions)
 			if err != nil {
+				internals.RepoSyncErrors.WithLabelValues("standard", "db_save_error").Inc()
 				impl.logger.Errorw("error in updating", "totalIn", len(*chartVersions), "totalOut", len(appVersions), "err", err)
 				return err
 			}
+			// Count app versions created
+			internals.AppVersionsCreated.Add(float64(len(appVersions)))
 			// reset the array
 			appVersions = nil
 		}
@@ -430,9 +457,13 @@ func (impl *SyncServiceImpl) updateOCIRegistryChartVersions(client *registry.Cli
 
 		chartData, err := impl.helmRepoManager.OCIRepoValuesJson(client, ociRepo.RegistryURL, chartName, chartVersion)
 		if err != nil {
+			internals.ChartVersionsFailedProcessing.WithLabelValues("oci", chartName, "processing_error").Inc()
 			impl.logger.Errorw("error in getting values yaml", "err", err)
 			continue
 		}
+
+		// Track successful processing
+		internals.ChartVersionsProcessed.WithLabelValues("oci", chartName).Inc()
 
 		if !isAnyChartVersionFound {
 			isAnyChartVersionFound = true

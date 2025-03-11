@@ -7,26 +7,71 @@ import (
 
 var constLabels = map[string]string{"app": "chart-sync"}
 
-var SyncOCIRepo = promauto.NewCounterVec(
-	prometheus.CounterOpts{
-		Name:        "sync_oci_repo",
-		Help:        "no of update received in given chart and version",
-		ConstLabels: constLabels,
-	},
-	[]string{})
-
-var SyncRepo = promauto.NewCounterVec(
-	prometheus.CounterOpts{
-		Name:        "sync_repo",
-		Help:        "no of update received in given chart and version",
-		ConstLabels: constLabels,
-	},
-	[]string{})
-
+// Counter metrics
 var (
-	httpDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:        "http_duration_seconds",
-		Help:        "Duration of HTTP requests.",
-		ConstLabels: constLabels,
-	}, []string{"path", "method", "status"})
+	SyncOCIRepo = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:        "sync_oci_repo",
+			Help:        "Number of OCI repository sync operations",
+			ConstLabels: constLabels,
+		},
+		[]string{"repo_name"})
+
+	SyncRepo = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:        "sync_repo",
+			Help:        "Number of standard repository sync operations",
+			ConstLabels: constLabels,
+		},
+		[]string{"repo_name"})
+
+	ChartVersionsProcessed = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:        "chart_versions_processed_total",
+			Help:        "Total number of chart versions processed successfully",
+			ConstLabels: constLabels,
+		},
+		[]string{"repo_type", "chart_name"})
+
+	ChartVersionsFailedProcessing = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:        "chart_versions_failed_processing_total",
+			Help:        "Total number of chart versions that failed processing",
+			ConstLabels: constLabels,
+		},
+		[]string{"repo_type", "chart_name", "error_type"})
+
+	AppStoresCreated = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name:        "app_stores_created_total",
+			Help:        "Total number of app stores created during sync",
+			ConstLabels: constLabels,
+		})
+
+	AppVersionsCreated = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name:        "app_versions_created_total",
+			Help:        "Total number of app versions created during sync",
+			ConstLabels: constLabels,
+		})
+
+	RepoSyncErrors = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:        "repo_sync_errors_total",
+			Help:        "Total number of repository sync errors",
+			ConstLabels: constLabels,
+		},
+		[]string{"repo_type", "error_type"})
+)
+
+// Histogram metrics
+var (
+	RepoSyncDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:        "repo_sync_duration_seconds",
+			Help:        "Time taken to sync an entire repository",
+			ConstLabels: constLabels,
+			Buckets:     prometheus.DefBuckets,
+		},
+		[]string{"repo_type", "repo_name"})
 )
