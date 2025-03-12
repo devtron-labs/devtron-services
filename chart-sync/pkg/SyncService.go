@@ -146,7 +146,7 @@ func (impl *SyncServiceImpl) syncOCIRepo(ociRepo *sql.DockerArtifactStore) error
 	}()
 
 	// prometheus event for OCI registry sync (already present)
-	internals.SyncOCIRepo.WithLabelValues(ociRepo.RegistryURL).Inc()
+	internals.SyncRepo.WithLabelValues("oci", ociRepo.RegistryURL).Inc()
 
 	applications, err := impl.appStoreRepository.FindByStoreId(ociRepo.Id)
 	if err != nil {
@@ -282,7 +282,7 @@ func (impl *SyncServiceImpl) syncRepo(repo *sql.ChartRepo) error {
 	}()
 
 	// prometheus event for registry sync (already present)
-	internals.SyncRepo.WithLabelValues(repo.Name).Inc()
+	internals.SyncRepo.WithLabelValues("standard", repo.Name).Inc()
 
 	indexFile, err := impl.helmRepoManager.LoadIndexFile(repo)
 	if err != nil {
@@ -412,7 +412,6 @@ func (impl *SyncServiceImpl) updateChartVersions(appId int, chartVersions *repo.
 			impl.logger.Infow("saving chart versions into DB", "versions", len(appVersions))
 			err = impl.appStoreApplicationVersionRepository.Save(&appVersions)
 			if err != nil {
-				internals.RepoSyncErrors.WithLabelValues("standard", "db_save_error").Inc()
 				impl.logger.Errorw("error in updating", "totalIn", len(*chartVersions), "totalOut", len(appVersions), "err", err)
 				return err
 			}
@@ -430,6 +429,9 @@ func (impl *SyncServiceImpl) updateChartVersions(appId int, chartVersions *repo.
 
 	// if any version left to save
 	if len(appVersions) > 0 {
+		// Count app versions created
+		internals.AppVersionsCreated.Add(float64(len(appVersions)))
+
 		impl.logger.Infow("saving remaining chart versions into DB", "versions", len(appVersions))
 		err = impl.appStoreApplicationVersionRepository.Save(&appVersions)
 		if err != nil {
