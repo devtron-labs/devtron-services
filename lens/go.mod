@@ -59,4 +59,4 @@ require (
 	github.com/onsi/gomega v1.18.1 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250310093210-a1f1a873eeab
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250313091833-637411e6a2e4
