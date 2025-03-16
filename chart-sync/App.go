@@ -51,7 +51,7 @@ func (app *App) Start() {
 	internals.RepoSyncDuration.WithLabelValues("all", "all", "").Observe(time.Since(start).Seconds())
 
 	// sleep for ShutDownInterval seconds to give time for prometheus to scrape the metrics
-	time.Sleep(time.Duration(app.configuration.AppSyncJobShutDownInterval) * time.Second)
+	time.Sleep(time.Duration(app.configuration.AppSyncJobShutDownWaitDuration) * time.Second)
 
 	if err != nil {
 		app.Logger.Errorw("err", "err", err)
