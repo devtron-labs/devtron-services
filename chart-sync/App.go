@@ -41,8 +41,15 @@ func (app *App) Start() {
 		}
 	}()
 
+	// Track overall sync time
+	start := time.Now()
 	// Start the sync service
 	_, err := app.syncService.Sync()
+	if err != nil {
+		internals.RepoSyncDuration.WithLabelValues("all", "all", err.Error()).Observe(time.Since(start).Seconds())
+	}
+	internals.RepoSyncDuration.WithLabelValues("all", "all", "").Observe(time.Since(start).Seconds())
+
 	// sleep for ShutDownInterval seconds to give time for prometheus to scrape the metrics
 	time.Sleep(time.Duration(app.configuration.AppSyncJobShutDownInterval) * time.Second)
 
