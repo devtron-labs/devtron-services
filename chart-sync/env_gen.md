@@ -5,7 +5,7 @@
 |-------|----------|-------------------|-------------------|-----------------------|------------------|
  | APP | string |chart-sync |  |  | false |
  | APP_STORE_APPLICATION_VERSIONS_SAVE_CHUNK_SIZE | int |20 |  |  | false |
- | APP_SYNC_SHUTDOWN_INTERVAL | int |60 |  |  | false |
+ | APP_SYNC_SHUTDOWN_WAIT_DURATION | int |120 |  |  | false |
  | CHART_PROVIDER_ID | string |* |  |  | false |
  | IS_OCI_REGISTRY | bool |true |  |  | false |
  | LOG_LEVEL | int |0 |  |  | false |
