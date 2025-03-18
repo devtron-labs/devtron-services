@@ -5,7 +5,7 @@ go 1.22.4
 toolchain go1.22.6
 
 replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250313102545-75df8a5bec13
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250313103330-7628711e09f7
 	helm.sh/helm/v3 v3.14.3 => github.com/devtron-labs/helm/v3 v3.14.1-0.20240401080259-90238cf69e42
 )
 
