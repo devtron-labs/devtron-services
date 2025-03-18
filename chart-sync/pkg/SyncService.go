@@ -115,9 +115,9 @@ func (impl *SyncServiceImpl) Sync() (interface{}, error) {
 		if err != nil {
 			impl.logger.Errorw("repo sync error", "OCIRegistry", registryObj)
 			internals.RepoSyncDuration.WithLabelValues("oci", registryObj.RegistryURL, err.Error()).Observe(time.Since(start).Seconds())
+		} else {
+			internals.RepoSyncDuration.WithLabelValues("oci", registryObj.RegistryURL, "").Observe(time.Since(start).Seconds())
 		}
-		internals.RepoSyncDuration.WithLabelValues("oci", registryObj.RegistryURL, "").Observe(time.Since(start).Seconds())
-
 	}
 	for _, repository := range repos {
 		impl.logger.Infow("syncing repo", "name", repository.Name)
@@ -126,9 +126,10 @@ func (impl *SyncServiceImpl) Sync() (interface{}, error) {
 		err := impl.syncRepo(repository)
 		if err != nil {
 			impl.logger.Errorw("repo sync error", "repo", repository)
-			internals.RepoSyncDuration.WithLabelValues("standard", repo.Name, err.Error()).Observe(time.Since(start).Seconds())
+			internals.RepoSyncDuration.WithLabelValues("standard", repository.Name, err.Error()).Observe(time.Since(start).Seconds())
+		} else {
+			internals.RepoSyncDuration.WithLabelValues("standard", repository.Name, "").Observe(time.Since(start).Seconds())
 		}
-		internals.RepoSyncDuration.WithLabelValues("standard", repo.Name, "").Observe(time.Since(start).Seconds())
 	}
 	return nil, nil
 }

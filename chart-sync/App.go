@@ -46,14 +46,12 @@ func (app *App) Start() {
 	// Start the sync service
 	_, err := app.syncService.Sync()
 	if err != nil {
+		app.Logger.Errorw("err", "err", err)
 		internals.RepoSyncDuration.WithLabelValues("all", "all", err.Error()).Observe(time.Since(start).Seconds())
+	} else {
+		internals.RepoSyncDuration.WithLabelValues("all", "all", "").Observe(time.Since(start).Seconds())
 	}
-	internals.RepoSyncDuration.WithLabelValues("all", "all", "").Observe(time.Since(start).Seconds())
 
 	// sleep for ShutDownInterval seconds to give time for prometheus to scrape the metrics
 	time.Sleep(time.Duration(app.configuration.AppSyncJobShutDownWaitDuration) * time.Second)
-
-	if err != nil {
-		app.Logger.Errorw("err", "err", err)
-	}
 }
