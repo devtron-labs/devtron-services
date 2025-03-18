@@ -377,10 +377,15 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 		material.CheckoutStatus = false
 		errorMessage := util2.BuildDisplayErrorMessage(errMsg, err)
 		material.CheckoutMsgAny = errorMessage
+		dbErr := impl.materialRepository.Update(material)
+		if dbErr != nil {
+			impl.logger.Errorw("error in updating material repo", "err", dbErr, "material", material)
+		}
 		return nil, errors.New(errorMessage)
 	} else {
 		material.CheckoutLocation = checkoutLocationForFetching
 		material.CheckoutStatus = true
+		material.FetchStatus = true
 	}
 	err = impl.materialRepository.Update(material)
 	if err != nil {
@@ -528,26 +533,26 @@ func (impl RepoManagerImpl) FetchGitCommitsForBranchFixPipeline(pipelineMaterial
 }
 
 func (impl RepoManagerImpl) CheckAndSetErrorTypeAndMsgInResponse(pipelineMaterial *sql.CiPipelineMaterial, gitMaterial *sql.GitMaterial, response *git.MaterialChangeResp, isWebhook bool) bool {
-	if pipelineMaterial.Errored {
-		impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "gitMaterialId", gitMaterial.Id, "fetchErrorMessage", gitMaterial.FetchErrorMessage, "checkoutMsgAny", gitMaterial.CheckoutMsgAny, "errMsg", pipelineMaterial.ErrorMsg)
-		if !gitMaterial.CheckoutStatus {
-			response.IsRepoError = true
-			// doing this as previously fetch message was stored with checkoutStatus flag, if empty return fetchErrormessage
-			if len(gitMaterial.CheckoutMsgAny) > 0 {
-				response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
-			} else {
-				response.RepoErrorMsg = gitMaterial.FetchErrorMessage
-			}
-		} else if isWebhook {
-			// this is done as old data has been saved in db for tag/pr/webhook and only checkoutStatus is relevant for these types
-			return false
-		} else if !gitMaterial.FetchStatus {
-			response.IsRepoError = true
-			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+	impl.logger.Infow("errored material ", "id", pipelineMaterial.Id, "gitMaterialId", gitMaterial.Id, "fetchErrorMessage", gitMaterial.FetchErrorMessage, "checkoutMsgAny", gitMaterial.CheckoutMsgAny, "errMsg", pipelineMaterial.ErrorMsg)
+	if !gitMaterial.CheckoutStatus {
+		response.IsRepoError = true
+		// doing this as previously fetch message was stored with checkoutStatus flag, if empty return fetchErrormessage
+		if len(gitMaterial.CheckoutMsgAny) > 0 {
+			response.RepoErrorMsg = gitMaterial.CheckoutMsgAny
 		} else {
-			response.IsBranchError = true
-			response.BranchErrorMsg = pipelineMaterial.ErrorMsg
+			response.RepoErrorMsg = gitMaterial.FetchErrorMessage
 		}
+		return true
+	} else if isWebhook {
+		// this is done as old data has been saved in db for tag/pr/webhook and only checkoutStatus is relevant for these types
+		return false
+	} else if !gitMaterial.FetchStatus {
+		response.IsRepoError = true
+		response.RepoErrorMsg = gitMaterial.FetchErrorMessage
+		return true
+	} else if pipelineMaterial.Errored {
+		response.IsBranchError = true
+		response.BranchErrorMsg = pipelineMaterial.ErrorMsg
 		return true
 	}
 	return false
