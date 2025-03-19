@@ -29,6 +29,7 @@ import (
 	error2 "github.com/devtron-labs/kubelink/error"
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/commonHelmService"
+	"github.com/devtron-labs/kubelink/pkg/service/helmApplicationService/adapter"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -205,7 +206,7 @@ func (impl *HelmAppServiceImpl) getDeployedAppDetails(config *client.ClusterConf
 	}
 
 	for _, item := range releases {
-		deployedApps = append(deployedApps, NewDeployedAppDetail(config, item))
+		deployedApps = append(deployedApps, adapter.NewDeployedAppDetail(config, item))
 	}
 	return deployedApps, nil
 }
@@ -367,7 +368,7 @@ func (impl *HelmAppServiceImpl) GetHelmAppValues(req *client.AppDetailRequest) (
 		return nil, err
 	}
 
-	appDetail := parseDeployedAppDetail(req.ClusterConfig.ClusterId, req.ClusterConfig.ClusterName, helmRelease)
+	appDetail := adapter.ParseDeployedAppDetail(req.ClusterConfig.ClusterId, req.ClusterConfig.ClusterName, helmRelease)
 	releaseInfo.DeployedAppDetail = appDetail
 	return releaseInfo, nil
 
@@ -711,7 +712,7 @@ func (impl *HelmAppServiceImpl) installRelease(ctx context.Context, request *cli
 		return nil, err
 	}
 
-	registryConfig, err := NewRegistryConfig(request.RegistryCredential)
+	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
 	defer func() {
 		if registryConfig != nil {
 			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
@@ -856,7 +857,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 	releaseIdentifier := request.ReleaseIdentifier
 	helmClientObj, err := impl.getHelmClient(releaseIdentifier.ClusterConfig, releaseIdentifier.ReleaseNamespace)
 
-	registryConfig, err := NewRegistryConfig(request.RegistryCredential)
+	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
 	defer func() {
 		if registryConfig != nil {
 			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
@@ -948,7 +949,7 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 		return nil, err
 	}
 
-	registryConfig, err := NewRegistryConfig(request.RegistryCredential)
+	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
 	defer func() {
 		if registryConfig != nil {
 			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
@@ -1152,7 +1153,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		return "", nil, err
 	}
 
-	registryConfig, err := NewRegistryConfig(request.RegistryCredential)
+	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
 	defer func() {
 		if registryConfig != nil {
 			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
@@ -1638,7 +1639,7 @@ func (impl *HelmAppServiceImpl) ValidateOCIRegistryLogin(ctx context.Context, OC
 			return nil, err
 		}
 	}
-	registryConfig, err := NewRegistryConfig(OCIRegistryRequest)
+	registryConfig, err := adapter.NewRegistryConfig(OCIRegistryRequest)
 	defer func() {
 		if registryConfig != nil {
 			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
@@ -1666,7 +1667,7 @@ func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Conte
 
 	registryPushResponse := &client.OCIRegistryResponse{}
 
-	registryConfig, err := NewRegistryConfig(OCIRegistryRequest.RegistryCredential)
+	registryConfig, err := adapter.NewRegistryConfig(OCIRegistryRequest.RegistryCredential)
 	defer func() {
 		if registryConfig != nil {
 			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
@@ -1814,7 +1815,7 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 				impl.logger.Errorw("requested helm release does not exist")
 				return nil, commonHelmService.ErrorReleaseNotFoundOnCluster
 			}
-			return parseDeployedAppDetail(releaseIdentifier.ClusterConfig.ClusterId, releaseIdentifier.ClusterConfig.ClusterName, helmRelease), nil
+			return adapter.ParseDeployedAppDetail(releaseIdentifier.ClusterConfig.ClusterId, releaseIdentifier.ClusterConfig.ClusterName, helmRelease), nil
 		}
 		impl.logger.Errorw("error in fetching release details by id", "releaseIdentifier", releaseIdentifier, "err", err)
 		return nil, err
@@ -1824,7 +1825,7 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 }
 
 func (impl *HelmAppServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.Context, req *client.GetResourceTreeRequest) (*client.ResourceTreeResponse, error) {
-	appDetailReq := GetAppDetailRequestFromGetResourceTreeRequest(req)
+	appDetailReq := adapter.GetAppDetailRequestFromGetResourceTreeRequest(req)
 
 	var conf *rest.Config
 	var err error
