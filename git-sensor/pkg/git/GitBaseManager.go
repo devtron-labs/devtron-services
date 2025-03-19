@@ -400,7 +400,7 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 		if err != nil {
 			impl.logger.Errorw("error killing command", "name", name, "arg", arg, "err", err)
 		} else {
-			impl.logger.Infow("success cancel command", "name", name, "arg", arg)
+			impl.logger.Infow("sucess cancel command", "name", name, "arg", arg)
 		}
 		return err
 	}
