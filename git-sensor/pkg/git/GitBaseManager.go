@@ -394,8 +394,8 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 		newCtx, cancel = ctx.WithTimeout(timeout) //context.WithTimeout(ctx.Context, timeout*time.Second)
 	}
 	cmd := exec.CommandContext(newCtx, name, arg...)
+	cmd.WaitDelay = 10 * time.Second
 	cmd.Cancel = func() error {
-		cmd.WaitDelay = 10 * time.Second
 		impl.logger.Infow("canceling command", "name", name, "arg", arg)
 		err := cmd.Process.Kill()
 		if err != nil {
