@@ -12,7 +12,7 @@ RUN apk add --no-cache ca-certificates
 RUN apk add git --no-cache
 COPY --from=build-env  /go/src/github.com/devtron-labs/authenticator/authenticator .
 
-RUN adduser -D devtron
+RUN adduser -u 4002 -g 4002 -D devtron
 RUN chown -R devtron:devtron ./authenticator
 USER devtron
 
