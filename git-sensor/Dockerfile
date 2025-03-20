@@ -18,7 +18,7 @@ RUN chmod +x /git-ask-pass.sh && \
 	apk add --no-cache ca-certificates && \
 	apk add git --no-cache && \
 	apk add openssh --no-cache && \
-	adduser -D devtron
+	adduser -u 4002 -g 4002 -D devtron
 
 COPY --chown=devtron:devtron --from=build-env  /go/src/github.com/devtron-labs/git-sensor/scripts/ /go/src/github.com/devtron-labs/git-sensor/git-sensor ./
 
