@@ -16,7 +16,7 @@ COPY --from=aquasec/trivy:0.46.1 /usr/local/bin/trivy /usr/local/bin/trivy
 
 RUN apk add --no-cache ca-certificates && \
 	mkdir -p /security && \
-	adduser -D devtron 
+	adduser -u 4002 -g 4002 -D devtron 
 
 COPY --chown=devtron:devtron --from=build-env  /go/src/github.com/devtron-labs/image-scanner/image-scanner .
 
