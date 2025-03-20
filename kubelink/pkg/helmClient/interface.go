@@ -19,6 +19,7 @@ package helmClient
 import (
 	"context"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
 )
@@ -40,4 +41,7 @@ type Client interface {
 	RollbackRelease(spec *ChartSpec, version int) error
 	TemplateChart(spec *ChartSpec, options *HelmTemplateOptions, chartData []byte, returnChartBytes bool) ([]byte, []byte, error)
 	GetNotes(spec *ChartSpec, options *HelmTemplateOptions) ([]byte, error)
+	GetProviders() getter.Providers
+	GetRepositoryConfig() string
+	GetRepositoryCache() string
 }

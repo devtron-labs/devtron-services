@@ -46,8 +46,10 @@ var storage = repo.File{}
 
 const (
 	CHART_WORKING_DIR_PATH      = "/tmp/charts/"
-	defaultCachePath            = "/home/devtron/devtroncd/.helmcache"
-	defaultRepositoryConfigPath = "/home/devtron/devtroncd/.helmrepo"
+	DefaultCachePath            = "/home/devtron/devtroncd/.helmcache"
+	DefaultRepositoryConfigPath = "/home/devtron/devtroncd/.helmrepo"
+	DefaultTempDirectory        = "/tmp/dir/"
+	TemHelmChartDirectory       = "helmDependencyChart"
 )
 
 // NewClientFromRestConf returns a new Helm client constructed with the provided REST config options
@@ -103,9 +105,9 @@ func newClient(options *Options, clientGetter genericclioptions.RESTClientGetter
 func setEnvSettings(options *Options, settings *cli.EnvSettings) error {
 	if options == nil {
 		options = &Options{
-			RepositoryConfig: defaultRepositoryConfigPath,
-			RepositoryCache:  defaultCachePath,
-			Linting:          true,
+			//RepositoryConfig: DefaultRepositoryConfigPath,
+			//RepositoryCache:  DefaultCachePath,
+			Linting: true,
 		}
 	}
 
@@ -121,11 +123,11 @@ func setEnvSettings(options *Options, settings *cli.EnvSettings) error {
 	}*/
 
 	if options.RepositoryConfig == "" {
-		options.RepositoryConfig = defaultRepositoryConfigPath
+		options.RepositoryConfig = DefaultRepositoryConfigPath
 	}
 
 	if options.RepositoryCache == "" {
-		options.RepositoryCache = defaultCachePath
+		options.RepositoryCache = DefaultCachePath
 	}
 
 	settings.RepositoryCache = options.RepositoryCache
@@ -796,29 +798,51 @@ func updateDependencies(helmChart *chart.Chart, chartPathOptions *action.ChartPa
 }
 
 func GetChartBytes(helmChart *chart.Chart) ([]byte, error) {
+
+	absFilePath, err := GetChartSavedDir(helmChart)
+	if err != nil {
+		fmt.Errorf("error in getting saved chart data directory path %w", err)
+		return nil, err
+	}
+	chartBytes, err := os.ReadFile(absFilePath)
+	if err != nil {
+		fmt.Errorf("error in reading chartdata from the file filePath : %s  err : %w", absFilePath, err)
+		return nil, err
+	}
+
+	return chartBytes, nil
+}
+func GetChartSavedDir(helmChart *chart.Chart) (string, error) {
 	dirPath := CHART_WORKING_DIR_PATH
 	outputChartPathDir := fmt.Sprintf("%s/%s", dirPath, strconv.FormatInt(time.Now().UnixNano(), 16))
 	err := os.MkdirAll(outputChartPathDir, os.ModePerm)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	defer func() {
 		err := os.RemoveAll(outputChartPathDir)
 		if err != nil {
-			fmt.Println("error in deleting dir", " dir: ", outputChartPathDir, " err: ", err)
+			fmt.Errorf("error in deleting dir, %s, err: %w", outputChartPathDir, err)
 		}
 	}()
 	absFilePath, err := chartutil.Save(helmChart, outputChartPathDir)
 	if err != nil {
-		fmt.Println("error in saving chartdata in the destination dir ", " dir : ", outputChartPathDir, " err : ", err)
-		return nil, err
+		fmt.Errorf("error in saving chartdata in the destination dir %s, err: %w", outputChartPathDir, err)
+		return "", err
 	}
 
-	chartBytes, err := os.ReadFile(absFilePath)
-	if err != nil {
-		fmt.Println("error in reading chartdata from the file ", " filePath : ", absFilePath, " err : ", err)
-	}
+	return absFilePath, nil
+}
 
-	return chartBytes, nil
+func (c *HelmClient) GetProviders() getter.Providers {
+	return c.Providers
+}
+
+func (c *HelmClient) GetRepositoryConfig() string {
+	return c.Settings.RepositoryConfig
+}
+
+func (c *HelmClient) GetRepositoryCache() string {
+	return c.Settings.RepositoryCache
 }
