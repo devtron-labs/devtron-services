@@ -4,12 +4,12 @@ go 1.21
 
 toolchain go1.22.4
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250318120348-f6eebf1e6195
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250320213930-e3ceb67eecd5
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/common-lib v0.0.0
-	github.com/devtron-labs/protos v0.0.3-0.20240809072909-83171af34169
+	github.com/devtron-labs/protos v0.0.3-0.20250320112837-a8190ec7cd67
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/go-pg/pg v6.15.1+incompatible
