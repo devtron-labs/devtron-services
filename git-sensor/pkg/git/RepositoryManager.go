@@ -17,6 +17,7 @@
 package git
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/git-sensor/internals"
@@ -43,6 +44,7 @@ type RepositoryManager interface {
 	Add(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (errMsg string, err error)
 	InitRepoAndGetSshPrivateKeyPath(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (string, string, error)
 	FetchRepo(gitCtx GitContext, location string) (errMsg string, err error)
+	PreserveGitMaterialBeforeUpdate(detailedExistingMaterial *sql.GitMaterial) error
 	GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, httpMatched bool, shMatched bool, err error)
 	GetCheckoutLocation(gitCtx GitContext, material *sql.GitMaterial, url, checkoutPath string) string
 	TrimLastGitCommit(gitCommits []*GitCommitBase, count int) []*GitCommitBase
@@ -82,20 +84,58 @@ func (impl *RepositoryManagerImpl) IsSpaceAvailableOnDisk() bool {
 	return availableSpace > int64(impl.configuration.MinLimit)*1024*1024
 }
 
+func (impl *RepositoryManagerImpl) PreserveGitMaterialBeforeUpdate(detailedExistingMaterial *sql.GitMaterial) error {
+	srcDir := impl.getBaseDirForMaterial(detailedExistingMaterial)
+	preserveBaseDir := impl.getPreserveDirForMaterial(detailedExistingMaterial)
+	dstDir := path.Join(preserveBaseDir, PRESERVE_GIT_BASE_SUB_DIR)
+	if _, fileErr := os.Stat(dstDir); fileErr == nil {
+		err := os.RemoveAll(dstDir)
+		if err != nil {
+			impl.logger.Errorw("error in refreshing material ", "dstDir", dstDir, "err", err)
+			return err
+		}
+	}
+	err := util.CopyDir(srcDir, dstDir)
+	if err != nil {
+		impl.logger.Errorw("error in copying material", "srcDir", srcDir, "dstDir", dstDir, "err", err)
+		return err
+	}
+	materialJsonByte, err := json.Marshal(detailedExistingMaterial)
+	if err != nil {
+		impl.logger.Errorw("error in marshalling material", "material", detailedExistingMaterial, "err", err)
+		return err
+	}
+	filePath := path.Join(preserveBaseDir, PRESERVE_DB_MODELS_FILE_NAME)
+	err = os.WriteFile(filePath, materialJsonByte, 0666)
+	if err != nil {
+		impl.logger.Errorw("error in writing material json", "filePath", filePath, "material", detailedExistingMaterial, "err", err)
+		return err
+	}
+	return nil
+}
+
+func (impl *RepositoryManagerImpl) getBaseDirForMaterial(material *sql.GitMaterial) string {
+	return path.Join(GIT_BASE_DIR, strconv.Itoa(material.Id))
+}
+
+func (impl *RepositoryManagerImpl) getPreserveDirForMaterial(material *sql.GitMaterial) string {
+	return path.Join(PRESERVE_BASE_DIR, strconv.Itoa(material.Id))
+}
+
 func (impl *RepositoryManagerImpl) GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, httpMatched bool, shMatched bool, err error) {
 	//gitRegex := `/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/`
 	httpsRegex := `^https.*`
 	httpsMatched, err := regexp.MatchString(httpsRegex, material.Url)
 	if httpsMatched {
 		locationWithoutProtocol := strings.ReplaceAll(material.Url, "https://", "")
-		checkoutPath := path.Join(GIT_BASE_DIR, strconv.Itoa(material.Id), locationWithoutProtocol)
+		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), locationWithoutProtocol)
 		return checkoutPath, httpsMatched, false, nil
 	}
 
 	sshRegex := `^git@.*`
 	sshMatched, err := regexp.MatchString(sshRegex, material.Url)
 	if sshMatched {
-		checkoutPath := path.Join(GIT_BASE_DIR, strconv.Itoa(material.Id), material.Url)
+		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), material.Url)
 		return checkoutPath, httpsMatched, sshMatched, nil
 	}
 
