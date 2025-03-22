@@ -164,7 +164,7 @@ func runWeb() {
 	dexConfig.DexClientID = *dexCLIClientID
 	dexConfig.UserSessionDurationSeconds = 10000
 
-	userVerifier := func(claims jwt.MapClaims) (bool, error) { return true, nil }
+	userVerifier := func(claims jwt.MapClaims) bool { return true }
 	redirectUrlSanitiser := func(url string) string { return url }
 	oidcClient, dexProxy, err := client2.GetOidcClient(dexConfig, userVerifier, redirectUrlSanitiser)
 	if err != nil {

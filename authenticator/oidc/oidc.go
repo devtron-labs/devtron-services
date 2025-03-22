@@ -136,7 +136,7 @@ func (a *ClientApp) UpdateConfig(c *ClientApp) {
 }
 
 type RedirectUrlSanitiser func(url string) string
-type UserVerifier func(claims jwt.MapClaims) (bool, error)
+type UserVerifier func(claims jwt.MapClaims) bool
 
 func GetScopesOrDefault(scopes []string) []string {
 	if len(scopes) == 0 {
@@ -457,11 +457,10 @@ func (a *ClientApp) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	returnUrl := appState.ReturnURL
 	// verify user in system
-	valid, err := a.userVerifier(claims)
+	valid := a.userVerifier(claims)
 	//  end verify user in system
 	if !valid {
 		w.Header().Add("Set-Cookie", "")
-		_, err = w.Write([]byte(fmt.Sprintf("Login failed: %v", err)))
 		returnUrl = NoUserLocation
 	} else {
 		if idTokenRAW != "" {
