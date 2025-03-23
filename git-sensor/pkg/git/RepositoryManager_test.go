@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func TestPreserveGitMaterialBeforeUpdate(t *testing.T) {
+func TestCreateGitMaterialBackupBeforeUpdate(t *testing.T) {
 	t.Run("Success_With_Non_Existing_Dir", testSuccessWithNonExistingDir)
 	t.Run("Success_With_Existing_Dir", testSuccessWithExistingDir)
 	t.Run("Source_Dir_Error", testSourceDirError)
@@ -39,23 +39,23 @@ func testSuccessWithNonExistingDir(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	preserveBaseDir := impl.getPreserveDirForMaterial(validMaterialDetails)
-	if _, fileErr := os.Stat(preserveBaseDir); fileErr == nil {
-		err := os.RemoveAll(preserveBaseDir)
+	backupBaseDir := impl.getBackupDirForMaterial(validMaterialDetails)
+	if _, fileErr := os.Stat(backupBaseDir); fileErr == nil {
+		err := os.RemoveAll(backupBaseDir)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	dstDir := path.Join(preserveBaseDir, PRESERVE_GIT_BASE_SUB_DIR)
+	dstDir := path.Join(backupBaseDir, BACKUP_GIT_BASE_SUB_DIR)
 	err = os.MkdirAll(dstDir, os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(preserveBaseDir)
-	err = impl.PreserveGitMaterialBeforeUpdate(validMaterialDetails)
+	defer os.RemoveAll(backupBaseDir)
+	err = impl.BackupGitMaterialBeforeUpdate(validMaterialDetails)
 	assert.NoError(t, err)
 	assert.True(t, deepCompare(path.Join(srcDir, "test.txt"), path.Join(dstDir, "github.com/Ash-exp/test.git/.git", "test.txt")))
-	file, err := os.ReadFile(path.Join(preserveBaseDir, PRESERVE_DB_MODELS_FILE_NAME))
+	file, err := os.ReadFile(path.Join(backupBaseDir, BACKUP_DB_MODELS_FILE_NAME))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,28 +90,28 @@ func testSuccessWithExistingDir(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	preserveBaseDir := impl.getPreserveDirForMaterial(validMaterialDetails)
-	if _, fileErr := os.Stat(preserveBaseDir); fileErr == nil {
-		err := os.RemoveAll(preserveBaseDir)
+	backupBaseDir := impl.getBackupDirForMaterial(validMaterialDetails)
+	if _, fileErr := os.Stat(backupBaseDir); fileErr == nil {
+		err := os.RemoveAll(backupBaseDir)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	dstDir := path.Join(preserveBaseDir, PRESERVE_GIT_BASE_SUB_DIR, "github.com/Ash-exp/test.git/.git")
+	dstDir := path.Join(backupBaseDir, BACKUP_GIT_BASE_SUB_DIR, "github.com/Ash-exp/test.git/.git")
 	err = os.MkdirAll(dstDir, os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(preserveBaseDir)
+	defer os.RemoveAll(backupBaseDir)
 	tmpFileContent := []byte("invalid file content\nfound\n")
 	err = os.WriteFile(path.Join(dstDir, "test.txt"), tmpFileContent, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = impl.PreserveGitMaterialBeforeUpdate(validMaterialDetails)
+	err = impl.BackupGitMaterialBeforeUpdate(validMaterialDetails)
 	assert.NoError(t, err)
 	assert.True(t, deepCompare(path.Join(srcDir, "test.txt"), path.Join(dstDir, "test.txt")))
-	file, err := os.ReadFile(path.Join(preserveBaseDir, PRESERVE_DB_MODELS_FILE_NAME))
+	file, err := os.ReadFile(path.Join(backupBaseDir, BACKUP_DB_MODELS_FILE_NAME))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func testSourceDirError(t *testing.T) {
 	}
 	srcBaseDir := impl.getBaseDirForMaterial(validMaterialDetails)
 	_ = os.RemoveAll(srcBaseDir)
-	err := impl.PreserveGitMaterialBeforeUpdate(validMaterialDetails)
+	err := impl.BackupGitMaterialBeforeUpdate(validMaterialDetails)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, fs.ErrNotExist)
 }
@@ -213,7 +213,7 @@ var validMaterialDetails = &sql.GitMaterial{
 	LastFetchErrorCount: 0,
 	FetchErrorMessage:   "",
 	CloningMode:         "",
-	PreserveMode:        true,
+	CreateBackup:        true,
 	FilterPattern:       nil,
 	GitProvider:         nil,
 	CiPipelineMaterials: []*sql.CiPipelineMaterial{

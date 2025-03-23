@@ -156,7 +156,7 @@ func (impl *GrpcHandlerImpl) UpdateRepo(ctx context.Context, req *pb.GitMaterial
 		CheckoutMsgAny:   req.CheckoutMsgAny,
 		Deleted:          req.Deleted,
 		FilterPattern:    req.FilterPattern,
-		PreserveMode:     req.PreserveMode,
+		CreateBackup:     req.CreateBackup,
 	}
 
 	// Update repo

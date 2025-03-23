@@ -269,20 +269,20 @@ func (impl RepoManagerImpl) AddRepo(gitCtx git.GitContext, materials []*sql.GitM
 	return materials, nil
 }
 
-func (impl RepoManagerImpl) preserveGitMaterialBeforeUpdate(existingMaterial *sql.GitMaterial) error {
-	repoPreserveStartTime := time.Now()
+func (impl RepoManagerImpl) backupGitMaterialBeforeUpdate(existingMaterial *sql.GitMaterial) error {
+	backupStartTime := time.Now()
 	impl.logger.Infow("preserving material", "material", existingMaterial)
 	detailedExistingMaterial, err := impl.materialRepository.FindOneWithCiPipelineMaterials(existingMaterial.Id)
 	if err != nil {
-		impl.logger.Errorw("error in fetching material", "materialId", existingMaterial.Id, "preserveTimeTaken", time.Since(repoPreserveStartTime), "err", err)
+		impl.logger.Errorw("error in fetching material", "materialId", existingMaterial.Id, "backupTimeTaken", time.Since(backupStartTime), "err", err)
 		return err
 	}
-	err = impl.repositoryManager.PreserveGitMaterialBeforeUpdate(detailedExistingMaterial)
+	err = impl.repositoryManager.BackupGitMaterialBeforeUpdate(detailedExistingMaterial)
 	if err != nil {
-		impl.logger.Errorw("error in preserving material", "materialId", existingMaterial.Id, "preserveTimeTaken", time.Since(repoPreserveStartTime), "err", err)
+		impl.logger.Errorw("error in preserving material", "materialId", existingMaterial.Id, "backupTimeTaken", time.Since(backupStartTime), "err", err)
 		return err
 	}
-	impl.logger.Infow("preserving material", "materialId", existingMaterial.Id, "preserveTimeTaken", time.Since(repoPreserveStartTime))
+	impl.logger.Infow("preserving material", "materialId", existingMaterial.Id, "backupTimeTaken", time.Since(backupStartTime))
 	return nil
 }
 
@@ -293,8 +293,8 @@ func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitM
 		impl.logger.Errorw("error in fetching material", "material", material, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 		return nil, err
 	}
-	if material.PreserveMode {
-		err = impl.preserveGitMaterialBeforeUpdate(existingMaterial)
+	if material.CreateBackup {
+		err = impl.backupGitMaterialBeforeUpdate(existingMaterial)
 		if err != nil {
 			impl.logger.Errorw("error in preserving material", "material", existingMaterial, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 			return nil, err

@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	PRESERVE_BASE_DIR            = GIT_BASE_DIR + "preserve-base/"
-	PRESERVE_GIT_BASE_SUB_DIR    = "git-material/"
-	PRESERVE_DB_MODELS_FILE_NAME = "git-material-db.json"
+	BACKUP_BASE_DIR            = GIT_BASE_DIR + "backup-base/"
+	BACKUP_GIT_BASE_SUB_DIR    = "git-material/"
+	BACKUP_DB_MODELS_FILE_NAME = "git-material-db.json"
 
 	GIT_BASE_DIR                   = "/git-base/"
 	SSH_PRIVATE_KEY_DIR            = GIT_BASE_DIR + "ssh-keys/"

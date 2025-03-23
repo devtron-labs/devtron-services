@@ -29,8 +29,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250321081211-fdcebde4ae7e h1:476GCrPSFjmAH35Y8a9Qj2G3c7EqwuWInfWIENWi1Qw=
 github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250321081211-fdcebde4ae7e/go.mod h1:1QJJLpgJSkb5Jm9xPeKAk+kXb0QgBOOOgJj0cgYhAVA=
-github.com/devtron-labs/protos v0.0.3-0.20250320112837-a8190ec7cd67 h1:gH82ad3wOUH7oEac9NA5jIx/ZIzd77siI/pHI2WONmM=
-github.com/devtron-labs/protos v0.0.3-0.20250320112837-a8190ec7cd67/go.mod h1:1TqULGlTey+VNhAu/ag7NJuUvByJemkqodsc9L5PHJk=
+github.com/devtron-labs/protos v0.0.3-0.20250323161859-1e84b4db2917 h1:g4R93NXNrHRv2FiGTrqKR7qb5bx6sGXD0Qy7UoOP6pw=
+github.com/devtron-labs/protos v0.0.3-0.20250323161859-1e84b4db2917/go.mod h1:1TqULGlTey+VNhAu/ag7NJuUvByJemkqodsc9L5PHJk=
 github.com/docker/cli v24.0.6+incompatible h1:fF+XCQCgJjjQNIMjzaSmiKJSCcfcXb3TWTcc7GAneOY=
 github.com/docker/cli v24.0.6+incompatible/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/elazarl/goproxy v1.4.0 h1:4GyuSbFa+s26+3rmYNSuUVsx+HgPrV1bk1jXI0l9wjM=
