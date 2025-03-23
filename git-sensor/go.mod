@@ -9,7 +9,7 @@ replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-se
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/common-lib v0.0.0
-	github.com/devtron-labs/protos v0.0.3-0.20250323161859-1e84b4db2917
+	github.com/devtron-labs/protos v0.0.3-0.20250323220609-ecf8a0f7305e
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-git/go-git/v5 v5.13.2
 	github.com/go-pg/pg v6.15.1+incompatible

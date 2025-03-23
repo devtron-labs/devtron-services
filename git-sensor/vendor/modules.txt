@@ -81,7 +81,7 @@ github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
-# github.com/devtron-labs/protos v0.0.3-0.20250323161859-1e84b4db2917
+# github.com/devtron-labs/protos v0.0.3-0.20250323220609-ecf8a0f7305e
 ## explicit; go 1.17
 github.com/devtron-labs/protos/gitSensor
 # github.com/docker/cli v24.0.6+incompatible
