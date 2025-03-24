@@ -1,4 +1,4 @@
-package helmApplicationService
+package adapter
 
 import (
 	"github.com/devtron-labs/common-lib/helmLib/registry"
@@ -90,7 +90,7 @@ func NewDeployedAppDetail(config *client.ClusterConfig, release *release.Release
 	}
 }
 
-func parseDeployedAppDetail(clusterId int32, clusterName string, helmRelease *release.Release) *client.DeployedAppDetail {
+func ParseDeployedAppDetail(clusterId int32, clusterName string, helmRelease *release.Release) *client.DeployedAppDetail {
 	appDetail := &client.DeployedAppDetail{
 		AppId:        util.GetAppId(clusterId, helmRelease),
 		AppName:      helmRelease.Name,
@@ -103,6 +103,8 @@ func parseDeployedAppDetail(clusterId int32, clusterName string, helmRelease *re
 			ClusterId:   clusterId,
 			Namespace:   helmRelease.Namespace,
 		},
+		ReleaseStatus: helmRelease.Info.Status.String(),
+		Home:          helmRelease.Chart.Metadata.Home,
 	}
 	return appDetail
 }
