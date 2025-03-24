@@ -66,7 +66,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250324080324-2454c028a660
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250324093341-67da6179efc6
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
@@ -81,7 +81,7 @@ github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
-# github.com/devtron-labs/protos v0.0.3-0.20240809072909-83171af34169
+# github.com/devtron-labs/protos v0.0.3-0.20250323220609-ecf8a0f7305e
 ## explicit; go 1.17
 github.com/devtron-labs/protos/gitSensor
 # github.com/docker/cli v24.0.6+incompatible
@@ -488,4 +488,4 @@ gopkg.in/yaml.v3
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250324080324-2454c028a660
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250324093341-67da6179efc6
