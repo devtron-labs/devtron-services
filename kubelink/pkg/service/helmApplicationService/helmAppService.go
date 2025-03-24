@@ -896,7 +896,8 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 			return "", err
 		}
 	case false:
-		chartName = request.ChartName
+		//chartName = request.ChartName
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		repoURL = request.ChartRepository.Url
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
@@ -1192,11 +1193,30 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 			return "", nil, err
 		}
 	case false:
-		chartName = request.ChartName
+		//chartName = request.ChartName
 		repoURL = request.ChartRepository.Url
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
+		chartRepoRequest := request.ChartRepository
+		chartRepoName := chartRepoRequest.Name
+		// Add or update chart repo starts
+		chartRepo := repo.Entry{
+			Name:     chartRepoName,
+			URL:      chartRepoRequest.Url,
+			Username: request.ChartRepository.Username,
+			Password: request.ChartRepository.Password,
+			// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
+			PassCredentialsAll:    true,
+			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
+		}
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
+		impl.logger.Debug("Adding/Updating Chart repo", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest)
+		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
+		if err != nil {
+			impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
+			return "", nil, err
+		}
 	}
 
 	chartSpec := &helmClient.ChartSpec{
