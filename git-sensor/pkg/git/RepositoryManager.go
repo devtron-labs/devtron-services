@@ -311,7 +311,7 @@ func (impl *RepositoryManagerImpl) ChangesSinceByRepository(gitCtx GitContext, r
 			if !gitCommit.IsMessageValidUTF8() {
 				gitCommit.FixInvalidUTF8Message()
 			}
-			impl.logger.Debugw("commit dto for repo ", "repo", repository, commit)
+			impl.logger.Debugw("commit dto for repo ", "repo", repository, "commit", commit)
 			gitCommits = append(gitCommits, gitCommit)
 			itrCounter = itrCounter + 1
 
