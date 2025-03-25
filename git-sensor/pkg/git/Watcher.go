@@ -30,6 +30,7 @@ import (
 	"github.com/devtron-labs/git-sensor/internals/sql"
 	util2 "github.com/devtron-labs/git-sensor/util"
 	"github.com/gammazero/workerpool"
+	"github.com/google/uuid"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"runtime/debug"
@@ -112,16 +113,17 @@ func (impl GitWatcherImpl) StopCron() {
 }
 
 func (impl GitWatcherImpl) Watch() {
-	impl.logger.Infow("starting git watch thread")
+	watchID := uuid.New().String()
+	impl.logger.Infow("starting git watch thread", "watchID", watchID)
 	materials, err := impl.materialRepo.FindActive()
 	if err != nil {
-		impl.logger.Error("error in fetching watchlist", "err", err)
+		impl.logger.Error("error in fetching watchlist", "err", err, "watchID", watchID)
 		return
 	}
 	// impl.Publish(materials)
 	middleware.ActiveGitRepoCount.WithLabelValues().Set(float64(len(materials)))
 	impl.RunOnWorker(materials)
-	impl.logger.Infow("stop git watch thread")
+	impl.logger.Infow("stop git watch thread", "watchID", watchID)
 }
 
 func (impl *GitWatcherImpl) RunOnWorker(materials []*sql.GitMaterial) {
@@ -202,39 +204,20 @@ func (impl GitWatcherImpl) handleSshKeyCreationAndRetry(gitCtx GitContext, mater
 		impl.logger.Info("Retrying fetching for", "repo", material.Url)
 		updated, repo, errMsg, err = impl.FetchAndUpdateMaterial(gitCtx, material, location)
 		if err != nil {
-			impl.logAndUpdateDbError(material.Id, errMsg)
 			impl.logger.Errorw("error in fetching material details in retry", "repo", material.Url, "err", err)
+			errorMessage := util2.BuildDisplayErrorMessage(errMsg, err)
+			material.FetchStatus = false
+			material.FetchErrorMessage = errorMessage
 			return false, nil, errMsg, err
 		}
 	}
 	return updated, repo, errMsg, err
 }
 
-// Helper function to log and update database with error message for CI pipeline material
-func (impl GitWatcherImpl) logAndUpdateDbError(materialId int, errMsg string) {
-	dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsErroredForGitMaterialId(materialId, sql.SOURCE_TYPE_BRANCH_FIXED, errMsg)
-	if dbErr != nil {
-		// made this non-blocking
-		impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", materialId, "dbErr", dbErr)
-	}
-}
-
-func (impl GitWatcherImpl) logAndUpdateDbNonError(materialId int, fetchStatus bool) {
-	if !fetchStatus {
-		// if fetch previously failed then update errored to false
-		dbErr := impl.ciPipelineMaterialRepository.UpdateMaterialsNonErroredForGitMaterialId(materialId, sql.SOURCE_TYPE_BRANCH_FIXED)
-		if dbErr != nil {
-			// made this non-blocking
-			impl.logger.Errorw("error encountered in updating ci pipeline material", "materialId", materialId, "dbErr", dbErr)
-		}
-	}
-}
-
 func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (string, error) {
 	gitProvider := material.GitProvider
 	userName, password, err := GetUserNamePassword(gitProvider)
 	location := material.CheckoutLocation
-	initialFetchStatus := material.FetchStatus
 	if err != nil {
 		impl.logger.Errorw("error in determining location", "url", material.Url, "err", err)
 		return "", err
@@ -256,14 +239,15 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 			}
 		} else {
 			// Log and update database if retry not possible or SSH key already exists
-			impl.logAndUpdateDbError(material.Id, errMsg)
+			impl.logger.Errorw("error in fetching material details in retry", "repo", material.Url, "materialId", material.Id, "err", err, "errMsg", errMsg)
+			errorMessage := util2.BuildDisplayErrorMessage(errMsg, err)
+			material.FetchStatus = false
+			material.FetchErrorMessage = errorMessage
 			return errMsg, err
 		}
 	}
 	if !updated {
 		impl.logger.Debugw("no new commit found but fetch success", "url", material.Url, "fetchStatus", material.FetchStatus)
-		// update set errored false in ci pipeline material as fetch is successful
-		impl.logAndUpdateDbNonError(material.Id, initialFetchStatus)
 		return "", nil
 	}
 	materials, err := impl.ciPipelineMaterialRepository.FindByGitMaterialId(material.Id)
@@ -334,22 +318,21 @@ func (impl GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (
 			updatedMaterialsModel = append(updatedMaterialsModel, material)
 		}
 	}
-	if len(updatedMaterialsModel) > 0 {
-		err = impl.NotifyForMaterialUpdate(updatedMaterials, material)
+	if len(erroredMaterialsModels) > 0 {
+		err = impl.ciPipelineMaterialRepository.Update(erroredMaterialsModels)
 		if err != nil {
-			impl.logger.Errorw("error in sending notification for materials", "url", material.Url, "update", updatedMaterialsModel)
-		}
-		err = impl.ciPipelineMaterialRepository.Update(updatedMaterialsModel)
-		if err != nil {
-			impl.logger.Errorw("error in update db ", "url", material.Url, "update", updatedMaterialsModel)
-			impl.logger.Errorw("error in sending notification for materials", "url", material.Url, "update", updatedMaterialsModel)
+			impl.logger.Errorw("error in update db ", "url", material.Url, "update", erroredMaterialsModels)
 		}
 	}
-	if len(erroredMaterialsModels) > 0 {
+	if len(updatedMaterialsModel) > 0 {
 		err = impl.ciPipelineMaterialRepository.Update(updatedMaterialsModel)
 		if err != nil {
 			impl.logger.Errorw("error in update db ", "url", material.Url, "update", updatedMaterialsModel)
-			impl.logger.Errorw("error in sending notification for materials", "url", material.Url, "update", updatedMaterialsModel)
+		} else {
+			err = impl.NotifyForMaterialUpdate(updatedMaterials, material)
+			if err != nil {
+				impl.logger.Errorw("error in sending notification for materials", "url", material.Url, "update", updatedMaterialsModel)
+			}
 		}
 	}
 	return "", nil

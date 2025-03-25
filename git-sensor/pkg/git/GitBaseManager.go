@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type GitManager interface {
@@ -196,6 +197,12 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitCont
 
 func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
+	startTime := time.Now()
+	// logging context deadline for the command
+	deadline, ok := gitCtx.Deadline()
+	if ok {
+		impl.logger.Infow("context deadline", "remainingTime", time.Until(deadline).Seconds(), "cmd", cmd.String())
+	}
 	outBytes, err := cmd.CombinedOutput()
 	output := string(outBytes)
 	output = strings.TrimSpace(output)
@@ -204,7 +211,8 @@ func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (re
 		errMsg = output
 		if errors.Is(gitCtx.Err(), context.DeadlineExceeded) {
 			errMsg = "command timed out"
-			impl.logger.Errorw("command timed out", "cmd", cmd.String())
+			impl.logger.Errorw(errMsg, "startTime", startTime.Format(time.RFC3339), "processingTime", time.Since(startTime).Seconds(), "cmd", cmd.String())
+
 			// prometheus event count for timeout
 			middleware.GitFetchTimeoutCounter.WithLabelValues().Inc()
 			return output, errMsg, err
@@ -386,6 +394,20 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 		newCtx, cancel = ctx.WithTimeout(timeout) //context.WithTimeout(ctx.Context, timeout*time.Second)
 	}
 	cmd := exec.CommandContext(newCtx, name, arg...)
+
+	// setting waitDelay for closing the IO of child process if not closed already,
+	// So that parent can be closed according to the given timeout + max 10 seconds
+	cmd.WaitDelay = 10 * time.Second
+	cmd.Cancel = func() error {
+		impl.logger.Infow("canceling command", "name", name, "arg", arg)
+		err := cmd.Process.Kill()
+		if err != nil {
+			impl.logger.Errorw("error killing command", "name", name, "arg", arg, "err", err)
+		} else {
+			impl.logger.Infow("sucess cancel command", "name", name, "arg", arg)
+		}
+		return err
+	}
 	return cmd, newCtx, cancel
 }
 
