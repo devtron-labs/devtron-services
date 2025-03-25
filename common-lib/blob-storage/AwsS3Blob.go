@@ -23,6 +23,7 @@ import (
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	credentialsv2 "github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	s3v2 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -36,9 +37,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"time"
-
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 )
 
 type AwsS3Blob struct{}
@@ -218,7 +216,10 @@ func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secr
 			region = "us-east-1" //for minio
 			sdkConfig = awsv2.Config{Region: region}
 		}
-		endpointURL, _ := url.Parse("http://34.47.202.209:9000")
+		endpointURL, err := url.Parse(endpointUrl)
+		if err != nil {
+			return BucketBasics{}, err
+		}
 		s3Client = s3v2.NewFromConfig(sdkConfig, func(o *s3v2.Options) {
 			o.UsePathStyle = true
 			o.EndpointResolverV2 = &Resolver{URL: endpointURL}
@@ -244,7 +245,6 @@ func (basics BucketBasics) UploadFileV2(ctx context.Context, request *BlobStorag
 		u.PartSize = request.AwsS3BaseConfig.PartSize
 		u.Concurrency = request.AwsS3BaseConfig.Concurrency
 	})
-	start := time.Now()
 	_, err = uploader.Upload(ctx, &s3v2.PutObjectInput{
 		Bucket: aws.String(request.AwsS3BaseConfig.BucketName),
 		Key:    aws.String(request.DestinationKey),
@@ -253,11 +253,9 @@ func (basics BucketBasics) UploadFileV2(ctx context.Context, request *BlobStorag
 	if err != nil {
 		log.Printf("Couldn't upload large object to %v:%v. Here's why: %v\n",
 			request.AwsS3BaseConfig.BucketName, request.DestinationKey, err)
+		return err
 	}
-	elapsed := time.Since(start)
-	log.Printf("upload v2 took %s", elapsed)
-
-	return err
+	return nil
 }
 
 // DownloadFileV2 uses a download manager to download an object from a bucket using aws-sdk-v2.
@@ -269,7 +267,6 @@ func (basics BucketBasics) DownloadFileV2(ctx context.Context, request *BlobStor
 		d.Concurrency = request.AwsS3BaseConfig.Concurrency
 	})
 
-	start := time.Now()
 	numBytes, err = downloader.Download(ctx, file, &s3v2.GetObjectInput{
 		Bucket: aws.String(request.AwsS3BaseConfig.BucketName),
 		Key:    aws.String(request.SourceKey),
@@ -279,7 +276,5 @@ func (basics BucketBasics) DownloadFileV2(ctx context.Context, request *BlobStor
 			request.AwsS3BaseConfig.BucketName, request.SourceKey, err)
 		return false, 0, err
 	}
-	elapsed := time.Since(start)
-	log.Printf("download v2 took %s", elapsed)
-	return true, numBytes, err
+	return true, numBytes, nil
 }

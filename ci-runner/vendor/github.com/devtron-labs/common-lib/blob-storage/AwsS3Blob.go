@@ -218,7 +218,7 @@ func GetS3BucketBasicsClient(ctx context.Context, region string, accessKey, secr
 			region = "us-east-1" //for minio
 			sdkConfig = awsv2.Config{Region: region}
 		}
-		endpointURL, _ := url.Parse("http://34.47.202.209:9000")
+		endpointURL, _ := url.Parse(endpointUrl)
 		s3Client = s3v2.NewFromConfig(sdkConfig, func(o *s3v2.Options) {
 			o.UsePathStyle = true
 			o.EndpointResolverV2 = &Resolver{URL: endpointURL}
