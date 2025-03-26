@@ -886,7 +886,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
 	}
 
-	var chartName, repoURL, username, password string
+	var chartName, username, password string
 	var allowInsecureConnection bool
 	switch request.IsOCIRepo {
 	case true:
@@ -898,19 +898,19 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 	case false:
 		//chartName = request.ChartName
 		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
-		repoURL = request.ChartRepository.Url
+		//repoURL = request.ChartRepository.Url
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
 	}
 
 	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:             releaseIdentifier.ReleaseName,
-		Namespace:               releaseIdentifier.ReleaseNamespace,
-		ChartName:               chartName,
-		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ChartName:     chartName,
+		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
+		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
+		//RepoURL:                 repoURL,
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		Username:                username,
@@ -1183,7 +1183,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
 	}
 
-	var chartName, repoURL, username, password string
+	var chartName, username, password string
 	var allowInsecureConnection bool
 	switch request.IsOCIRepo {
 	case true:
@@ -1194,7 +1194,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		}
 	case false:
 		//chartName = request.ChartName
-		repoURL = request.ChartRepository.Url
+		//repoURL = request.ChartRepository.Url
 		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		chartRepoRequest := request.ChartRepository
 		chartRepoName := chartRepoRequest.Name
@@ -1220,12 +1220,12 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 	}
 
 	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:             releaseIdentifier.ReleaseName,
-		Namespace:               releaseIdentifier.ReleaseNamespace,
-		ChartName:               chartName,
-		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ChartName:     chartName,
+		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
+		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
+		//RepoURL:                 repoURL,
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		RegistryClient:          registryClient,
