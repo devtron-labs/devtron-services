@@ -1221,6 +1221,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 				impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
 				return "", nil, err
 			}
+			// Add or update chart repo ends
 		}
 	}
 
