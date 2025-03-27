@@ -1193,14 +1193,16 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 			return "", nil, err
 		}
 	case false:
-		//chartName = request.ChartName
-		//repoURL = request.ChartRepository.Url
 		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		chartRepoRequest := request.ChartRepository
 		chartRepoName := chartRepoRequest.Name
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
+		// request.ChartContent is nil for helm apps but not for devtron charts
+		// AddOrUpdateChartRepo function is needed for helm apps for updating index.yaml
+		// in Devtron apps ChartContent is already present so no need to update index.yaml
+
 		if request.ChartContent == nil {
 			// Add or update chart repo starts
 			chartRepo := repo.Entry{
@@ -1228,7 +1230,12 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		ChartName:     chartName,
 		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
 		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		//RepoURL:                 repoURL,
+		//RepoURL:                 repoURL, // RepoURL is not required, ChartName is sufficient
+
+		// WHen RepoURL != "", below function will be called, it will fetch the chart from the invalid repoURL(for some bitnami charts)
+		//chartURL, err := repo.FindChartInAuthAndTLSAndPassRepoURL(c.RepoURL, c.Username, c.Password, name, version,
+		//			c.CertFile, c.KeyFile, c.CaFile, c.InsecureSkipTLSverify, c.PassCredentialsAll, getter.All(settings))
+
 		Version:                 request.ChartVersion,
 		ValuesYaml:              request.ValuesYaml,
 		RegistryClient:          registryClient,
