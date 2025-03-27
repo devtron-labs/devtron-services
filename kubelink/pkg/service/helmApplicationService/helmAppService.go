@@ -1201,7 +1201,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		username = request.ChartRepository.Username
 		password = request.ChartRepository.Password
 		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
-		if request.ChartContent != nil {
+		if request.ChartContent == nil {
 			// Add or update chart repo starts
 			chartRepo := repo.Entry{
 				Name:     chartRepoName,
