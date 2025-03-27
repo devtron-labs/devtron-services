@@ -299,20 +299,8 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	err := impl.DockerLogin(ciContext, &DockerCredentials{
-		DockerUsername:     ciRequest.DockerUsername,
-		DockerPassword:     ciRequest.DockerPassword,
-		AwsRegion:          ciRequest.AwsRegion,
-		AccessKey:          ciRequest.AccessKey,
-		SecretKey:          ciRequest.SecretKey,
-		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
-		DockerRegistryType: ciRequest.DockerRegistryType,
-	})
-	if err != nil {
-		return "", err
-	}
 	envVars := &EnvironmentVariables{}
-	err = env.Parse(envVars)
+	err := env.Parse(envVars)
 	if err != nil {
 		log.Println("Error while parsing environment variables", err)
 	}
