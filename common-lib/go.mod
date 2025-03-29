@@ -19,7 +19,9 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/juju/errors v1.0.0
 	github.com/nats-io/nats.go v1.28.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
+	github.com/posthog/posthog-go v1.4.1
 	github.com/prometheus/client_golang v1.16.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.8.4
