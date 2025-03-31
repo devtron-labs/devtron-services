@@ -603,7 +603,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV2(ciContext cicxt.CiContext,
 	}
 
 	manifestLocation := util.LOCAL_BUILDX_LOCATION + "/manifest.json"
-	dockerBuild = fmt.Sprintf("%s -t %s --push --metadata-file %s", dockerBuild, dest, manifestLocation)
+	dockerBuild = fmt.Sprintf("%s -t %s --load --metadata-file %s", dockerBuild, dest, manifestLocation)
 
 	return dockerBuild, impl.getBuildxExportCacheFunc(ciContext, exportCacheCmds)
 }
@@ -614,7 +614,7 @@ func (impl *DockerHelperImpl) getBuildxBuildCommandV1(cacheEnabled bool, useCach
 	if useCacheMin {
 		cacheMode = CacheModeMin
 	}
-	dockerBuild = fmt.Sprintf("%s -f %s -t %s --push %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
+	dockerBuild = fmt.Sprintf("%s -f %s -t %s --load %s --network host --allow network.host --allow security.insecure", dockerBuild, dockerfilePath, dest, dockerBuildConfig.BuildContext)
 	if cacheEnabled {
 		dockerBuild = fmt.Sprintf("%s --cache-to=type=local,dest=%s,mode=%s --cache-from=type=local,src=%s", dockerBuild, localCachePath, cacheMode, oldCacheBuildxPath)
 	}
