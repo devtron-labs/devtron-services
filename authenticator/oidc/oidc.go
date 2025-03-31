@@ -241,29 +241,32 @@ func (a *ClientApp) oauth2Config(scopes []string, connectorId string) (*oauth2.C
 		return nil, err
 	}
 	if len(connectorId) > 0 {
+		errored := false
 		authUrl, err := url.JoinPath(endpoint.AuthURL, connectorId)
 		if err != nil {
+			errored = true
 			//using default auth url in case error occurred
 			fmt.Println("error occurred while joining auth url with connectorId", err)
-			authUrl = endpoint.AuthURL
 		}
 
 		deviceAuthURL, err := url.JoinPath(endpoint.DeviceAuthURL, connectorId)
 		if err != nil {
+			errored = true
 			//using default auth url in case error occurred
 			fmt.Println("error occurred while joining auth url with connectorId", err)
-			deviceAuthURL = endpoint.DeviceAuthURL
 		}
 		tokenURL, err := url.JoinPath(endpoint.TokenURL, connectorId)
 		if err != nil {
+			errored = true
 			//using default auth url in case error occurred
 			fmt.Println("error occurred while joining auth url with connectorId", err)
-			tokenURL = endpoint.TokenURL
+		}
+		if !errored {
+			endpoint.AuthURL = authUrl
+			endpoint.DeviceAuthURL = deviceAuthURL
+			endpoint.TokenURL = tokenURL
 		}
 
-		endpoint.AuthURL = authUrl
-		endpoint.DeviceAuthURL = deviceAuthURL
-		endpoint.TokenURL = tokenURL
 	}
 	return &oauth2.Config{
 		ClientID:     a.clientID,
