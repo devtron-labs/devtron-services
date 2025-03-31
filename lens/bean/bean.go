@@ -17,5 +17,5 @@
 package bean
 
 type GitSensorProtocolConfig struct {
-	Protocol string `env:"GIT_SENSOR_PROTOCOL" envDefault:"REST"`
+	Protocol string `env:"GIT_SENSOR_PROTOCOL" envDefault:"REST" description: "The protocol used by the Git Sensor"`
 }

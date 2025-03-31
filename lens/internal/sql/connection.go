@@ -28,11 +28,11 @@ import (
 )
 
 type Config struct {
-	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
-	Port            string `env:"PG_PORT" envDefault:"5432"`
-	User            string `env:"PG_USER" envDefault:""`
+	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1" description: "The address of the PostgreSQL server"`
+	Port            string `env:"PG_PORT" envDefault:"5432" description: "The port number for PostgreSQL"`
+	User            string `env:"PG_USER" envDefault:"" description: "The username for PostgreSQL access"`
 	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
-	Database        string `env:"PG_DATABASE" envDefault:"lens"`
+	Database        string `env:"PG_DATABASE" envDefault:"lens" description: "The name of the PostgreSQL database"`
 	ApplicationName string `env:"APP" envDefault:"lens"`
 	bean.PgQueryMonitoringConfig
 }

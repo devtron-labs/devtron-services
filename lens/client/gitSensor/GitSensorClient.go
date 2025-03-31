@@ -49,7 +49,7 @@ func GetGitSensorConfig() (*GitSensorConfig, error) {
 
 // ----------------------impl
 type GitSensorConfig struct {
-	Url     string `env:"GIT_SENSOR_URL" envDefault:"http://localhost:9999"`
+	Url     string `env:"GIT_SENSOR_URL" envDefault:"http://localhost:9999" description: "The URL of the Git Sensor Service"`
 	Timeout int    `env:"GIT_SENSOR_TIMEOUT" envDefault:"0"` // in seconds
 }
 
