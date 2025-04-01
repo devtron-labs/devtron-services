@@ -719,7 +719,7 @@ func (impl *HelmAppServiceImpl) installRelease(ctx context.Context, request *cli
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	chartSpec, err := impl.getChartSpec(true, helmClientObj, request, releaseIdentifier, registryClient)
 	if err != nil {
 		impl.logger.Errorw("error in getting chart spec", "err", err)
 		return nil, err
@@ -801,7 +801,7 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	chartSpec, err := impl.getChartSpec(false, helmClientObj, request, releaseIdentifier, registryClient)
 	if err != nil {
 		impl.logger.Errorw("error in getting chart spec", "err", err)
 		return "", err
@@ -839,7 +839,7 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	chartSpec, err := impl.getChartSpec(true, helmClientObj, request, releaseIdentifier, registryClient)
 	chartSpec.DependencyUpdate = true
 	chartSpec.UpgradeCRDs = true
 	if err != nil {
@@ -985,7 +985,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	chartSpec, err := impl.getChartSpec(true, helmClientObj, request, releaseIdentifier, registryClient)
 	if err != nil {
 		impl.logger.Errorw("error in getting chart spec", "err", err)
 		return "", nil, err
@@ -1008,7 +1008,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 	return string(rel), chartBytes, nil
 }
 
-func (impl *HelmAppServiceImpl) getChartSpec(helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *registry.Client) (*helmClient.ChartSpec, error) {
+func (impl *HelmAppServiceImpl) getChartSpec(addOrUpdateChartRepo bool, helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *registry.Client) (*helmClient.ChartSpec, error) {
 	var chartName, username, password string
 	var allowInsecureConnection bool
 	var err error
@@ -1030,7 +1030,7 @@ func (impl *HelmAppServiceImpl) getChartSpec(helmClientObj helmClient.Client, re
 		// AddOrUpdateChartRepo function is needed for helm apps for updating index.yaml
 		// in Devtron apps ChartContent is already present so no need to update index.yaml
 
-		if request.ChartContent == nil {
+		if addOrUpdateChartRepo && request.ChartContent == nil {
 			// Add or update chart repo starts
 			chartRepo := repo.Entry{
 				Name:     chartRepoName,
