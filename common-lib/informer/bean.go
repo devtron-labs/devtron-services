@@ -14,11 +14,27 @@
  * limitations under the License.
  */
 
-package errors
+package informer
 
-import (
-	"errors"
-	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
+const (
+	ClusterModifyEventSecretType = "cluster.request/modify"
+	ClusterActionAdd             = "add"
+	ClusterActionUpdate          = "update"
+	ClusterActionDelete          = "delete"
+	SecretFieldAction            = "action"
+	SecretFieldClusterId         = "cluster_id"
 )
 
-var AlreadyExists = errors.New(bean.InformerAlreadyExistMessage)
+const (
+	WorkflowTypeLabelKey = "workflowType"
+	CiWorkflowName       = "ci"
+	CdWorkflowName       = "cd"
+)
+
+const (
+	DevtronAdministratorInstanceLabelKey = "devtron.ai/administrator-instance"
+)
+
+const (
+	PodDeletedMessage = "pod deleted"
+)

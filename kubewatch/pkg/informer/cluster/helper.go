@@ -113,23 +113,23 @@ func (impl *InformerImpl) startInformerForCluster(clusterInfo *repository.Cluste
 }
 
 func (impl *InformerImpl) handleClusterChangeEvent(secretObject *coreV1.Secret) error {
-	if secretObject.Type != informerBean.CLUSTER_MODIFY_EVENT_SECRET_TYPE {
+	if secretObject.Type != informerBean.ClusterModifyEventSecretType {
 		return nil
 	}
 	data := secretObject.Data
-	action := data[informerBean.SECRET_FIELD_ACTION]
-	id := string(data[informerBean.SECRET_FIELD_CLUSTER_ID])
+	action := data[informerBean.SecretFieldAction]
+	id := string(data[informerBean.SecretFieldClusterId])
 	clusterId, convErr := strconv.Atoi(id)
 	if convErr != nil {
 		impl.logger.Errorw("error in converting cluster id to int", "clusterId", id, "err", convErr)
 		return convErr
 	}
-	if string(action) == informerBean.CLUSTER_ACTION_ADD {
+	if string(action) == informerBean.ClusterActionAdd {
 		if err := impl.reloadInformerForCluster(clusterId); err != nil {
 			impl.logger.Errorw("error in starting informer for cluster", "clusterId", clusterId, "err", err)
 			return err
 		}
-	} else if string(action) == informerBean.CLUSTER_ACTION_UPDATE {
+	} else if string(action) == informerBean.ClusterActionUpdate {
 		if err := impl.syncMultiClusterInformer(clusterId); err != nil {
 			impl.logger.Errorw("error in updating informer for cluster", "id", clusterId, "err", err)
 			return err
@@ -139,17 +139,17 @@ func (impl *InformerImpl) handleClusterChangeEvent(secretObject *coreV1.Secret) 
 }
 
 func (impl *InformerImpl) handleClusterDeleteEvent(secretObject *coreV1.Secret) error {
-	if secretObject.Type != informerBean.CLUSTER_MODIFY_EVENT_SECRET_TYPE {
+	if secretObject.Type != informerBean.ClusterModifyEventSecretType {
 		return nil
 	}
 	data := secretObject.Data
-	action := data[informerBean.SECRET_FIELD_ACTION]
-	id := string(data[informerBean.SECRET_FIELD_CLUSTER_ID])
+	action := data[informerBean.SecretFieldAction]
+	id := string(data[informerBean.SecretFieldClusterId])
 	clusterId, err := strconv.Atoi(id)
 	if err != nil {
 		return err
 	}
-	if string(action) == informerBean.CLUSTER_ACTION_DELETE {
+	if string(action) == informerBean.ClusterActionDelete {
 		if err = impl.handleClusterDelete(clusterId); err != nil {
 			impl.logger.Errorw("error in handling cluster delete event", "clusterId", clusterId, "err", err)
 			return err

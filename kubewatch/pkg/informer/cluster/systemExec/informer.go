@@ -72,7 +72,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	impl.logger.Infow("starting system executor informer for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.LabelSelector = informerBean.WORKFLOW_LABEL_SELECTOR
+		opts.LabelSelector = informerBean.WorkflowLabelSelector
 	})
 	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
 	// updateFunc is called when an existing pod is updated
@@ -93,17 +93,17 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 		if newPodObj != nil {
 			var workflowType string
 			podLabels := newPodObj.GetLabels()
-			if val, ok := podLabels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
+			if val, ok := podLabels[informerBean.WorkflowTypeLabelKey]; ok {
 				workflowType = val
 			}
 			impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
-			nodeStatus := impl.assessNodeStatus(informerBean.UPDATE_EVENT, newPodObj)
+			nodeStatus := impl.assessNodeStatus(informerBean.UpdateEvent, newPodObj)
 			workflowStatus := getWorkflowStatus(newPodObj, nodeStatus, workflowType)
 			if workflowStatus.Message == "" && workflowStatus.Phase == v1alpha1.WorkflowFailed {
 				impl.logger.Debugw("skipping the failed workflow update event as message is empty", "workflow", workflowStatus)
 				return
 			}
-			if val, ok := podLabels[informerBean.DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY]; ok {
+			if val, ok := podLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
 				workflowStatus.DevtronAdministratorInstance = val
 			} else {
 				impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)
@@ -139,18 +139,18 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	deleteFunc := func(podObj *coreV1.Pod) {
 		var workflowType string
 		podLabels := podObj.GetLabels()
-		if val, ok := podLabels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
+		if val, ok := podLabels[informerBean.WorkflowTypeLabelKey]; ok {
 			workflowType = val
 		}
 		impl.logger.Debugw("event received in Pods delete informer", "time", time.Now(), "podObjStatus", podObj.Status)
-		nodeStatus := impl.assessNodeStatus(informerBean.DELETE_EVENT, podObj)
+		nodeStatus := impl.assessNodeStatus(informerBean.DeleteEvent, podObj)
 		nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, restConfig)
 		if !reTriggerRequired {
 			// not sending this deleted event if it's not a re-trigger case
 			return
 		}
 		workflowStatus := getWorkflowStatus(podObj, nodeStatus, workflowType)
-		if val, ok := podLabels[informerBean.DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY]; ok {
+		if val, ok := podLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
 			workflowStatus.DevtronAdministratorInstance = val
 		} else {
 			impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)

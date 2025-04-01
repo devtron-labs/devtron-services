@@ -24,9 +24,9 @@ import (
 
 func GetNatsTopicForWorkflow(workflowType string) (string, error) {
 	switch workflowType {
-	case informerBean.CD_WORKFLOW_NAME:
+	case informerBean.CdWorkflowName:
 		return pubsub.CD_WORKFLOW_STATUS_UPDATE, nil
-	case informerBean.CI_WORKFLOW_NAME:
+	case informerBean.CiWorkflowName:
 		return pubsub.WORKFLOW_STATUS_UPDATE_TOPIC, nil
 	}
 	return "", fmt.Errorf("no topic mapped to workflow type %s", workflowType)

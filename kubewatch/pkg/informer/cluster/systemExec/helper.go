@@ -59,7 +59,7 @@ func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInf
 func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string,
 	nodeStatus v1alpha1.NodeStatus, config *rest.Config) (v1alpha1.NodeStatus, bool) {
 
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == informerBean.EXIT_CODE_143_ERROR || nodeStatus.Message == informerBean.NodeNoLongerExists) {
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == informerBean.ExitCode143Error || nodeStatus.Message == informerBean.NodeNoLongerExists) {
 		clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 		if k8sErr != nil {
 			return nodeStatus, false
@@ -68,13 +68,13 @@ func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace s
 		if err != nil {
 			impl.logger.Errorw("error in getting pod from clusterClient", "podName", podName, "namespace", namespace, "err", err)
 			if isResourceNotFoundErr(err) {
-				nodeStatus.Message = informerBean.POD_DELETED_MESSAGE
+				nodeStatus.Message = informerBean.PodDeletedMessage
 				return nodeStatus, true
 			}
 			return nodeStatus, false
 		}
 		if pod.DeletionTimestamp != nil {
-			nodeStatus.Message = informerBean.POD_DELETED_MESSAGE
+			nodeStatus.Message = informerBean.PodDeletedMessage
 			return nodeStatus, true
 		}
 	}
@@ -178,7 +178,7 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 			// case2: we get the above event[n-1] and last[n] event with pod phase as failed and the main container state as terminated.
 
 			// we want to handle the below case in last[n] event only,last event is always caught by DELETE_EVENT informer.
-			if eventType == informerBean.DELETE_EVENT {
+			if eventType == informerBean.DeleteEvent {
 				// we should mark this case as an error
 				if ctr.Name == common.MainContainerName {
 					return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)

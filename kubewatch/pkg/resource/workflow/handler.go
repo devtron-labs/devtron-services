@@ -44,7 +44,7 @@ func NewCiInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientSer
 		logger:       logger,
 		client:       client,
 		appConfig:    appConfig,
-		workflowType: informerBean.CI_WORKFLOW_NAME,
+		workflowType: informerBean.CiWorkflowName,
 	}
 }
 
@@ -53,7 +53,7 @@ func NewCdInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientSer
 		logger:       logger,
 		client:       client,
 		appConfig:    appConfig,
-		workflowType: informerBean.CD_WORKFLOW_NAME,
+		workflowType: informerBean.CdWorkflowName,
 	}
 }
 
@@ -84,13 +84,13 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 					return
 				} else if found {
 					workflowLabels := workflowObject.GetLabels()
-					if val, ok := workflowLabels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok && impl.workflowType != val {
+					if val, ok := workflowLabels[informerBean.WorkflowTypeLabelKey]; ok && impl.workflowType != val {
 						impl.logger.Warnw("workflow type label is not matching with the workflow type", "workflowType", impl.workflowType, "workflowTypeLabel", val)
 						// return statement is skipped intentionally for backward compatibility
 						// TODO Asutosh: Use this as a labelSelector to filter out the workflows in future.
 						return
 					}
-					if val, ok := workflowLabels[informerBean.DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY]; ok {
+					if val, ok := workflowLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
 						workflow[informerBean.DevtronAdministratorInstance] = val
 					} else {
 						impl.logger.Warnw("devtron administrator instance label is not found in the workflow. not a devtron workflow", "workflowLabels", workflowLabels)
