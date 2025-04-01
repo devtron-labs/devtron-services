@@ -725,6 +725,9 @@ func (impl *HelmAppServiceImpl) installRelease(ctx context.Context, request *cli
 		return nil, err
 	}
 	chartSpec.DryRun = dryRun
+	chartSpec.DependencyUpdate = true
+	chartSpec.UpgradeCRDs = true
+	chartSpec.CreateNamespace = false
 
 	impl.logger.Debugw("Installing release", "name", releaseIdentifier.ReleaseName, "namespace", releaseIdentifier.ReleaseNamespace, "dry-run", dryRun)
 	switch impl.helmReleaseConfig.RunHelmInstallInAsyncMode {
@@ -837,6 +840,8 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 	request.RegistryCredential.RegistryUrl = registryUrl
 
 	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	chartSpec.DependencyUpdate = true
+	chartSpec.UpgradeCRDs = true
 	if err != nil {
 		impl.logger.Errorw("error in getting chart spec", "err", err)
 		return nil, err
@@ -1051,8 +1056,8 @@ func (impl *HelmAppServiceImpl) getChartSpec(helmClientObj helmClient.Client, re
 		ReleaseName:   releaseIdentifier.ReleaseName,
 		Namespace:     releaseIdentifier.ReleaseNamespace,
 		ChartName:     chartName,
-		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
+		CleanupOnFail: true,                    // allow deletion of new resources created in this rollback when rollback fails
+		MaxHistory:    int(request.HistoryMax), // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
 		//RepoURL:                 repoURL, // RepoURL is not required, ChartName is sufficient
 
 		// WHen RepoURL != "", below function will be called, it will fetch the chart from the invalid repoURL(for some bitnami charts)
