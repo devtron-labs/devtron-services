@@ -19,8 +19,9 @@ package cluster
 import (
 	"errors"
 	"fmt"
+	informerBean "github.com/devtron-labs/common-lib/informer"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
-	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	informerErr "github.com/devtron-labs/kubewatch/pkg/informer/errors"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/go-pg/pg"
@@ -30,7 +31,7 @@ import (
 	"time"
 )
 
-func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInformerFactory, clusterLabels *informerBean.ClusterLabels) (chan struct{}, error) {
+func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInformerFactory, clusterLabels *bean.ClusterLabels) (chan struct{}, error) {
 	stopChannel := make(chan struct{})
 	stopper, found := impl.getClusterInformerStopper()
 	if found {
@@ -42,11 +43,11 @@ func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInf
 	return stopChannel, nil
 }
 
-func (impl *InformerImpl) getClusterInformerStopper() (*informerBean.FactoryStopper, bool) {
+func (impl *InformerImpl) getClusterInformerStopper() (*bean.FactoryStopper, bool) {
 	return impl.clusterInformerStopper, impl.clusterInformerStopper.HasInformer()
 }
 
-func (impl *InformerImpl) setClusterInformerStopper(stopper *informerBean.FactoryStopper) {
+func (impl *InformerImpl) setClusterInformerStopper(stopper *bean.FactoryStopper) {
 	impl.clusterInformerStopper = stopper
 }
 
@@ -60,7 +61,7 @@ func (impl *InformerImpl) stopDevtronClusterWatcher() error {
 }
 
 func (impl *InformerImpl) startClientInformers(clusterInfo *repository.Cluster) error {
-	for supportedClient := range informerBean.SupportedClientMap {
+	for supportedClient := range bean.SupportedClientMap {
 		clientAdvisor, err := impl.GetClient(supportedClient, clusterInfo)
 		if err != nil {
 			impl.logger.Errorw("error in getting client advisor", "supportedClient", supportedClient, "err", err)
@@ -78,7 +79,7 @@ func (impl *InformerImpl) startClientInformers(clusterInfo *repository.Cluster) 
 }
 
 func (impl *InformerImpl) stopInformersForCluster(clusterId int) error {
-	for supportedClient := range informerBean.SupportedClientMap {
+	for supportedClient := range bean.SupportedClientMap {
 		clientAdvisor, err := impl.GetClientStopper(supportedClient)
 		if err != nil {
 			impl.logger.Errorw("error in getting client advisor", "supportedClient", supportedClient, "err", err)
@@ -100,7 +101,7 @@ func (impl *InformerImpl) startInformerForCluster(clusterInfo *repository.Cluste
 	}()
 	if len(clusterInfo.ErrorInConnecting) > 0 {
 		impl.logger.Debugw("cluster is not reachable", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
-		middleware.IncUnreachableCluster(informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id))
+		middleware.IncUnreachableCluster(bean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id))
 	}
 	// FIXME: If cluster is not reachable, we won't be able to start the informer for it.
 	// But once orchestrator is able to connect to the cluster, we should start the informer using it's event.

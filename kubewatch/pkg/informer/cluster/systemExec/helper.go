@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
-	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	informerBean "github.com/devtron-labs/common-lib/informer"
+	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/informer/errors"
 	"golang.org/x/exp/maps"
 	coreV1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ import (
 	"sort"
 )
 
-func (impl *InformerImpl) getSystemWfStopper(clusterId int) (*informerBean.FactoryStopper, bool) {
+func (impl *InformerImpl) getSystemWfStopper(clusterId int) (*bean.FactoryStopper, bool) {
 	stopper, ok := impl.systemWfInformerStopper[clusterId]
 	if ok {
 		return stopper, stopper.HasInformer()
@@ -44,7 +45,7 @@ func (impl *InformerImpl) getStoppableClusterIds() []int {
 	return maps.Keys(impl.systemWfInformerStopper)
 }
 
-func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInformerFactory, clusterLabels *informerBean.ClusterLabels) (chan struct{}, error) {
+func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInformerFactory, clusterLabels *bean.ClusterLabels) (chan struct{}, error) {
 	stopChannel := make(chan struct{})
 	stopper, ok := impl.systemWfInformerStopper[clusterLabels.ClusterId]
 	if ok && stopper.HasInformer() {
@@ -59,7 +60,7 @@ func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInf
 func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string,
 	nodeStatus v1alpha1.NodeStatus, config *rest.Config) (v1alpha1.NodeStatus, bool) {
 
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == informerBean.ExitCode143Error || nodeStatus.Message == informerBean.NodeNoLongerExists) {
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == bean.ExitCode143Error || nodeStatus.Message == bean.NodeNoLongerExists) {
 		clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 		if k8sErr != nil {
 			return nodeStatus, false
@@ -178,7 +179,7 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 			// case2: we get the above event[n-1] and last[n] event with pod phase as failed and the main container state as terminated.
 
 			// we want to handle the below case in last[n] event only,last event is always caught by DELETE_EVENT informer.
-			if eventType == informerBean.DeleteEvent {
+			if eventType == bean.DeleteEvent {
 				// we should mark this case as an error
 				if ctr.Name == common.MainContainerName {
 					return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)

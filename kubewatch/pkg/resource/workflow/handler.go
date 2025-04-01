@@ -19,9 +19,10 @@ package workflow
 import (
 	"encoding/json"
 	"github.com/argoproj/argo-workflows/v3/workflow/util"
+	informerBean "github.com/devtron-labs/common-lib/informer"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/kubewatch/pkg/config"
-	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"go.uber.org/zap"
@@ -57,7 +58,7 @@ func NewCdInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientSer
 	}
 }
 
-func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *InformerImpl) GetSharedInformer(clusterLabels *bean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
 	defer func() {
 		impl.logger.Debugw("registered workflow informer", "namespace", namespace, "time", time.Since(startTime))
@@ -91,7 +92,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 						return
 					}
 					if val, ok := workflowLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
-						workflow[informerBean.DevtronAdministratorInstance] = val
+						workflow[bean.DevtronAdministratorInstance] = val
 					} else {
 						impl.logger.Warnw("devtron administrator instance label is not found in the workflow. not a devtron workflow", "workflowLabels", workflowLabels)
 						middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_ARGO_WORKFLOW)

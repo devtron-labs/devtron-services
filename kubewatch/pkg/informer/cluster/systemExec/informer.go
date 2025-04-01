@@ -19,10 +19,11 @@ package systemExec
 import (
 	"encoding/json"
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+	informerBean "github.com/devtron-labs/common-lib/informer"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
-	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
@@ -42,7 +43,7 @@ type InformerImpl struct {
 	k8sUtil                 utils.K8sUtil
 	pubSubClient            *pubsub.PubSubClientServiceImpl
 	informerClient          resource.InformerClient
-	systemWfInformerStopper map[int]*informerBean.FactoryStopper
+	systemWfInformerStopper map[int]*bean.FactoryStopper
 }
 
 func NewInformerImpl(logger *zap.SugaredLogger,
@@ -56,7 +57,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 		k8sUtil:                 k8sUtil,
 		pubSubClient:            pubSubClient,
 		informerClient:          informerClient,
-		systemWfInformerStopper: make(map[int]*informerBean.FactoryStopper),
+		systemWfInformerStopper: make(map[int]*bean.FactoryStopper),
 	}
 }
 
@@ -72,9 +73,9 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	impl.logger.Infow("starting system executor informer for cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.LabelSelector = informerBean.WorkflowLabelSelector
+		opts.LabelSelector = bean.WorkflowLabelSelector
 	})
-	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
+	clusterLabels := bean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
 	// updateFunc is called when an existing pod is updated
 	updateFunc := func(oldPodObj, newPodObj *coreV1.Pod) {
 		// at least one of the pod version will be not nil
@@ -97,7 +98,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 				workflowType = val
 			}
 			impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
-			nodeStatus := impl.assessNodeStatus(informerBean.UpdateEvent, newPodObj)
+			nodeStatus := impl.assessNodeStatus(bean.UpdateEvent, newPodObj)
 			workflowStatus := getWorkflowStatus(newPodObj, nodeStatus, workflowType)
 			if workflowStatus.Message == "" && workflowStatus.Phase == v1alpha1.WorkflowFailed {
 				impl.logger.Debugw("skipping the failed workflow update event as message is empty", "workflow", workflowStatus)
@@ -143,7 +144,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 			workflowType = val
 		}
 		impl.logger.Debugw("event received in Pods delete informer", "time", time.Now(), "podObjStatus", podObj.Status)
-		nodeStatus := impl.assessNodeStatus(informerBean.DeleteEvent, podObj)
+		nodeStatus := impl.assessNodeStatus(bean.DeleteEvent, podObj)
 		nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, restConfig)
 		if !reTriggerRequired {
 			// not sending this deleted event if it's not a re-trigger case

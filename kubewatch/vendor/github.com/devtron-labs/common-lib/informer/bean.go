@@ -14,20 +14,27 @@
  * limitations under the License.
  */
 
-package argoWf
+package informer
 
-import (
-	"fmt"
-	informerBean "github.com/devtron-labs/common-lib/informer"
-	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
+const (
+	ClusterModifyEventSecretType = "cluster.request/modify"
+	ClusterActionAdd             = "add"
+	ClusterActionUpdate          = "update"
+	ClusterActionDelete          = "delete"
+	SecretFieldAction            = "action"
+	SecretFieldClusterId         = "cluster_id"
 )
 
-func GetNatsTopicForWorkflow(workflowType string) (string, error) {
-	switch workflowType {
-	case informerBean.CdWorkflowName:
-		return pubsub.CD_WORKFLOW_STATUS_UPDATE, nil
-	case informerBean.CiWorkflowName:
-		return pubsub.WORKFLOW_STATUS_UPDATE_TOPIC, nil
-	}
-	return "", fmt.Errorf("no topic mapped to workflow type %s", workflowType)
-}
+const (
+	WorkflowTypeLabelKey = "workflowType"
+	CiWorkflowName       = "ci"
+	CdWorkflowName       = "cd"
+)
+
+const (
+	DevtronAdministratorInstanceLabelKey = "devtron.ai/administrator-instance"
+)
+
+const (
+	PodDeletedMessage = "pod deleted"
+)
