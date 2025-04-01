@@ -1008,72 +1008,6 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 	return string(rel), chartBytes, nil
 }
 
-func (impl *HelmAppServiceImpl) getChartSpec(addOrUpdateChartRepo bool, helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *registry.Client) (*helmClient.ChartSpec, error) {
-	var chartName, username, password string
-	var allowInsecureConnection bool
-	var err error
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return nil, err
-		}
-	case false:
-		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
-		chartRepoRequest := request.ChartRepository
-		chartRepoName := chartRepoRequest.Name
-		username = request.ChartRepository.Username
-		password = request.ChartRepository.Password
-		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
-		// request.ChartContent is nil for helm apps but not for devtron charts
-		// AddOrUpdateChartRepo function is needed for helm apps for updating index.yaml
-		// in Devtron apps ChartContent is already present so no need to update index.yaml
-
-		if addOrUpdateChartRepo && request.ChartContent == nil {
-			// Add or update chart repo starts
-			chartRepo := repo.Entry{
-				Name:     chartRepoName,
-				URL:      chartRepoRequest.Url,
-				Username: request.ChartRepository.Username,
-				Password: request.ChartRepository.Password,
-				// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
-				PassCredentialsAll:    true,
-				InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
-			}
-
-			impl.logger.Debug("Adding/Updating Chart repo", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest)
-			err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
-			if err != nil {
-				impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
-				return nil, err
-			}
-			// Add or update chart repo ends
-		}
-	}
-
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:   releaseIdentifier.ReleaseName,
-		Namespace:     releaseIdentifier.ReleaseNamespace,
-		ChartName:     chartName,
-		CleanupOnFail: true,                    // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:    int(request.HistoryMax), // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		//RepoURL:                 repoURL, // RepoURL is not required, ChartName is sufficient
-
-		// WHen RepoURL != "", below function will be called, it will fetch the chart from the invalid repoURL(for some bitnami charts)
-		//chartURL, err := repo.FindChartInAuthAndTLSAndPassRepoURL(c.RepoURL, c.Username, c.Password, name, version,
-		//			c.CertFile, c.KeyFile, c.CaFile, c.InsecureSkipTLSverify, c.PassCredentialsAll, getter.All(settings))
-
-		Version:                 request.ChartVersion,
-		ValuesYaml:              request.ValuesYaml,
-		RegistryClient:          registryClient,
-		Username:                username,
-		Password:                password,
-		AllowInsecureConnection: allowInsecureConnection,
-	}
-	return chartSpec, nil
-}
-
 // getHelmTemplateOptions creates and returns HelmTemplateOptions with KubeVersion set if provided
 func (impl *HelmAppServiceImpl) getHelmTemplateOptions(k8sVersion string) *helmClient.HelmTemplateOptions {
 	helmTemplateOptions := &helmClient.HelmTemplateOptions{}
@@ -1805,35 +1739,68 @@ func (impl *HelmAppServiceImpl) setupRegistryClient(registryCredential *client.R
 	return settings.RegistryClient, settings.RegistryHostURL, cleanup, nil
 }
 
-//
-//func (impl *HelmAppServiceImpl) handleChartName(request *client.InstallReleaseRequest) (string, error) {
-//	var chartName string
-//	var err error
-//	switch request.IsOCIRepo {
-//	case true:
-//		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-//		if err != nil {
-//			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-//			return "", err
-//		}
-//	case false:
-//		chartRepoRequest := request.ChartRepository
-//		chartRepoName := chartRepoRequest.Name
-//		chartRepo := repo.Entry{
-//			Name:     chartRepoName,
-//			URL:      chartRepoRequest.Url,
-//			Username: chartRepoRequest.Username,
-//			Password: chartRepoRequest.Password,
-//			PassCredentialsAll:    true,
-//			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
-//		}
-//		impl.logger.Debug("Adding/Updating Chart repo")
-//		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
-//		if err != nil {
-//			impl.logger.Errorw("Error in add/update chart repo ", "err", err)
-//			return "", err
-//		}
-//		chartName = fmt.Sprintf("%s/%s", chartRepoName, request.ChartName)
-//	}
-//	return chartName, nil
-//}
+func (impl *HelmAppServiceImpl) getChartSpec(addOrUpdateChartRepo bool, helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *registry.Client) (*helmClient.ChartSpec, error) {
+	var chartName, username, password string
+	var allowInsecureConnection bool
+	var err error
+	switch request.IsOCIRepo {
+	case true:
+		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
+		if err != nil {
+			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
+			return nil, err
+		}
+	case false:
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
+		chartRepoRequest := request.ChartRepository
+		chartRepoName := chartRepoRequest.Name
+		username = request.ChartRepository.Username
+		password = request.ChartRepository.Password
+		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
+		// request.ChartContent is nil for helm apps but not for devtron charts
+		// AddOrUpdateChartRepo function is needed for helm apps for updating index.yaml
+		// in Devtron apps ChartContent is already present so no need to update index.yaml
+
+		if addOrUpdateChartRepo && request.ChartContent == nil {
+			// Add or update chart repo starts
+			chartRepo := repo.Entry{
+				Name:     chartRepoName,
+				URL:      chartRepoRequest.Url,
+				Username: request.ChartRepository.Username,
+				Password: request.ChartRepository.Password,
+				// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
+				PassCredentialsAll:    true,
+				InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
+			}
+
+			impl.logger.Debug("Adding/Updating Chart repo", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest)
+			err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
+			if err != nil {
+				impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
+				return nil, err
+			}
+			// Add or update chart repo ends
+		}
+	}
+
+	chartSpec := &helmClient.ChartSpec{
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ChartName:     chartName,
+		CleanupOnFail: true,                    // allow deletion of new resources created in this rollback when rollback fails
+		MaxHistory:    int(request.HistoryMax), // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
+		//RepoURL:                 repoURL, // RepoURL is not required, ChartName is sufficient
+
+		// WHen RepoURL != "", below function will be called, it will fetch the chart from the invalid repoURL(for some bitnami charts)
+		//chartURL, err := repo.FindChartInAuthAndTLSAndPassRepoURL(c.RepoURL, c.Username, c.Password, name, version,
+		//			c.CertFile, c.KeyFile, c.CaFile, c.InsecureSkipTLSverify, c.PassCredentialsAll, getter.All(settings))
+
+		Version:                 request.ChartVersion,
+		ValuesYaml:              request.ValuesYaml,
+		RegistryClient:          registryClient,
+		Username:                username,
+		Password:                password,
+		AllowInsecureConnection: allowInsecureConnection,
+	}
+	return chartSpec, nil
+}
