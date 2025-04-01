@@ -215,7 +215,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250327100051-86261f25ea82
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250331054241-4988cd6bf54e
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -1760,4 +1760,4 @@ upper.io/db.v3/postgresql
 # k8s.io/mount-utils => k8s.io/mount-utils v0.29.7
 # k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.7
 # k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250327100051-86261f25ea82
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250331054241-4988cd6bf54e
