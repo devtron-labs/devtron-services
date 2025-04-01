@@ -14,26 +14,27 @@
  * limitations under the License.
  */
 
-package k8sInformer
+package informer
 
-import (
-	"errors"
-	"helm.sh/helm/v3/pkg/release"
-)
-
-type ReleaseDto struct {
-	*release.Release
-}
-
-func (r *ReleaseDto) getUniqueReleaseIdentifier() string {
-	return r.Namespace + "_" + r.Name
-}
-
-var (
-	ErrorCacheMissReleaseNotFound = errors.New("release not found in cache")
+const (
+	ClusterModifyEventSecretType = "cluster.request/modify"
+	ClusterActionAdd             = "add"
+	ClusterActionUpdate          = "update"
+	ClusterActionDelete          = "delete"
+	SecretFieldAction            = "action"
+	SecretFieldClusterId         = "cluster_id"
 )
 
 const (
-	HELM_RELEASE_SECRET_TYPE       = "helm.sh/release.v1"
-	INFORMER_ALREADY_EXIST_MESSAGE = "INFORMER_ALREADY_EXIST"
+	WorkflowTypeLabelKey = "workflowType"
+	CiWorkflowName       = "ci"
+	CdWorkflowName       = "cd"
+)
+
+const (
+	DevtronAdministratorInstanceLabelKey = "devtron.ai/administrator-instance"
+)
+
+const (
+	PodDeletedMessage = "pod deleted"
 )
