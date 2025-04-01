@@ -719,55 +719,12 @@ func (impl *HelmAppServiceImpl) installRelease(ctx context.Context, request *cli
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	var chartName string
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return nil, err
-		}
-
-	case false:
-		chartRepoRequest := request.ChartRepository
-		chartRepoName := chartRepoRequest.Name
-		// Add or update chart repo starts
-		chartRepo := repo.Entry{
-			Name:     chartRepoName,
-			URL:      chartRepoRequest.Url,
-			Username: chartRepoRequest.Username,
-			Password: chartRepoRequest.Password,
-			// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
-			PassCredentialsAll:    true,
-			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
-		}
-		impl.logger.Debug("Adding/Updating Chart repo")
-		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
-		if err != nil {
-			impl.logger.Errorw("Error in add/update chart repo ", "err", err)
-			internalErr := error2.ConvertHelmErrorToInternalError(err)
-			if internalErr != nil {
-				err = internalErr
-			}
-			return nil, err
-		}
-		chartName = fmt.Sprintf("%s/%s", chartRepoName, request.ChartName)
-		// Add or update chart repo ends
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return nil, err
 	}
-
-	// Install release starts
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:      releaseIdentifier.ReleaseName,
-		Namespace:        releaseIdentifier.ReleaseNamespace,
-		ValuesYaml:       request.ValuesYaml,
-		ChartName:        chartName,
-		Version:          request.ChartVersion,
-		DependencyUpdate: true,
-		UpgradeCRDs:      true,
-		CreateNamespace:  false,
-		DryRun:           dryRun,
-		RegistryClient:   registryClient,
-	}
+	chartSpec.DryRun = dryRun
 
 	impl.logger.Debugw("Installing release", "name", releaseIdentifier.ReleaseName, "namespace", releaseIdentifier.ReleaseNamespace, "dry-run", dryRun)
 	switch impl.helmReleaseConfig.RunHelmInstallInAsyncMode {
@@ -841,37 +798,10 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	var chartName, username, password string
-	var allowInsecureConnection bool
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return "", err
-		}
-	case false:
-		//chartName = request.ChartName
-		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
-		//repoURL = request.ChartRepository.Url
-		username = request.ChartRepository.Username
-		password = request.ChartRepository.Password
-		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
-	}
-
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:   releaseIdentifier.ReleaseName,
-		Namespace:     releaseIdentifier.ReleaseNamespace,
-		ChartName:     chartName,
-		CleanupOnFail: true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:    0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		//RepoURL:                 repoURL,
-		Version:                 request.ChartVersion,
-		ValuesYaml:              request.ValuesYaml,
-		Username:                username,
-		Password:                password,
-		AllowInsecureConnection: allowInsecureConnection,
-		RegistryClient:          registryClient,
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return "", err
 	}
 	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
 	release, err := helmClientObj.GetNotes(chartSpec, helmTemplateOptions)
@@ -906,48 +836,10 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
-	var chartName string
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return nil, err
-		}
-	case false:
-		chartRepoRequest := request.ChartRepository
-		chartRepoName := chartRepoRequest.Name
-		// Add or update chart repo starts
-		chartRepo := repo.Entry{
-			Name:     chartRepoName,
-			URL:      chartRepoRequest.Url,
-			Username: chartRepoRequest.Username,
-			Password: chartRepoRequest.Password,
-			// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
-			PassCredentialsAll:    true,
-			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
-		}
-		impl.logger.Debug("Adding/Updating Chart repo")
-		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
-		if err != nil {
-			impl.logger.Errorw("Error in add/update chart repo ", "err", err)
-			return nil, err
-		}
-		chartName = fmt.Sprintf("%s/%s", chartRepoName, request.ChartName)
-		// Add or update chart repo ends
-	}
-
-	// Update release starts
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:      releaseIdentifier.ReleaseName,
-		Namespace:        releaseIdentifier.ReleaseNamespace,
-		ValuesYaml:       request.ValuesYaml,
-		ChartName:        chartName,
-		Version:          request.ChartVersion,
-		DependencyUpdate: true,
-		UpgradeCRDs:      true,
-		MaxHistory:       int(request.HistoryMax),
-		RegistryClient:   registryClient,
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return nil, err
 	}
 
 	switch impl.helmReleaseConfig.RunHelmInstallInAsyncMode {
@@ -1088,14 +980,39 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 	defer cleanup()
 	request.RegistryCredential.RegistryUrl = registryUrl
 
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return "", nil, err
+	}
+
+	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
+	var content []byte
+	if request.ChartContent != nil {
+		content = request.ChartContent.Content
+	}
+	rel, chartBytes, err := helmClientObj.TemplateChart(chartSpec, helmTemplateOptions, content, getChart)
+	if err != nil {
+		impl.logger.Errorw("error occured while generating manifest in helm app service", "err:", err)
+		return "", nil, err
+	}
+
+	if rel == nil {
+		return "", nil, errors.New("release is found nil")
+	}
+	return string(rel), chartBytes, nil
+}
+
+func (impl *HelmAppServiceImpl) getChartSpec(helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *registry.Client) (*helmClient.ChartSpec, error) {
 	var chartName, username, password string
 	var allowInsecureConnection bool
+	var err error
 	switch request.IsOCIRepo {
 	case true:
 		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
 		if err != nil {
 			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return "", nil, err
+			return nil, err
 		}
 	case false:
 		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
@@ -1124,7 +1041,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 			err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
 			if err != nil {
 				impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
-				return "", nil, err
+				return nil, err
 			}
 			// Add or update chart repo ends
 		}
@@ -1149,22 +1066,7 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		Password:                password,
 		AllowInsecureConnection: allowInsecureConnection,
 	}
-
-	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
-	var content []byte
-	if request.ChartContent != nil {
-		content = request.ChartContent.Content
-	}
-	rel, chartBytes, err := helmClientObj.TemplateChart(chartSpec, helmTemplateOptions, content, getChart)
-	if err != nil {
-		impl.logger.Errorw("error occured while generating manifest in helm app service", "err:", err)
-		return "", nil, err
-	}
-
-	if rel == nil {
-		return "", nil, errors.New("release is found nil")
-	}
-	return string(rel), chartBytes, nil
+	return chartSpec, nil
 }
 
 // getHelmTemplateOptions creates and returns HelmTemplateOptions with KubeVersion set if provided
