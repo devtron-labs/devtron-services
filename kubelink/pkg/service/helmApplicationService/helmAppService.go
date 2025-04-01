@@ -873,13 +873,8 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 		AllowInsecureConnection: allowInsecureConnection,
 		RegistryClient:          registryClient,
 	}
-	HelmTemplateOptions := &helmClient.HelmTemplateOptions{}
-	if request.K8SVersion != "" {
-		HelmTemplateOptions.KubeVersion = &chartutil.KubeVersion{
-			Version: request.K8SVersion,
-		}
-	}
-	release, err := helmClientObj.GetNotes(chartSpec, HelmTemplateOptions)
+	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
+	release, err := helmClientObj.GetNotes(chartSpec, helmTemplateOptions)
 	if err != nil {
 		impl.logger.Errorw("Error in fetching Notes ", "err", err)
 		internalErr := error2.ConvertHelmErrorToInternalError(err)
@@ -1155,17 +1150,12 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		AllowInsecureConnection: allowInsecureConnection,
 	}
 
-	HelmTemplateOptions := &helmClient.HelmTemplateOptions{}
-	if request.K8SVersion != "" {
-		HelmTemplateOptions.KubeVersion = &chartutil.KubeVersion{
-			Version: request.K8SVersion,
-		}
-	}
+	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
 	var content []byte
 	if request.ChartContent != nil {
 		content = request.ChartContent.Content
 	}
-	rel, chartBytes, err := helmClientObj.TemplateChart(chartSpec, HelmTemplateOptions, content, getChart)
+	rel, chartBytes, err := helmClientObj.TemplateChart(chartSpec, helmTemplateOptions, content, getChart)
 	if err != nil {
 		impl.logger.Errorw("error occured while generating manifest in helm app service", "err:", err)
 		return "", nil, err
@@ -1175,6 +1165,17 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		return "", nil, errors.New("release is found nil")
 	}
 	return string(rel), chartBytes, nil
+}
+
+// getHelmTemplateOptions creates and returns HelmTemplateOptions with KubeVersion set if provided
+func (impl *HelmAppServiceImpl) getHelmTemplateOptions(k8sVersion string) *helmClient.HelmTemplateOptions {
+	helmTemplateOptions := &helmClient.HelmTemplateOptions{}
+	if k8sVersion != "" {
+		helmTemplateOptions.KubeVersion = &chartutil.KubeVersion{
+			Version: k8sVersion,
+		}
+	}
+	return helmTemplateOptions
 }
 
 func (impl *HelmAppServiceImpl) getHelmReleaseHistory(clusterConfig *client.ClusterConfig, releaseNamespace string, releaseName string, countOfHelmReleaseHistory int) ([]*release.Release, error) {
