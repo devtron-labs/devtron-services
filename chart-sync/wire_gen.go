@@ -39,6 +39,6 @@ func InitializeApp() (*App, error) {
 	defaultSettingsGetterImpl := registry.NewDefaultSettingsGetter(sugaredLogger)
 	settingsFactoryImpl := registry.NewSettingsFactoryImpl(defaultSettingsGetterImpl)
 	syncServiceImpl := pkg.NewSyncServiceImpl(chartRepoRepositoryImpl, sugaredLogger, helmRepoManagerImpl, dockerArtifactStoreRepositoryImpl, ociRegistryConfigRepositoryImpl, appStoreRepositoryImpl, appStoreApplicationVersionRepositoryImpl, configuration, settingsFactoryImpl)
-	app := NewApp(sugaredLogger, db, syncServiceImpl)
+	app := NewApp(sugaredLogger, db, syncServiceImpl, configuration)
 	return app, nil
 }
