@@ -16,6 +16,8 @@
 
 package bean
 
+import "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+
 type ClusterInfo struct {
 	ClusterId   int    `json:"clusterId"`
 	ClusterName string `json:"clusterName"`
@@ -33,16 +35,17 @@ const (
 	SECRET_FIELD_ACTION                 = "action"
 	SECRET_FIELD_CLUSTER_ID             = "cluster_id"
 
-	POD_DELETED_MESSAGE     = "pod deleted"
-	EXIT_CODE_143_ERROR     = "Error (exit code 143)"
-	CI_WORKFLOW_NAME        = "ci"
-	CD_WORKFLOW_NAME        = "cd"
-	WORKFLOW_LABEL_SELECTOR = "devtron.ai/purpose==workflow"
-	WORKFLOW_TYPE_LABEL_KEY = "workflowType"
-	JobKind                 = "Job"
-	NodeNoLongerExists      = "PodGC: node no longer exists"
-	UPDATE_EVENT            = "update_event"
-	DELETE_EVENT            = "delete_event"
+	POD_DELETED_MESSAGE                      = "pod deleted"
+	EXIT_CODE_143_ERROR                      = "Error (exit code 143)"
+	CI_WORKFLOW_NAME                         = "ci"
+	CD_WORKFLOW_NAME                         = "cd"
+	WORKFLOW_LABEL_SELECTOR                  = "devtron.ai/purpose==workflow"
+	WORKFLOW_TYPE_LABEL_KEY                  = "workflowType"
+	DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY = "devtron.ai/administrator-instance"
+	JobKind                                  = "Job"
+	NodeNoLongerExists                       = "PodGC: node no longer exists"
+	UPDATE_EVENT                             = "update_event"
+	DELETE_EVENT                             = "delete_event"
 )
 
 type ClusterLabels struct {
@@ -55,4 +58,13 @@ func NewClusterLabels(clusterName string, clusterId int) *ClusterLabels {
 		ClusterName: clusterName,
 		ClusterId:   clusterId,
 	}
+}
+
+const (
+	DevtronAdministratorInstance = "devtronAdministratorInstance"
+)
+
+type CiCdStatus struct {
+	DevtronAdministratorInstance string `json:"devtronAdministratorInstance"`
+	*v1alpha1.WorkflowStatus
 }

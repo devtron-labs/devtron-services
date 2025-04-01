@@ -73,10 +73,10 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
 	applicationInformer := impl.informerClient.GetSharedInformerClient(resourceBean.ApplicationResourceType)
 	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
-	acdInformer, err := applicationInformer.GetSharedInformer(clusterInfo.Id, impl.appConfig.GetACDNamespace(), restConfig)
+	acdInformer, err := applicationInformer.GetSharedInformer(clusterLabels, impl.appConfig.GetACDNamespace(), restConfig)
 	if err != nil {
 		impl.logger.Errorw("error in registering acd informer", "err", err, "clusterId", clusterInfo.Id)
-		middleware.IncUnregisteredInformers(clusterLabels, middleware.ARGO_CD)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.ARGO_CD_INFORMER)
 		return err
 	}
 	stopChannel, err := impl.getStopChannel(clusterLabels)

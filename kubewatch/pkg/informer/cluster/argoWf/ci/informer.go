@@ -65,10 +65,10 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
 	ciWfInformer := impl.informerClient.GetSharedInformerClient(resourceBean.CiWorkflowResourceType)
 	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
-	workflowInformer, err := ciWfInformer.GetSharedInformer(clusterInfo.Id, impl.appConfig.GetCiWfNamespace(), restConfig)
+	workflowInformer, err := ciWfInformer.GetSharedInformer(clusterLabels, impl.appConfig.GetCiWfNamespace(), restConfig)
 	if err != nil {
 		impl.logger.Errorw("error in starting workflow informer", "err", err)
-		middleware.IncUnregisteredInformers(clusterLabels, middleware.CI_STAGE_ARGO_WORKFLOW)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.CI_STAGE_ARGO_WORKFLOW_INFORMER)
 	}
 	stopChan, err := impl.getCiArgoWfStopChannel(clusterLabels)
 	if err != nil {

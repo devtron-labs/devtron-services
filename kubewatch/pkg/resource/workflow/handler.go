@@ -21,6 +21,9 @@ import (
 	"github.com/argoproj/argo-workflows/v3/workflow/util"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/kubewatch/pkg/config"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf"
+	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -30,31 +33,31 @@ import (
 )
 
 type InformerImpl struct {
-	logger        *zap.SugaredLogger
-	client        *pubsub.PubSubClientServiceImpl
-	appConfig     *config.AppConfig
-	natsTopicName string
+	logger       *zap.SugaredLogger
+	client       *pubsub.PubSubClientServiceImpl
+	appConfig    *config.AppConfig
+	workflowType string
 }
 
 func NewCiInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientServiceImpl, appConfig *config.AppConfig) *InformerImpl {
 	return &InformerImpl{
-		logger:        logger,
-		client:        client,
-		appConfig:     appConfig,
-		natsTopicName: pubsub.WORKFLOW_STATUS_UPDATE_TOPIC,
+		logger:       logger,
+		client:       client,
+		appConfig:    appConfig,
+		workflowType: informerBean.CI_WORKFLOW_NAME,
 	}
 }
 
 func NewCdInformerImpl(logger *zap.SugaredLogger, client *pubsub.PubSubClientServiceImpl, appConfig *config.AppConfig) *InformerImpl {
 	return &InformerImpl{
-		logger:        logger,
-		client:        client,
-		appConfig:     appConfig,
-		natsTopicName: pubsub.CD_WORKFLOW_STATUS_UPDATE,
+		logger:       logger,
+		client:       client,
+		appConfig:    appConfig,
+		workflowType: informerBean.CD_WORKFLOW_NAME,
 	}
 }
 
-func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
 	defer func() {
 		impl.logger.Debugw("registered workflow informer", "namespace", namespace, "time", time.Since(startTime))
@@ -73,29 +76,56 @@ func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8s
 	_, err = workflowInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {},
 		UpdateFunc: func(oldWf, newWf interface{}) {
-			impl.logger.Info("workflow update detected")
-			if workflow, ok := newWf.(*unstructured.Unstructured).Object["status"]; ok {
-				wfJson, err := json.Marshal(workflow)
-				if err != nil {
-					impl.logger.Errorw("error occurred while marshalling workflow", "err", err)
+			impl.logger.Infow("workflow update detected", "workflowType", impl.workflowType)
+			if workflowObject, ok := newWf.(*unstructured.Unstructured); ok {
+				workflow, found, jsonErr := unstructured.NestedMap(workflowObject.Object, "status")
+				if jsonErr != nil {
+					impl.logger.Errorw("error in getting workflow status", "wfObject", workflowObject.Object, "err", jsonErr)
 					return
-				}
-				impl.logger.Debugw("sending workflow update event ", "wfJson", string(wfJson))
-				var reqBody = wfJson
-				if impl.appConfig.GetExternalConfig().External {
-					err = publishEventsOnRest(reqBody, impl.natsTopicName, impl.appConfig.GetExternalConfig())
-				} else {
-					if impl.client == nil {
-						impl.logger.Warn("don't publish")
+				} else if found {
+					workflowLabels := workflowObject.GetLabels()
+					if val, ok := workflowLabels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok && impl.workflowType != val {
+						impl.logger.Warnw("workflow type label is not matching with the workflow type", "workflowType", impl.workflowType, "workflowTypeLabel", val)
+						// return statement is skipped intentionally for backward compatibility
+						// TODO Asutosh: Use this as a labelSelector to filter out the workflows in future.
 						return
 					}
-					err = impl.client.Publish(impl.natsTopicName, string(reqBody))
+					if val, ok := workflowLabels[informerBean.DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY]; ok {
+						workflow[informerBean.DevtronAdministratorInstance] = val
+					} else {
+						impl.logger.Warnw("devtron administrator instance label is not found in the workflow. not a devtron workflow", "workflowLabels", workflowLabels)
+						middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_ARGO_WORKFLOW)
+						// return statement is skipped intentionally for backward compatibility
+						// TODO Asutosh: remove this return statement in future
+						// return
+					}
+					wfJson, err := json.Marshal(workflow)
+					if err != nil {
+						impl.logger.Errorw("error occurred while marshalling workflow", "err", err)
+						return
+					}
+					natsTopicName, err := argoWf.GetNatsTopicForWorkflow(impl.workflowType)
+					if err != nil {
+						impl.logger.Errorw("error in getting nats topic for workflow", "workflowType", impl.workflowType, "err", err)
+						return
+					}
+					impl.logger.Debugw("sending workflow update event", "natsTopicName", natsTopicName, "wfJson", string(wfJson))
+					var reqBody = wfJson
+					if impl.appConfig.GetExternalConfig().External {
+						err = publishEventsOnRest(reqBody, natsTopicName, impl.appConfig.GetExternalConfig())
+					} else {
+						if impl.client == nil {
+							impl.logger.Warn("don't publish")
+							return
+						}
+						err = impl.client.Publish(natsTopicName, string(reqBody))
+					}
+					if err != nil {
+						impl.logger.Errorw("error while publishing request", "natsTopicName", natsTopicName, "err", err)
+						return
+					}
+					impl.logger.Debug("workflow update sent")
 				}
-				if err != nil {
-					impl.logger.Errorw("Error while publishing Request", "err ", err)
-					return
-				}
-				impl.logger.Debug("workflow update sent")
 			}
 		},
 		DeleteFunc: func(wf interface{}) {},

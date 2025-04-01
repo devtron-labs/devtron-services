@@ -125,7 +125,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	secretFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in registering default cluster secret informer", "err", err)
-		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET_INFORMER)
 		return err
 	}
 	stopChannel, err := impl.getStopChannel(secretFactory, clusterLabels)

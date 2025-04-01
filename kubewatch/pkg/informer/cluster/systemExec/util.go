@@ -20,23 +20,12 @@ import (
 	"fmt"
 	"github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
-	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	coreV1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
-
-func getTopic(workflowType string) (string, error) {
-	switch workflowType {
-	case informerBean.CD_WORKFLOW_NAME:
-		return pubsub.CD_WORKFLOW_STATUS_UPDATE, nil
-	case informerBean.CI_WORKFLOW_NAME:
-		return pubsub.WORKFLOW_STATUS_UPDATE_TOPIC, nil
-	}
-	return "", fmt.Errorf("no topic mapped to workflow type %s", workflowType)
-}
 
 func getLatestFinishedAt(pod *coreV1.Pod) metav1.Time {
 	var latest metav1.Time
@@ -93,8 +82,8 @@ func isResourceNotFoundErr(err error) bool {
 	return false
 }
 
-func getWorkflowStatus(podObj *coreV1.Pod, nodeStatus v1alpha1.NodeStatus, templateName string) *v1alpha1.WorkflowStatus {
-	workflowStatus := &v1alpha1.WorkflowStatus{}
+func getWorkflowStatus(podObj *coreV1.Pod, nodeStatus v1alpha1.NodeStatus, templateName string) *informerBean.CiCdStatus {
+	workflowStatus := &informerBean.CiCdStatus{}
 	workflowPhase := v1alpha1.WorkflowPhase(nodeStatus.Phase)
 	if workflowPhase == v1alpha1.WorkflowPending {
 		workflowPhase = v1alpha1.WorkflowRunning

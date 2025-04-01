@@ -25,8 +25,9 @@ import (
 
 // metrics name constants
 const (
-	KUBEWATCH_UNREACHABLE_CLIENT_COUNT    = "Kubewatch_unreachable_client_count"
-	KUBEWATCH_UNREGISTERED_INFORMER_COUNT = "Kubewatch_unregistered_informer_count"
+	KUBEWATCH_UNREACHABLE_CLIENT_COUNT        = "Kubewatch_unreachable_client_count"
+	KUBEWATCH_UNREGISTERED_INFORMER_COUNT     = "Kubewatch_unregistered_informer_count"
+	KUBEWATCH_NON_ADMINISTRATIVE_EVENTS_COUNT = "Kubewatch_non_administrative_events_count"
 )
 
 // metrics labels constants
@@ -34,12 +35,36 @@ const (
 	CLUSTER_NAME  = "clusterName"
 	CLUSTER_ID    = "clusterId"
 	INFORMER_NAME = "informerName"
+	RESOURCE_TYPE = "resourceType"
+)
 
-	CI_STAGE_ARGO_WORKFLOW = "CIStageArgoWorkflow"
-	CD_STAGE_ARGO_WORLFLOW = "CDStageArgoWorkflow"
-	ARGO_CD                = "ArgoCD"
-	DEFAULT_CLUSTER_SECRET = "DefaultClusterSecret"
-	SYSTEM_EXECUTOR        = "SystemExecutor"
+// ResourceMetrics type
+type ResourceMetrics string
+
+func (m ResourceMetrics) String() string {
+	return string(m)
+}
+
+// resource labels values constants
+const (
+	RESOURCE_ARGO_WORKFLOW ResourceMetrics = "ArgoWorkflow"
+	RESOURCE_K8S_JOB       ResourceMetrics = "K8sJob"
+)
+
+// InformerMetrics type
+type InformerMetrics string
+
+func (m InformerMetrics) String() string {
+	return string(m)
+}
+
+// informer labels values constants
+const (
+	CI_STAGE_ARGO_WORKFLOW_INFORMER InformerMetrics = "CIStageArgoWorkflow"
+	CD_STAGE_ARGO_WORLFLOW_INFORMER InformerMetrics = "CDStageArgoWorkflow"
+	ARGO_CD_INFORMER                InformerMetrics = "ArgoCD"
+	DEFAULT_CLUSTER_SECRET_INFORMER InformerMetrics = "DefaultClusterSecret"
+	SYSTEM_EXECUTOR_INFORMER        InformerMetrics = "SystemExecutor"
 )
 
 var UnreachableCluster = promauto.NewCounterVec(
@@ -53,15 +78,27 @@ var UnreachableCluster = promauto.NewCounterVec(
 var UnregisteredInformers = promauto.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: KUBEWATCH_UNREGISTERED_INFORMER_COUNT,
-		Help: "How many informers are unregistered, with cluster name and cluster id.",
+		Help: "How many informers are unregistered, with informer name, cluster name and cluster id.",
 	},
 	[]string{CLUSTER_NAME, CLUSTER_ID, INFORMER_NAME},
+)
+
+var NonAdministrativeEvents = promauto.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: KUBEWATCH_NON_ADMINISTRATIVE_EVENTS_COUNT,
+		Help: "How many events are non-administrative (not devtron managed), with resource type, cluster name and cluster id.",
+	},
+	[]string{CLUSTER_NAME, CLUSTER_ID, RESOURCE_TYPE},
 )
 
 func IncUnreachableCluster(clusterLabels *bean.ClusterLabels) {
 	UnreachableCluster.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId)).Inc()
 }
 
-func IncUnregisteredInformers(clusterLabels *bean.ClusterLabels, informerName string) {
-	UnregisteredInformers.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId), informerName).Inc()
+func IncUnregisteredInformers(clusterLabels *bean.ClusterLabels, informerName InformerMetrics) {
+	UnregisteredInformers.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId), informerName.String()).Inc()
+}
+
+func IncNonAdministrativeEvents(clusterLabels *bean.ClusterLabels, resourceType ResourceMetrics) {
+	NonAdministrativeEvents.WithLabelValues(clusterLabels.ClusterName, strconv.Itoa(clusterLabels.ClusterId), resourceType.String()).Inc()
 }

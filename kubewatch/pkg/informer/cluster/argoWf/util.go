@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-package resource
+package argoWf
 
 import (
 	"fmt"
+	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 )
 
-type UnimplementedImpl struct {
-}
-
-func NewUnimplementedImpl() *UnimplementedImpl {
-	return &UnimplementedImpl{}
-}
-
-func (impl *UnimplementedImpl) GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
-	return nil, fmt.Errorf("informer not implemented")
+func GetNatsTopicForWorkflow(workflowType string) (string, error) {
+	switch workflowType {
+	case informerBean.CD_WORKFLOW_NAME:
+		return pubsub.CD_WORKFLOW_STATUS_UPDATE, nil
+	case informerBean.CI_WORKFLOW_NAME:
+		return pubsub.WORKFLOW_STATUS_UPDATE_TOPIC, nil
+	}
+	return "", fmt.Errorf("no topic mapped to workflow type %s", workflowType)
 }

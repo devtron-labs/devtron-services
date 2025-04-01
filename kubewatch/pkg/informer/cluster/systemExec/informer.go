@@ -23,6 +23,7 @@ import (
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
 	resourceBean "github.com/devtron-labs/kubewatch/pkg/resource/bean"
@@ -73,12 +74,15 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 		opts.LabelSelector = informerBean.WORKFLOW_LABEL_SELECTOR
 	})
+	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
 	// updateFunc is called when an existing pod is updated
 	updateFunc := func(oldPodObj, newPodObj *coreV1.Pod) {
-		// atleast one of the pod version will be not nil
+		// at least one of the pod version will be not nil
 		if !foundAnyUpdateInPodStatus(oldPodObj, newPodObj) {
-			podName := newPodObj.Name
-			logArgs := []interface{}{"podName", podName, "newPodStatusObj", newPodObj.Status}
+			logArgs := make([]any, 0)
+			if newPodObj != nil {
+				logArgs = append(logArgs, "podName", newPodObj.Name, "newPodStatusObj", newPodObj.Status)
+			}
 			if oldPodObj != nil {
 				logArgs = append(logArgs, "oldPodStatusObj", oldPodObj.Status)
 			}
@@ -88,10 +92,9 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 
 		if newPodObj != nil {
 			var workflowType string
-			if newPodObj.Labels != nil {
-				if val, ok := newPodObj.Labels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
-					workflowType = val
-				}
+			podLabels := newPodObj.GetLabels()
+			if val, ok := podLabels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
+				workflowType = val
 			}
 			impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
 			nodeStatus := impl.assessNodeStatus(informerBean.UPDATE_EVENT, newPodObj)
@@ -100,9 +103,18 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 				impl.logger.Debugw("skipping the failed workflow update event as message is empty", "workflow", workflowStatus)
 				return
 			}
+			if val, ok := podLabels[informerBean.DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY]; ok {
+				workflowStatus.DevtronAdministratorInstance = val
+			} else {
+				impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)
+				middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_K8S_JOB)
+				// return statement is skipped intentionally for backward compatibility
+				// TODO Asutosh: remove this return statement in future
+				// return
+			}
 			wfJson, err := json.Marshal(workflowStatus)
 			if err != nil {
-				impl.logger.Errorw("error occurred while marshalling workflowJson", "err", err)
+				impl.logger.Errorw("error occurred while marshalling workflowJson", "workflowStatus", workflowStatus, "err", err)
 				return
 			}
 			impl.logger.Debugw("sending system executor workflow update event", "workflow", string(wfJson))
@@ -110,38 +122,46 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 				log.Println("don't publish")
 				return
 			}
-			topic, err := getTopic(workflowType)
+			topic, err := argoWf.GetNatsTopicForWorkflow(workflowType)
 			if err != nil {
-				impl.logger.Errorw("error while getting Topic")
+				impl.logger.Errorw("error while getting topic", "workflowType", workflowType, "err", err)
 				return
 			}
 			err = impl.pubSubClient.Publish(topic, string(wfJson))
 			if err != nil {
-				impl.logger.Errorw("error while publishing Request", "err", err)
+				impl.logger.Errorw("error while publishing request", "topic", topic, "wfJson", wfJson, "err", err)
 				return
 			}
-			impl.logger.Debugw("system executor workflow update sent", "workflowType", workflowType)
+			impl.logger.Debugw("system executor workflow update sent", "topic", topic, "workflowType", workflowType)
 		}
 	}
 	// deleteFunc is called when an existing pod is deleted
 	deleteFunc := func(podObj *coreV1.Pod) {
 		var workflowType string
-		if podObj.Labels != nil {
-			if val, ok := podObj.Labels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
-				workflowType = val
-			}
+		podLabels := podObj.GetLabels()
+		if val, ok := podLabels[informerBean.WORKFLOW_TYPE_LABEL_KEY]; ok {
+			workflowType = val
 		}
 		impl.logger.Debugw("event received in Pods delete informer", "time", time.Now(), "podObjStatus", podObj.Status)
 		nodeStatus := impl.assessNodeStatus(informerBean.DELETE_EVENT, podObj)
 		nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, restConfig)
 		if !reTriggerRequired {
-			//not sending this deleted event if it's not a re-trigger case
+			// not sending this deleted event if it's not a re-trigger case
 			return
 		}
 		workflowStatus := getWorkflowStatus(podObj, nodeStatus, workflowType)
+		if val, ok := podLabels[informerBean.DEVTRON_ADMINISTRATOR_INSTANCE_LABEL_KEY]; ok {
+			workflowStatus.DevtronAdministratorInstance = val
+		} else {
+			impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)
+			middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_K8S_JOB)
+			// return statement is skipped intentionally for backward compatibility
+			// TODO Asutosh: remove this return statement in future
+			// return
+		}
 		wfJson, err := json.Marshal(workflowStatus)
 		if err != nil {
-			impl.logger.Errorw("error occurred while marshalling workflowJson", "err", err)
+			impl.logger.Errorw("error occurred while marshalling workflowJson", "workflowStatus", workflowStatus, "err", err)
 			return
 		}
 		impl.logger.Debugw("sending system executor cd workflow delete event", "workflow", string(wfJson))
@@ -149,27 +169,26 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 			log.Println("don't publish")
 			return
 		}
-		topic, err := getTopic(workflowType)
+		topic, err := argoWf.GetNatsTopicForWorkflow(workflowType)
 		if err != nil {
-			impl.logger.Errorw("error while getting topic")
+			impl.logger.Errorw("error while getting topic", "workflowType", workflowType, "err", err)
 			return
 		}
 		err = impl.pubSubClient.Publish(topic, string(wfJson))
 		if err != nil {
-			impl.logger.Errorw("error while publishing request", "err", err)
+			impl.logger.Errorw("error while publishing request", "topic", topic, "wfJson", wfJson, "err", err)
 			return
 		}
-		impl.logger.Debugw("workflow update sent", "workflowType", workflowType)
+		impl.logger.Debugw("workflow update sent", "topic", topic, "workflowType", workflowType)
 	}
 	podInformerFactory := impl.informerClient.GetPodInformerFactory()
 	eventHandler := resourceBean.NewEventHandlers[coreV1.Pod]().
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
-	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
 	podFactory, err := podInformerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in adding event handler for cluster pod informer", "err", err)
-		middleware.IncUnregisteredInformers(clusterLabels, middleware.SYSTEM_EXECUTOR)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.SYSTEM_EXECUTOR_INFORMER)
 		return err
 	}
 	stopChannel, err := impl.getStopChannel(podFactory, clusterLabels)
