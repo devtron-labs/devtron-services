@@ -1729,7 +1729,7 @@ func podMetadataAdapter(podmetadatas []*commonBean.PodMetadata) []*client.PodMet
 
 func (impl *HelmAppServiceImpl) setupRegistryClient(request *client.InstallReleaseRequest) (*registry.Client, func(), error) {
 	var settings *registry2.Settings
-	var cleanup func()
+	cleanup := func() {}
 	registryCredential := request.RegistryCredential
 	var registryClient *registry.Client
 	if request.RegistryCredential != nil {
@@ -1737,7 +1737,7 @@ func (impl *HelmAppServiceImpl) setupRegistryClient(request *client.InstallRelea
 
 		if err != nil {
 			impl.logger.Errorw("error in getting registry config from registry proto", "registryName", registryCredential.RegistryName, "err", err)
-			return nil, nil, err
+			return nil, cleanup, err
 		}
 
 		cleanup = func() {
