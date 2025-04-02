@@ -1731,6 +1731,7 @@ func (impl *HelmAppServiceImpl) setupRegistryClient(request *client.InstallRelea
 	var settings *registry2.Settings
 	var cleanup func()
 	registryCredential := request.RegistryCredential
+	var registryClient *registry.Client
 	if request.RegistryCredential != nil {
 		registryConfig, err := adapter.NewRegistryConfig(registryCredential)
 
@@ -1761,9 +1762,10 @@ func (impl *HelmAppServiceImpl) setupRegistryClient(request *client.InstallRelea
 			impl.logger.Errorw(HELM_CLIENT_ERROR, "registryName", registryCredential.RegistryName, "err", err)
 			return nil, cleanup, err
 		}
+		registryClient = settings.RegistryClient
 		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
 	}
-	return settings.RegistryClient, cleanup, nil
+	return registryClient, cleanup, nil
 }
 
 func (impl *HelmAppServiceImpl) getChartSpec(addOrUpdateChartRepo bool, helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *registry.Client) (*helmClient.ChartSpec, error) {
