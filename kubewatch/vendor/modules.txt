@@ -215,12 +215,13 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250401095543-affde454fe43
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250402155135-302cb7c7df56
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
 github.com/devtron-labs/common-lib/git-manager/util
+github.com/devtron-labs/common-lib/informer
 github.com/devtron-labs/common-lib/monitoring
 github.com/devtron-labs/common-lib/monitoring/pprof
 github.com/devtron-labs/common-lib/monitoring/statsViz
@@ -393,7 +394,7 @@ github.com/gobwas/glob/util/strings
 ## explicit; go 1.15
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/golang-jwt/jwt/v4 v4.5.1
+# github.com/golang-jwt/jwt/v4 v4.5.2
 ## explicit; go 1.16
 github.com/golang-jwt/jwt/v4
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
@@ -1760,4 +1761,4 @@ upper.io/db.v3/postgresql
 # k8s.io/mount-utils => k8s.io/mount-utils v0.29.7
 # k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.29.7
 # k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.29.7
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250401095543-affde454fe43
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250402155135-302cb7c7df56
