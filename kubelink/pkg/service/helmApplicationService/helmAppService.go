@@ -1772,14 +1772,14 @@ func (impl *HelmAppServiceImpl) getChartSpec(addOrUpdateChartRepo bool, helmClie
 	var chartName, username, password string
 	var allowInsecureConnection bool
 	var err error
-	switch request.IsOCIRepo {
-	case true:
+	if request.IsOCIRepo {
 		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
 		if err != nil {
 			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
 			return nil, err
 		}
-	case false:
+
+	} else {
 		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
 		chartRepoRequest := request.ChartRepository
 		chartRepoName := chartRepoRequest.Name
