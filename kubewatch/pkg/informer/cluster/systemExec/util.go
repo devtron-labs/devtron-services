@@ -83,7 +83,9 @@ func isResourceNotFoundErr(err error) bool {
 }
 
 func getWorkflowStatus(podObj *coreV1.Pod, nodeStatus v1alpha1.NodeStatus, templateName string) *informerBean.CiCdStatus {
-	workflowStatus := &informerBean.CiCdStatus{}
+	workflowStatus := &informerBean.CiCdStatus{
+		WorkflowStatus: &v1alpha1.WorkflowStatus{},
+	}
 	workflowPhase := v1alpha1.WorkflowPhase(nodeStatus.Phase)
 	if workflowPhase == v1alpha1.WorkflowPending {
 		workflowPhase = v1alpha1.WorkflowRunning
