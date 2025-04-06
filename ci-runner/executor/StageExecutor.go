@@ -29,6 +29,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 )
 
 type StageExecutorImpl struct {
@@ -65,6 +66,12 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 		)
 
 		executeStep := func() error {
+			defer func() {
+				if panicErr := recover(); panicErr != nil {
+					log.Println("panic occurred in executing step", "step", step.Name, "panic", panicErr, "stack", string(debug.Stack()))
+					err = fmt.Errorf("panic occurred in executing step %s", step.Name)
+				}
+			}()
 			refPluginArtifacts, failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, scriptEnvVariables, preCiStageVariable, stageVariable, resetEnvVariable)
 			if err != nil {
 				return err
