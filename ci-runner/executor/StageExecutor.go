@@ -55,10 +55,11 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 	}*/
 
 	stageVariable := make(map[int]map[string]*commonBean.VariableObject)
+	stageInfoLoggingRequired := stepType != helper.STEP_TYPE_REF_PLUGIN
 	pluginArtifactsFromFile := helper.NewPluginArtifact()
+
 	for i, step := range steps {
 
-		stageInfoLoggingRequired := stepType != helper.STEP_TYPE_REF_PLUGIN
 		failedStep := step
 		var (
 			err                error
