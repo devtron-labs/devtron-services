@@ -61,26 +61,24 @@ func (impl *StageExecutorImpl) RunCiCdSteps(stepType helper.StepType, ciCdReques
 	for i, step := range steps {
 
 		failedStep := step
-		var (
-			err                error
-			refPluginArtifacts *helper.PluginArtifacts
-		)
+		var refPluginArtifacts *helper.PluginArtifacts
 
-		executeStep := func() error {
+		executeStep := func() (stepError error) {
 			defer func() {
 				if panicErr := recover(); panicErr != nil {
-					log.Println("panic occurred in executing step", "step", step.Name, "panic", panicErr, "stack", string(debug.Stack()))
-					err = fmt.Errorf("panic occurred in executing step %s", step.Name)
+					log.Println(util.DEVTRON, "panic occurred in executing step", "step", step.Name, "panic", panicErr, "stack", string(debug.Stack()))
+					stepError = fmt.Errorf("panic occurred in executing step %s", step.Name)
 				}
 			}()
-			refPluginArtifacts, failedStep, err = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, scriptEnvVariables, preCiStageVariable, stageVariable, resetEnvVariable)
-			if err != nil {
-				return err
+			refPluginArtifacts, failedStep, stepError = impl.RunCiCdStep(stepType, *ciCdRequest, i, step, refStageMap, scriptEnvVariables, preCiStageVariable, stageVariable, resetEnvVariable)
+			if stepError != nil {
+				return stepError
 			}
 			pluginArtifactsFromFile.MergePluginArtifact(refPluginArtifacts)
 			return nil
 		}
 
+		var err error
 		if stageInfoLoggingRequired {
 			log.Println(util.DEVTRON, "stage logging required")
 			err = util.ExecuteWithStageInfoLog(helper.GetPrePostStageDisplayName(step.Name, stepType), executeStep)
