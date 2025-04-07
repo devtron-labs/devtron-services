@@ -104,7 +104,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 				impl.logger.Debugw("skipping the failed workflow update event as message is empty", "workflow", workflowStatus)
 				return
 			}
-			if val, ok := podLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
+			if val, ok := podLabels[informerBean.DevtronOwnerInstanceLabelKey]; ok {
 				workflowStatus.DevtronAdministratorInstance = val
 			} else {
 				impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)
@@ -151,7 +151,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 			return
 		}
 		workflowStatus := getWorkflowStatus(podObj, nodeStatus, workflowType)
-		if val, ok := podLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
+		if val, ok := podLabels[informerBean.DevtronOwnerInstanceLabelKey]; ok {
 			workflowStatus.DevtronAdministratorInstance = val
 		} else {
 			impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)

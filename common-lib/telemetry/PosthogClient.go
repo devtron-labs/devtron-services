@@ -1,12 +1,30 @@
+/*
+ * Copyright (c) 2020-2024. Devtron Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package telemetry
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"go.opentelemetry.io/otel"
 	"time"
 
 	"github.com/devtron-labs/common-lib/utils/http"
-	cache "github.com/patrickmn/go-cache"
+	"github.com/patrickmn/go-cache"
 	"github.com/posthog/posthog-go"
 	"go.uber.org/zap"
 )
@@ -16,26 +34,13 @@ type PosthogClient struct {
 	cache  *cache.Cache
 }
 
-var (
-	PosthogApiKey        string = ""
-	PosthogEndpoint      string = "https://app.posthog.com"
-	SummaryCronExpr      string = "0 0 * * *" // Run once a day, midnight
-	HeartbeatCronExpr    string = "0 0/6 * * *"
-	CacheExpiry          int    = 1440
-	PosthogEncodedApiKey string = ""
-	IsOptOut             bool   = false
-)
-
-const (
-	TelemetryApiKeyEndpoint   string = "aHR0cHM6Ly90ZWxlbWV0cnkuZGV2dHJvbi5haS9kZXZ0cm9uL3RlbGVtZXRyeS9wb3N0aG9nSW5mbw=="
-	TelemetryOptOutApiBaseUrl string = "aHR0cHM6Ly90ZWxlbWV0cnkuZGV2dHJvbi5haS9kZXZ0cm9uL3RlbGVtZXRyeS9vcHQtb3V0"
-	ResponseApiKey            string = "PosthogApiKey"
-	ResponseUrlKey            string = "PosthogEndpoint"
-)
+func (p *PosthogClient) GetCache() *cache.Cache {
+	return p.cache
+}
 
 func NewPosthogClient(logger *zap.SugaredLogger) (*PosthogClient, error) {
 	if PosthogApiKey == "" {
-		encodedApiKey, apiKey, posthogUrl, err := getPosthogApiKey(TelemetryApiKeyEndpoint, logger)
+		encodedApiKey, apiKey, posthogUrl, err := getPosthogApiKey(context.Background(), TelemetryApiKeyEndpoint, logger)
 		if err != nil {
 			logger.Errorw("exception caught while getting api key", "err", err)
 		} else {
@@ -59,14 +64,16 @@ func NewPosthogClient(logger *zap.SugaredLogger) (*PosthogClient, error) {
 	return pgClient, nil
 }
 
-func getPosthogApiKey(encodedPosthogApiKeyUrl string, logger *zap.SugaredLogger) (string, string, string, error) {
+func getPosthogApiKey(ctx context.Context, encodedPosthogApiKeyUrl string, logger *zap.SugaredLogger) (string, string, string, error) {
+	newCtx, span := otel.Tracer("orchestrator").Start(ctx, "telemetry.getPosthogApiKey")
+	defer span.End()
 	decodedPosthogApiKeyUrl, err := base64.StdEncoding.DecodeString(encodedPosthogApiKeyUrl)
 	if err != nil {
 		logger.Errorw("error fetching posthog api key, decode error", "err", err)
 		return "", "", "", err
 	}
 	apiKeyUrl := string(decodedPosthogApiKeyUrl)
-	response, err := http.HttpRequest(apiKeyUrl)
+	response, err := http.HttpRequest(newCtx, apiKeyUrl)
 	if err != nil {
 		logger.Errorw("error fetching posthog api key, http call", "err", err)
 		return "", "", "", err
@@ -78,7 +85,7 @@ func getPosthogApiKey(encodedPosthogApiKeyUrl string, logger *zap.SugaredLogger)
 		return "", "", "", err
 	}
 	var datamap map[string]string
-	if err := json.Unmarshal(posthogInfoByte, &datamap); err != nil {
+	if err = json.Unmarshal(posthogInfoByte, &datamap); err != nil {
 		logger.Errorw("error while unmarshal data", "err", err)
 		return "", "", "", err
 	}

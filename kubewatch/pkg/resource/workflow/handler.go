@@ -91,7 +91,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *bean.ClusterLabels, n
 						// TODO Asutosh: Use this as a labelSelector to filter out the workflows in future.
 						return
 					}
-					if val, ok := workflowLabels[informerBean.DevtronAdministratorInstanceLabelKey]; ok {
+					if val, ok := workflowLabels[informerBean.DevtronOwnerInstanceLabelKey]; ok {
 						workflow[bean.DevtronAdministratorInstance] = val
 					} else {
 						impl.logger.Warnw("devtron administrator instance label is not found in the workflow. not a devtron workflow", "workflowLabels", workflowLabels)
