@@ -92,7 +92,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *bean.ClusterLabels, n
 						return
 					}
 					if val, ok := workflowLabels[informerBean.DevtronOwnerInstanceLabelKey]; ok {
-						workflow[bean.DevtronAdministratorInstance] = val
+						workflow[bean.DevtronOwnerInstance] = val
 					} else {
 						impl.logger.Warnw("devtron administrator instance label is not found in the workflow. not a devtron workflow", "workflowLabels", workflowLabels)
 						middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_ARGO_WORKFLOW)

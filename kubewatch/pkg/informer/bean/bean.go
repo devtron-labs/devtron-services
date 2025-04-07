@@ -51,10 +51,10 @@ func NewClusterLabels(clusterName string, clusterId int) *ClusterLabels {
 }
 
 const (
-	DevtronAdministratorInstance = "devtronAdministratorInstance"
+	DevtronOwnerInstance = "devtronOwnerInstance"
 )
 
 type CiCdStatus struct {
-	DevtronAdministratorInstance string `json:"devtronAdministratorInstance"`
+	DevtronOwnerInstance string `json:"devtronOwnerInstance"`
 	*v1alpha1.WorkflowStatus
 }

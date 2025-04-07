@@ -105,7 +105,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 				return
 			}
 			if val, ok := podLabels[informerBean.DevtronOwnerInstanceLabelKey]; ok {
-				workflowStatus.DevtronAdministratorInstance = val
+				workflowStatus.DevtronOwnerInstance = val
 			} else {
 				impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)
 				middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_K8S_JOB)
@@ -152,7 +152,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 		}
 		workflowStatus := getWorkflowStatus(podObj, nodeStatus, workflowType)
 		if val, ok := podLabels[informerBean.DevtronOwnerInstanceLabelKey]; ok {
-			workflowStatus.DevtronAdministratorInstance = val
+			workflowStatus.DevtronOwnerInstance = val
 		} else {
 			impl.logger.Warnw("devtron administrator instance label is not found in the pod. not a devtron workflow", "podLabels", podLabels)
 			middleware.IncNonAdministrativeEvents(clusterLabels, middleware.RESOURCE_K8S_JOB)
