@@ -65,7 +65,7 @@ func NewPosthogClient(logger *zap.SugaredLogger) (*PosthogClient, error) {
 }
 
 func getPosthogApiKey(ctx context.Context, encodedPosthogApiKeyUrl string, logger *zap.SugaredLogger) (string, string, string, error) {
-	newCtx, span := otel.Tracer("orchestrator").Start(ctx, "telemetry.getPosthogApiKey")
+	newCtx, span := otel.Tracer("common").Start(ctx, "telemetry.getPosthogApiKey")
 	defer span.End()
 	decodedPosthogApiKeyUrl, err := base64.StdEncoding.DecodeString(encodedPosthogApiKeyUrl)
 	if err != nil {
