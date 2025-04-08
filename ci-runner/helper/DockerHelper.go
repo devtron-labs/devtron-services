@@ -346,7 +346,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
@@ -941,14 +941,14 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, ciRequest *CommonWorkflowRequest, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
 	if len(builderNodes) == 0 {
 		return errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	deploymentNames := make([]string, 0)
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(ciRequest, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
 		if err != nil {
 			return err
 		}
@@ -1023,7 +1023,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(ciRequest *CommonWorkflowRequest, dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string, error) {
+func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string, error) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1037,7 +1037,7 @@ func getBuildxK8sDriverCmd(ciRequest *CommonWorkflowRequest, dockerConnection, b
 	}
 	// add driver options for app labels and annotations
 	var err error
-	if ciRequest.PropagateLabelsInBuildxPod {
+	if propagateLabelsInBuildxPod {
 		driverOpts["driverOptions"], err = getBuildXDriverOptionsWithLabelsAndAnnotations(driverOpts["driverOptions"])
 		if err != nil {
 			return "", "", err
