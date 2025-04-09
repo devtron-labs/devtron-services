@@ -30,10 +30,10 @@ func isNetworkError(err error) bool {
 	return ok
 }
 
-func uniqueIntegrityViolation(err error) bool {
+func isIntegrityViolationError(err error) bool {
 	pgErr, ok := err.(pg.Error)
 	if !ok {
 		return false
 	}
-	return pgErr.Field('C') == "23505"
+	return pgErr.IntegrityViolation()
 }

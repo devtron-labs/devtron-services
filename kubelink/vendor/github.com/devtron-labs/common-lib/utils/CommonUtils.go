@@ -115,7 +115,7 @@ func ExecutePGQueryProcessor(cfg bean.PgQueryMonitoringConfig, event bean.PgQuer
 	queryDuration := time.Since(event.StartTime)
 	var queryError bool
 	pgError := event.Error
-	if pgError != nil && !errors.Is(pgError, pg.ErrNoRows) && !uniqueIntegrityViolation(pgError) {
+	if pgError != nil && !errors.Is(pgError, pg.ErrNoRows) && !isIntegrityViolationError(pgError) {
 		queryError = true
 	}
 	// Expose prom metrics
