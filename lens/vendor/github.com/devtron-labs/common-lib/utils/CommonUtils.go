@@ -107,6 +107,7 @@ func GetPGPostQueryProcessor(cfg bean.PgQueryMonitoringConfig) func(event *pg.Qu
 			StartTime: event.StartTime,
 			Error:     event.Error,
 			Query:     query,
+			FuncName:  event.Func,
 		})
 	}
 }
@@ -122,25 +123,25 @@ func ExecutePGQueryProcessor(cfg bean.PgQueryMonitoringConfig, event bean.PgQuer
 	if cfg.ExportPromMetrics {
 		var status string
 		if queryError {
-			status = "FAIL"
+			status = FAIL
 		} else {
-			status = "SUCCESS"
+			status = SUCCESS
 		}
-		PgQueryDuration.WithLabelValues(status, cfg.ServiceName).Observe(queryDuration.Seconds())
+		PgQueryDuration.WithLabelValues(status, cfg.ServiceName, event.FuncName, getErrorType(pgError).String()).Observe(queryDuration.Seconds())
 	}
 
 	// Log pg query if enabled
 	logThresholdQueries := cfg.LogSlowQuery && queryDuration.Milliseconds() > cfg.QueryDurationThreshold
 	logNetworkFailure := queryError && cfg.LogAllFailureQueries && isNetworkError(pgError)
 	if logNetworkFailure {
-		log.Println("PG_NETWORK_ERROR - query time", "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
+		log.Println(fmt.Sprintf("%s - query time", PgNetworkErrorLogPrefix), "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
 	}
 	logFailureQuery := queryError && cfg.LogAllFailureQueries && !isNetworkError(pgError)
 	if logFailureQuery {
-		log.Println("PG_QUERY_FAIL - query time", "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
+		log.Println(fmt.Sprintf("%s - query time", PgQueryFailLogPrefix), "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
 	}
 	if logThresholdQueries {
-		log.Println("PG_QUERY_SLOW - query time", "duration", queryDuration.Seconds(), "query", event.Query)
+		log.Println(fmt.Sprintf("%s - query time", PgQuerySlowLogPrefix), "duration", queryDuration.Seconds(), "query", event.Query)
 	}
 	if cfg.LogAllQuery {
 		log.Println("query time", "duration", queryDuration.Seconds(), "query", event.Query)
@@ -158,7 +159,7 @@ func GetSelfK8sPodName() string {
 var PgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Name: "pg_query_duration_seconds",
 	Help: "Duration of PG queries",
-}, []string{"status", "serviceName"})
+}, []string{"status", "serviceName", "functionName", "errorType"})
 
 func ConvertTargetPlatformStringToObject(targetPlatformString string) []*bean.TargetPlatform {
 	targetPlatforms := ConvertTargetPlatformStringToList(targetPlatformString)

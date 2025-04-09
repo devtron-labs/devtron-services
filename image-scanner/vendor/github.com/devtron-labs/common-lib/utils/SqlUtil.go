@@ -17,10 +17,47 @@
 package utils
 
 import (
+	"errors"
 	"github.com/go-pg/pg"
 	"io"
 	"net"
+	"os"
 )
+
+const (
+	PgNetworkErrorLogPrefix string = "PG_NETWORK_ERROR"
+	PgQueryFailLogPrefix    string = "PG_QUERY_FAIL"
+	PgQuerySlowLogPrefix    string = "PG_QUERY_SLOW"
+)
+
+const (
+	FAIL    string = "FAIL"
+	SUCCESS string = "SUCCESS"
+)
+
+type ErrorType string
+
+func (e ErrorType) String() string {
+	return string(e)
+}
+
+const (
+	NetworkErrorType ErrorType = "NETWORK_ERROR"
+	SyntaxErrorType  ErrorType = "SYNTAX_ERROR"
+	TimeoutErrorType ErrorType = "TIMEOUT_ERROR"
+	NoErrorType      ErrorType = "NA"
+)
+
+func getErrorType(err error) ErrorType {
+	if err == nil {
+		return NoErrorType
+	} else if errors.Is(err, os.ErrDeadlineExceeded) {
+		return TimeoutErrorType
+	} else if isNetworkError(err) {
+		return NetworkErrorType
+	}
+	return SyntaxErrorType
+}
 
 func isNetworkError(err error) bool {
 	if err == io.EOF {
