@@ -115,7 +115,7 @@ func ExecutePGQueryProcessor(cfg bean.PgQueryMonitoringConfig, event bean.PgQuer
 	queryDuration := time.Since(event.StartTime)
 	var queryError bool
 	pgError := event.Error
-	if pgError != nil && !errors.Is(pgError, pg.ErrNoRows) {
+	if pgError != nil && !errors.Is(pgError, pg.ErrNoRows) && !uniqueIntegrityViolation(pgError) {
 		queryError = true
 	}
 	// Expose prom metrics
@@ -131,7 +131,11 @@ func ExecutePGQueryProcessor(cfg bean.PgQueryMonitoringConfig, event bean.PgQuer
 
 	// Log pg query if enabled
 	logThresholdQueries := cfg.LogSlowQuery && queryDuration.Milliseconds() > cfg.QueryDurationThreshold
-	logFailureQuery := queryError && cfg.LogAllFailureQueries
+	logNetworkFailure := queryError && cfg.LogAllFailureQueries && isNetworkError(pgError)
+	if logNetworkFailure {
+		log.Println("PG_NETWORK_ERROR - query time", "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
+	}
+	logFailureQuery := queryError && cfg.LogAllFailureQueries && !isNetworkError(pgError)
 	if logFailureQuery {
 		log.Println("PG_QUERY_FAIL - query time", "duration", queryDuration.Seconds(), "query", event.Query, "pgError", pgError)
 	}
