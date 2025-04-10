@@ -22,6 +22,7 @@ import (
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/git-sensor/internals/sql"
 	"github.com/devtron-labs/git-sensor/internals/util"
+	util2 "github.com/devtron-labs/git-sensor/util"
 	_ "github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"regexp"
@@ -94,17 +95,18 @@ func (impl WebhookEventServiceImpl) GetAllGitHostWebhookEventByGitHostName(gitHo
 
 func (impl WebhookEventServiceImpl) GetWebhookParsedEventDataByEventIdAndUniqueId(eventId int, uniqueId string) (*sql.WebhookEventParsedData, error) {
 	impl.logger.Debugw("fetching webhook event parsed data for ", "eventId", eventId, "uniqueId", uniqueId)
-
 	if len(uniqueId) == 0 {
-		return nil, nil
+		impl.logger.Warn("uniqueId is blank. so skipping fetching webhook event parsed data...")
+		return nil, ErrWebhookEventParsedDataNotFound
 	}
-
 	webhookEventParsedData, err := impl.webhookEventParsedDataRepository.GetWebhookParsedEventDataByEventIdAndUniqueId(eventId, uniqueId)
-	if err != nil {
-		impl.logger.Errorw("getting error while fetching webhook event parsed data ", "err", err)
+	if err != nil && !util2.IsErrNoRows(err) {
+		impl.logger.Errorw("getting error while fetching webhook event parsed data ", "eventId", eventId, "uniqueId", uniqueId, "err", err)
 		return nil, err
+	} else if util2.IsErrNoRows(err) {
+		impl.logger.Warnw("webhook event parsed data not found", "eventId", eventId, "uniqueId", uniqueId)
+		return nil, ErrWebhookEventParsedDataNotFound
 	}
-
 	return webhookEventParsedData, nil
 }
 
@@ -332,14 +334,20 @@ func (impl WebhookEventServiceImpl) NotifyForAutoCi(material *CiPipelineMaterial
 	return err
 }
 
-func (impl WebhookEventServiceImpl) HandleMaterialWebhookMappingIntoDb(ciPipelineMaterialId int, webhookParsedDataId int, conditionMatched bool, filterResults []*sql.CiPipelineMaterialWebhookDataMappingFilterResult) error {
-	impl.logger.Debug("Handling Material webhook mapping into DB")
-
+func (impl WebhookEventServiceImpl) getCiPipelineMaterialWebhookDataMapping(ciPipelineMaterialId int, webhookParsedDataId int) (*sql.CiPipelineMaterialWebhookDataMapping, bool, error) {
+	var isNewMapping bool
 	mapping, err := impl.webhookEventDataMappingRepository.GetCiPipelineMaterialWebhookDataMapping(ciPipelineMaterialId, webhookParsedDataId)
-	if err != nil {
-		impl.logger.Errorw("err in getting ci-pipeline vs webhook data mapping", "err", err)
-		return err
+	if err != nil && !util2.IsErrNoRows(err) {
+		impl.logger.Errorw("err in getting ci-pipeline vs webhook data mapping", "ciPipelineMaterialId", ciPipelineMaterialId, "webhookParsedDataId", webhookParsedDataId, "err", err)
+		return mapping, isNewMapping, err
+	} else if util2.IsErrNoRows(err) {
+		isNewMapping = true
 	}
+	return mapping, isNewMapping, nil
+}
+
+func (impl WebhookEventServiceImpl) HandleMaterialWebhookMappingIntoDb(ciPipelineMaterialId int, webhookParsedDataId int, conditionMatched bool, filterResults []*sql.CiPipelineMaterialWebhookDataMappingFilterResult) error {
+	impl.logger.Debugw("Handling Material webhook mapping into DB", "ciPipelineMaterialId", ciPipelineMaterialId, "webhookParsedDataId", webhookParsedDataId)
 
 	ciPipelineMaterialWebhookDataMapping := &sql.CiPipelineMaterialWebhookDataMapping{
 		CiPipelineMaterialId: ciPipelineMaterialId,
@@ -349,8 +357,12 @@ func (impl WebhookEventServiceImpl) HandleMaterialWebhookMappingIntoDb(ciPipelin
 		UpdatedOn:            time.Now(),
 	}
 
-	isNewMapping := mapping == nil
-
+	// get mapping
+	mapping, isNewMapping, err := impl.getCiPipelineMaterialWebhookDataMapping(ciPipelineMaterialId, webhookParsedDataId)
+	if err != nil {
+		impl.logger.Errorw("err in getting ci-pipeline vs webhook data mapping", "ciPipelineMaterialId", ciPipelineMaterialId, "webhookParsedDataId", webhookParsedDataId, "err", err)
+		return err
+	}
 	if isNewMapping {
 		// insert into DB
 		impl.logger.Debug("Saving mapping into DB")

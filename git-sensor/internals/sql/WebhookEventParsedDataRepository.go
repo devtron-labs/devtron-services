@@ -17,7 +17,6 @@
 package sql
 
 import (
-	"github.com/devtron-labs/git-sensor/util"
 	"github.com/go-pg/pg"
 	"time"
 )
@@ -54,13 +53,7 @@ func NewWebhookEventParsedDataRepositoryImpl(dbConnection *pg.DB) *WebhookEventP
 func (impl WebhookEventParsedDataRepositoryImpl) GetWebhookParsedEventDataByEventIdAndUniqueId(eventId int, uniqueId string) (*WebhookEventParsedData, error) {
 	var webhookEventParsedData WebhookEventParsedData
 	err := impl.dbConnection.Model(&webhookEventParsedData).Where("event_id =? ", eventId).Where("unique_id =? ", uniqueId).Select()
-	if err != nil {
-		if util.IsErrNoRows(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &webhookEventParsedData, nil
+	return &webhookEventParsedData, err
 }
 
 func (impl WebhookEventParsedDataRepositoryImpl) SaveWebhookParsedEventData(webhookEventParsedData *WebhookEventParsedData) error {
@@ -88,12 +81,5 @@ func (impl WebhookEventParsedDataRepositoryImpl) GetWebhookEventParsedDataById(i
 	err := impl.dbConnection.Model(&webhookEventParsedData).
 		Where("id = ? ", id).
 		Select()
-
-	if err != nil {
-		if util.IsErrNoRows(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &webhookEventParsedData, nil
+	return &webhookEventParsedData, err
 }
