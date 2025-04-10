@@ -60,6 +60,7 @@ func GetProjectName(url string) string {
 	url = url[strings.LastIndex(url, "/")+1:]
 	return strings.TrimSuffix(url, ".git")
 }
+
 func GetCheckoutPath(url string, cloneLocation string) string {
 	//url= https://github.com/devtron-labs/git-sensor.git cloneLocation= git-base/1/github.com/prakash100198
 	//then this function returns git-base/1/github.com/prakash100198/SampleGoLangProject/.git
@@ -83,11 +84,13 @@ func GetUserNamePassword(gitProvider *sql.GitProvider) (userName, password strin
 		return "", "", fmt.Errorf("unsupported %s", gitProvider.AuthMode)
 	}
 }
+
 func getSSHPrivateKeyFolderAndFilePath(gitProviderId int) (string, string) {
 	sshPrivateKeyFolderPath := path.Join(SSH_PRIVATE_KEY_DIR, strconv.Itoa(gitProviderId))
 	sshPrivateKeyFilePath := path.Join(sshPrivateKeyFolderPath, SSH_PRIVATE_KEY_FILE_NAME)
 	return sshPrivateKeyFolderPath, sshPrivateKeyFilePath
 }
+
 func GetOrCreateSshPrivateKeyOnDisk(gitProviderId int, sshPrivateKeyContent string) (privateKeyPath string, err error) {
 	sshPrivateKeyFolderPath, sshPrivateKeyFilePath := getSSHPrivateKeyFolderAndFilePath(gitProviderId)
 
@@ -232,6 +235,7 @@ func processFileStatOutputNameOnly(commitDiff string) (FileStats, error) {
 
 	return filestat, nil
 }
+
 func IsRepoShallowCloned(checkoutPath string) bool {
 	return strings.Contains(checkoutPath, "/.git")
 }
@@ -240,3 +244,7 @@ func getTestBaseDir() string {
 	dir, _ := os.UserHomeDir()
 	return path.Join(dir, "/tmp")
 }
+
+var (
+	ErrWebhookEventParsedDataNotFound = fmt.Errorf("webhook event parsed data not found")
+)
