@@ -86,7 +86,7 @@ func CertPoolFromFile(filename string) (*x509.CertPool, error) {
 }
 
 func HttpRequest(ctx context.Context, url string) (map[string]interface{}, error) {
-	newCtx, span := otel.Tracer("orchestrator").Start(ctx, "util.HttpRequest")
+	newCtx, span := otel.Tracer("common").Start(ctx, "http.HttpRequest")
 	defer span.End()
 	req, err := http.NewRequestWithContext(newCtx, http.MethodGet, url, nil)
 	if err != nil {
