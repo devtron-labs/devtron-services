@@ -16,6 +16,8 @@
 
 package bean
 
+import "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+
 type ClusterInfo struct {
 	ClusterId   int    `json:"clusterId"`
 	ClusterName string `json:"clusterName"`
@@ -24,25 +26,16 @@ type ClusterInfo struct {
 }
 
 const (
-	CLUSTER_MODIFY_EVENT_SECRET_TYPE    = "cluster.request/modify"
-	CLUSTER_MODIFY_EVENT_FIELD_SELECTOR = "type==cluster.request/modify"
-	INFORMER_ALREADY_EXIST_MESSAGE      = "INFORMER_ALREADY_EXIST"
-	CLUSTER_ACTION_ADD                  = "add"
-	CLUSTER_ACTION_UPDATE               = "update"
-	CLUSTER_ACTION_DELETE               = "delete"
-	SECRET_FIELD_ACTION                 = "action"
-	SECRET_FIELD_CLUSTER_ID             = "cluster_id"
+	ClusterModifyEventFieldSelector = "type==cluster.request/modify"
+	InformerAlreadyExistMessage     = "INFORMER_ALREADY_EXIST"
 
-	POD_DELETED_MESSAGE     = "pod deleted"
-	EXIT_CODE_143_ERROR     = "Error (exit code 143)"
-	CI_WORKFLOW_NAME        = "ci"
-	CD_WORKFLOW_NAME        = "cd"
-	WORKFLOW_LABEL_SELECTOR = "devtron.ai/purpose==workflow"
-	WORKFLOW_TYPE_LABEL_KEY = "workflowType"
-	JobKind                 = "Job"
-	NodeNoLongerExists      = "PodGC: node no longer exists"
-	UPDATE_EVENT            = "update_event"
-	DELETE_EVENT            = "delete_event"
+	ExitCode143Error   = "Error (exit code 143)"
+	NodeNoLongerExists = "PodGC: node no longer exists"
+	UpdateEvent        = "update_event"
+	DeleteEvent        = "delete_event"
+
+	WorkflowLabelSelector = "devtron.ai/purpose==workflow"
+	JobKind               = "Job"
 )
 
 type ClusterLabels struct {
@@ -55,4 +48,13 @@ func NewClusterLabels(clusterName string, clusterId int) *ClusterLabels {
 		ClusterName: clusterName,
 		ClusterId:   clusterId,
 	}
+}
+
+const (
+	DevtronOwnerInstance = "devtronOwnerInstance"
+)
+
+type CiCdStatus struct {
+	DevtronOwnerInstance string `json:"devtronOwnerInstance"`
+	*v1alpha1.WorkflowStatus
 }

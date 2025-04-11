@@ -18,6 +18,7 @@ package resource
 
 import (
 	"fmt"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
@@ -29,6 +30,6 @@ func NewUnimplementedImpl() *UnimplementedImpl {
 	return &UnimplementedImpl{}
 }
 
-func (impl *UnimplementedImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *UnimplementedImpl) GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	return nil, fmt.Errorf("informer not implemented")
 }

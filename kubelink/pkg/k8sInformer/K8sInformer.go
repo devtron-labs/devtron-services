@@ -24,7 +24,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/async"
+	informerBean "github.com/devtron-labs/common-lib/informer"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/kubelink/bean"
 	globalConfig "github.com/devtron-labs/kubelink/config"
 	"github.com/devtron-labs/kubelink/converter"
@@ -44,16 +46,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-)
-
-const (
-	HELM_RELEASE_SECRET_TYPE         = "helm.sh/release.v1"
-	CLUSTER_MODIFY_EVENT_SECRET_TYPE = "cluster.request/modify"
-	DEFAULT_CLUSTER                  = "default_cluster"
-	INFORMER_ALREADY_EXIST_MESSAGE   = "INFORMER_ALREADY_EXIST"
-	ADD                              = "add"
-	UPDATE                           = "update"
-	DELETE                           = "delete"
 )
 
 type K8sInformer interface {
@@ -127,13 +119,13 @@ func (impl *K8sInformerImpl) registerInformersForAllClusters() error {
 func (impl *K8sInformerImpl) OnStateChange(clusterId int, action string) {
 	impl.logger.Infow("syncing informer on cluster config update/delete", "action", action, "clusterId", clusterId)
 	switch action {
-	case UPDATE:
+	case informerBean.ClusterActionUpdate:
 		err := impl.syncInformer(clusterId)
 		if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
 			impl.logger.Errorw("error in updating informer for cluster", "id", clusterId, "err", err)
 			return
 		}
-	case DELETE:
+	case informerBean.ClusterActionDelete:
 		deleteClusterInfo, err := impl.clusterRepository.FindByIdWithActiveFalse(clusterId)
 		if err != nil {
 			impl.logger.Errorw("Error in fetching cluster by id", "cluster-id ", clusterId)
@@ -190,7 +182,7 @@ func (impl *K8sInformerImpl) BuildInformerForAllClusters(clusterInfos []*bean.Cl
 	if len(clusterInfos) == 0 {
 		clusterInfo := &bean.ClusterInfo{
 			ClusterId:             1,
-			ClusterName:           DEFAULT_CLUSTER,
+			ClusterName:           commonBean.DEFAULT_CLUSTER,
 			InsecureSkipTLSVerify: true,
 		}
 		err := impl.startInformer(*clusterInfo)
@@ -244,7 +236,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 	}
 
 	// for default cluster adding an extra informer, this informer will add informer on new clusters
-	if clusterInfo.ClusterName == DEFAULT_CLUSTER {
+	if clusterInfo.ClusterName == commonBean.DEFAULT_CLUSTER {
 		impl.logger.Debugw("Starting informer, reading new cluster request for default cluster")
 		labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 			//kubectl  get  secret --field-selector type==cluster.request/modify --all-namespaces
@@ -257,7 +249,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 			AddFunc: func(obj interface{}) {
 				impl.logger.Debugw("Event received in cluster secret Add informer", "time", time.Now())
 				if secretObject, ok := obj.(*coreV1.Secret); ok {
-					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
+					if secretObject.Type != informerBean.ClusterModifyEventSecretType {
 						return
 					}
 					data := secretObject.Data
@@ -265,14 +257,14 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 					id := string(data["cluster_id"])
 					id_int, _ := strconv.Atoi(id)
 
-					if string(action) == ADD {
+					if string(action) == informerBean.ClusterActionAdd {
 						err = impl.startInformerAndPopulateCache(id_int)
 						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
 							impl.logger.Debugw("error in adding informer for cluster", "id", id_int, "err", err)
 							return
 						}
 					}
-					if string(action) == UPDATE {
+					if string(action) == informerBean.ClusterActionUpdate {
 						err = impl.syncInformer(id_int)
 						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
 							impl.logger.Debugw("error in updating informer for cluster", "id", clusterInfo.ClusterId, "name", clusterInfo.ClusterName, "err", err)
@@ -284,7 +276,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				impl.logger.Debugw("Event received in cluster secret update informer", "time", time.Now())
 				if secretObject, ok := newObj.(*coreV1.Secret); ok {
-					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
+					if secretObject.Type != informerBean.ClusterModifyEventSecretType {
 						return
 					}
 					data := secretObject.Data
@@ -292,14 +284,14 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 					id := string(data["cluster_id"])
 					id_int, _ := strconv.Atoi(id)
 
-					if string(action) == ADD {
+					if string(action) == informerBean.ClusterActionAdd {
 						err = impl.startInformerAndPopulateCache(clusterInfo.ClusterId)
 						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
 							impl.logger.Errorw("error in adding informer for cluster", "id", id_int, "err", err)
 							return
 						}
 					}
-					if string(action) == UPDATE {
+					if string(action) == informerBean.ClusterActionUpdate {
 						impl.OnStateChange(id_int, string(action))
 						impl.informOtherListeners(id_int, string(action))
 					}
@@ -308,7 +300,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 			DeleteFunc: func(obj interface{}) {
 				impl.logger.Debugw("Event received in secret delete informer", "time", time.Now())
 				if secretObject, ok := obj.(*coreV1.Secret); ok {
-					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
+					if secretObject.Type != informerBean.ClusterModifyEventSecretType {
 						return
 					}
 					data := secretObject.Data
@@ -316,7 +308,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 					id := string(data["cluster_id"])
 					id_int, _ := strconv.Atoi(id)
 
-					if string(action) == DELETE {
+					if string(action) == informerBean.ClusterActionDelete {
 						impl.OnStateChange(id_int, string(action))
 						impl.informOtherListeners(id_int, string(action))
 					}

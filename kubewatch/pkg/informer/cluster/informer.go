@@ -95,7 +95,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	}
 	impl.logger.Debug("starting informer, reading new cluster request for default cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.FieldSelector = informerBean.CLUSTER_MODIFY_EVENT_FIELD_SELECTOR
+		opts.FieldSelector = informerBean.ClusterModifyEventFieldSelector
 	})
 	// addFunc is called when a new secret is created
 	addFunc := func(secretObject *coreV1.Secret) {
@@ -125,7 +125,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	secretFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
 		impl.logger.Errorw("error in registering default cluster secret informer", "err", err)
-		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET_INFORMER)
 		return err
 	}
 	stopChannel, err := impl.getStopChannel(secretFactory, clusterLabels)
