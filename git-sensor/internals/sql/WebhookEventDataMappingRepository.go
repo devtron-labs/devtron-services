@@ -17,7 +17,6 @@
 package sql
 
 import (
-	"github.com/devtron-labs/git-sensor/util"
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
 	"time"
@@ -61,15 +60,7 @@ func (impl WebhookEventDataMappingRepositoryImpl) GetCiPipelineMaterialWebhookDa
 		Where("webhook_data_id =? ", webhookParsedDataId).
 		Where("is_active = TRUE ").
 		Select()
-
-	if err != nil {
-		if util.IsErrNoRows(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &mapping, nil
+	return &mapping, err
 }
 
 func (impl WebhookEventDataMappingRepositoryImpl) SaveCiPipelineMaterialWebhookDataMapping(ciPipelineMaterialWebhookDataMapping *CiPipelineMaterialWebhookDataMapping) error {
@@ -89,15 +80,7 @@ func (impl WebhookEventDataMappingRepositoryImpl) GetMatchedCiPipelineMaterialWe
 		Where("is_active = TRUE ").
 		Where("condition_matched = TRUE ").
 		Select()
-
-	if err != nil {
-		if util.IsErrNoRows(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return pipelineMaterials, nil
+	return pipelineMaterials, err
 }
 
 func (impl WebhookEventDataMappingRepositoryImpl) InactivateWebhookDataMappingForPipelineMaterials(ciPipelineMaterialIds []int) error {
@@ -127,15 +110,7 @@ func (impl WebhookEventDataMappingRepositoryImpl) GetWebhookPayloadDataForPipeli
 		Offset(offset).
 		Order("updated_on " + sortOrder).
 		Select()
-
-	if err != nil {
-		if util.IsErrNoRows(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return mappings, nil
+	return mappings, err
 }
 
 func (impl WebhookEventDataMappingRepositoryImpl) GetWebhookPayloadFilterDataForPipelineMaterialId(ciPipelineMaterialId int, webhookParsedDataId int) (*CiPipelineMaterialWebhookDataMapping, error) {
@@ -149,13 +124,5 @@ func (impl WebhookEventDataMappingRepositoryImpl) GetWebhookPayloadFilterDataFor
 		Where("webhook_data_id =? ", webhookParsedDataId).
 		Where("is_active = TRUE ").
 		Select()
-
-	if err != nil {
-		if util.IsErrNoRows(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &mapping, nil
+	return &mapping, err
 }

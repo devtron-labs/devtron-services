@@ -17,8 +17,10 @@
 package git
 
 import (
+	"errors"
 	"github.com/devtron-labs/git-sensor/internals/sql"
 	"go.uber.org/zap"
+	"slices"
 	"strings"
 	"time"
 )
@@ -82,7 +84,7 @@ func (impl WebhookHandlerImpl) HandleWebhookEvent(webhookEvent *WebhookEvent) er
 	for _, event := range events {
 		if len(event.EventTypesCsv) > 0 {
 			eventTypes := strings.Split(event.EventTypesCsv, ",")
-			if !contains(eventTypes, eventType) {
+			if !slices.Contains(eventTypes, eventType) {
 				continue
 			}
 		}
@@ -100,42 +102,43 @@ func (impl WebhookHandlerImpl) HandleWebhookEvent(webhookEvent *WebhookEvent) er
 		webhookEventParsedData.EventId = eventId
 		webhookEventParsedData.EventActionType = event.ActionType
 		webhookEventParsedData.PayloadDataId = payloadId
-
-		// fetch webhook parsed data from DB if unique id is not blank
-		webhookParsedEventGetData, err := impl.webhookEventService.GetWebhookParsedEventDataByEventIdAndUniqueId(eventId, webhookEventParsedData.UniqueId)
-		if err != nil {
-			impl.logger.Errorw("error in getting parsed webhook event data", "err", err)
-			return err
+		if dbErr := impl.upsertWebhookEventParsedData(eventId, webhookEventParsedData); dbErr != nil {
+			impl.logger.Errorw("error in upserting webhook event parsed data", "eventId", eventId, "err", dbErr)
+			// intentionally not returning error here, as we want to continue processing other events
 		}
-
-		// save or update in DB
-		if webhookParsedEventGetData != nil {
-			webhookEventParsedData.Id = webhookParsedEventGetData.Id
-			webhookEventParsedData.CreatedOn = webhookParsedEventGetData.CreatedOn
-			webhookEventParsedData.UpdatedOn = time.Now()
-			impl.webhookEventService.UpdateWebhookParsedEventData(webhookEventParsedData)
-		} else {
-			webhookEventParsedData.CreatedOn = time.Now()
-			impl.webhookEventService.SaveWebhookParsedEventData(webhookEventParsedData)
-		}
-
 		// match ci trigger condition and notify
 		err = impl.webhookEventService.MatchCiTriggerConditionAndNotify(event, webhookEventParsedData, fullDataMap)
 		if err != nil {
 			impl.logger.Errorw("error in matching ci trigger condition for webhook after db save", "err", err)
 			return err
 		}
-
 	}
-
 	return nil
 }
 
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
+func (impl WebhookHandlerImpl) upsertWebhookEventParsedData(eventId int, webhookEventParsedData *sql.WebhookEventParsedData) error {
+	// fetch webhook parsed data from DB if unique id is not blank
+	webhookParsedEventGetData, err := impl.webhookEventService.GetWebhookParsedEventDataByEventIdAndUniqueId(eventId, webhookEventParsedData.UniqueId)
+	if err != nil && !errors.Is(err, ErrWebhookEventParsedDataNotFound) {
+		impl.logger.Errorw("error in getting parsed webhook event data", "eventId", eventId, "uniqueId", webhookEventParsedData.UniqueId, "err", err)
+		return err
+	} else if errors.Is(err, ErrWebhookEventParsedDataNotFound) {
+		impl.logger.Infow("webhook event parsed data not found in db, creating a new one", "eventId", eventId, "uniqueId", webhookEventParsedData.UniqueId)
+		// save in DB
+		webhookEventParsedData.CreatedOn = time.Now()
+		if err = impl.webhookEventService.SaveWebhookParsedEventData(webhookEventParsedData); err != nil {
+			impl.logger.Errorw("error in saving webhook event parsed data", "err", err)
+			return err
+		}
+	} else {
+		// update in DB
+		webhookEventParsedData.Id = webhookParsedEventGetData.Id
+		webhookEventParsedData.CreatedOn = webhookParsedEventGetData.CreatedOn
+		webhookEventParsedData.UpdatedOn = time.Now()
+		if err = impl.webhookEventService.UpdateWebhookParsedEventData(webhookEventParsedData); err != nil {
+			impl.logger.Errorw("error in updating webhook event parsed data", "err", err)
+			return err
 		}
 	}
-	return false
+	return nil
 }
