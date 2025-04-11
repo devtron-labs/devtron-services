@@ -16,12 +16,12 @@ COPY ./git-ask-pass.sh /git-ask-pass.sh
 
 RUN chmod +x /git-ask-pass.sh && \
 	apk add --no-cache ca-certificates && \
+        apk add tini --no-cache && \
 	apk add git --no-cache && \
 	apk add openssh --no-cache && \
 	adduser -D devtron
 
 COPY --chown=devtron:devtron --from=build-env  /go/src/github.com/devtron-labs/git-sensor/scripts/ /go/src/github.com/devtron-labs/git-sensor/git-sensor ./
-
 USER devtron
-
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["./git-sensor"]
