@@ -3,7 +3,6 @@ package registry
 import (
 	"go.uber.org/zap"
 	"helm.sh/helm/v3/pkg/registry"
-	"strings"
 )
 
 type DefaultSettingsGetter interface {
@@ -47,7 +46,7 @@ func (s *DefaultSettingsGetterImpl) getRegistryClient(config *Configuration) (*r
 
 	clientOptions := []registry.ClientOption{registry.ClientOptHTTPClient(httpClient)}
 
-	if strings.Contains(strings.ToLower(config.RegistryUrl), "http") {
+	if IsPlainHttp(config.RegistryUrl) {
 		clientOptions = append(clientOptions, registry.ClientOptPlainHTTP())
 	}
 
