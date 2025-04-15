@@ -97,6 +97,7 @@ type CommonWorkflowRequest struct {
 	DockerImageTag                 string                           `json:"dockerImageTag"`
 	DockerRegistryId               string                           `json:"dockerRegistryId"`
 	DockerRegistryType             string                           `json:"dockerRegistryType"`
+	CredentialsType                string                           `json:"credentialsType"`
 	DockerRegistryURL              string                           `json:"dockerRegistryURL"`
 	DockerRegistryConnectionConfig *bean.RemoteConnectionConfigBean `json:"dockerRegistryConnectionConfig"`
 	DockerConnection               string                           `json:"dockerConnection"`

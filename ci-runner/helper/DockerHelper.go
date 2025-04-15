@@ -190,7 +190,7 @@ const CacheModeMax = "max"
 const CacheModeMin = "min"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType, CredentialsType string
 }
 
 type EnvironmentVariables struct {
@@ -204,6 +204,9 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 }
 
 func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
+	if dockerCredentials.CredentialsType == "anonymous" {
+		return nil
+	}
 	performDockerLogin := func() error {
 		username := dockerCredentials.DockerUsername
 		pwd := dockerCredentials.DockerPassword
@@ -287,6 +290,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		SecretKey:          ciRequest.SecretKey,
 		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
 		DockerRegistryType: ciRequest.DockerRegistryType,
+		CredentialsType:    ciRequest.CredentialsType,
 	})
 	if err != nil {
 		return "", err
