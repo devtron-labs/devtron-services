@@ -131,6 +131,13 @@ func (impl *RepositoryManagerImpl) GetCheckoutLocationFromGitUrl(material *sql.G
 		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), locationWithoutProtocol)
 		return checkoutPath, httpsMatched, false, nil
 	}
+	httpRegex := `^http.*`
+	httpMatch, err := regexp.MatchString(httpRegex, material.Url)
+	if httpMatch {
+		locationWithoutProtocol := strings.ReplaceAll(material.Url, "http://", "")
+		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), locationWithoutProtocol)
+		return checkoutPath, httpMatch, false, nil
+	}
 
 	sshRegex := `^git@.*`
 	sshMatched, err := regexp.MatchString(sshRegex, material.Url)
