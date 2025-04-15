@@ -3,6 +3,7 @@ package registry
 import (
 	"go.uber.org/zap"
 	"helm.sh/helm/v3/pkg/registry"
+	"strings"
 )
 
 type DefaultSettingsGetter interface {
@@ -45,7 +46,8 @@ func (s *DefaultSettingsGetterImpl) getRegistryClient(config *Configuration) (*r
 	}
 
 	clientOptions := []registry.ClientOption{registry.ClientOptHTTPClient(httpClient)}
-	if config.RegistryConnectionType == INSECURE_CONNECTION {
+
+	if strings.Contains(strings.ToLower(config.RegistryUrl), "http") {
 		clientOptions = append(clientOptions, registry.ClientOptPlainHTTP())
 	}
 
@@ -55,7 +57,7 @@ func (s *DefaultSettingsGetterImpl) getRegistryClient(config *Configuration) (*r
 		return nil, err
 	}
 
-	if config != nil && !config.IsPublicRegistry {
+	if config != nil && !config.IsPublicRegistry && !(config.CredentialsType == string(CredentialsTypeAnonymous)) {
 		registryClient, err = GetLoggedInClient(registryClient, config)
 		if err != nil {
 			return nil, err
