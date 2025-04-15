@@ -18,7 +18,7 @@ FROM docker:20.10.24-dind
 RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && apk add make && apk add curl && apk add git && apk add zip && apk add jq && \
     ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
     apk -Uuv add groff less python3 py3-pip && \
-    pip3 install awscli && \
+    pip3 install awscli==1.38.11&& \
     apk --purge -v del py-pip && \
     rm /var/cache/apk/*
 
