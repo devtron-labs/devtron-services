@@ -55,7 +55,7 @@ func (s *DefaultSettingsGetterImpl) getRegistryClient(config *Configuration) (*r
 		return nil, err
 	}
 
-	if config != nil && !config.IsPublicRegistry {
+	if config != nil && !config.IsPublicRegistry && !(config.CredentialsType == string(CredentialsTypeAnonymous)) {
 		registryClient, err = GetLoggedInClient(registryClient, config)
 		if err != nil {
 			return nil, err

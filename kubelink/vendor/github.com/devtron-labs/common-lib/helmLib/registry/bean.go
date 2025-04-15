@@ -20,6 +20,7 @@ type Configuration struct {
 	RegistryType              string
 	IsPublicRegistry          bool
 	RemoteConnectionConfig    *bean.RemoteConnectionConfigBean
+	CredentialsType           string
 }
 
 type RegistryConnectionType string
@@ -31,6 +32,13 @@ type Settings struct {
 	HttpClient             *http.Client
 	Header                 http.Header
 }
+
+type CredentialsType string
+
+const (
+	CredentialsTypeAnonymous        CredentialsType = "anonymous"
+	CredentialsTypeUsernamePassword CredentialsType = "username_password"
+)
 
 const (
 	REGISTRY_CONNECTION_TYPE_DIRECT RegistryConnectionType = "DIRECT"

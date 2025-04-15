@@ -15,7 +15,7 @@ func NewRegistryConfig(credential *client.RegistryCredential) (*registry.Configu
 		registryConfig = &registry.Configuration{
 			RegistryId:                credential.RegistryName,
 			RegistryUrl:               credential.RegistryUrl,
-			Cre
+			CredentialsType:           credential.CredentialsType,
 			Username:                  credential.Username,
 			Password:                  credential.Password,
 			AwsAccessKey:              credential.AccessKey,
