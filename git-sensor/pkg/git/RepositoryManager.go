@@ -145,6 +145,12 @@ func (impl *RepositoryManagerImpl) GetCheckoutLocationFromGitUrl(material *sql.G
 		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), material.Url)
 		return checkoutPath, httpsMatched, sshMatched, nil
 	}
+	rootRegex := `^root@.*`
+	rootMatched, err := regexp.MatchString(rootRegex, material.Url)
+	if rootMatched {
+		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), material.Url)
+		return checkoutPath, httpsMatched, rootMatched, nil
+	}
 
 	return "", httpsMatched, sshMatched, fmt.Errorf("unsupported format url %s", material.Url)
 }
