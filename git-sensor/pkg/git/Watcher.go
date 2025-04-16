@@ -195,7 +195,7 @@ func (impl *GitWatcherImpl) pollAndUpdateGitMaterial(materialReq *sql.GitMateria
 // Helper function to handle SSH key creation and retry fetching material
 func (impl *GitWatcherImpl) handleSshKeyCreationAndRetry(gitCtx GitContext, material *sql.GitMaterial, location string, gitProvider *sql.GitProvider) (updated bool, repo *GitRepository, errMsg string, err error) {
 	if strings.Contains(material.CheckoutLocation, "/.git") {
-		location, _, _, err = impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
+		location, err = impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
 		if err != nil {
 			impl.logger.Errorw("error in getting clone location ", "material", material, "errMsg", errMsg, "err", err)
 			return false, nil, errMsg, err
