@@ -42,3 +42,5 @@ var (
 	ErrorCacheMissReleaseNotFound = errors.New("release not found in cache")
 	InformerAlreadyExistError     = errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
 )
+
+const secretKeyAppDetailKey = "appDetail"

@@ -238,7 +238,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 
 	// for default cluster adding an extra informer, this informer will add informer on new clusters
 	if clusterInfo.ClusterName == DEFAULT_CLUSTER {
-		impl.logger.Debugw("Starting informer, reading new cluster request for default cluster")
+		impl.logger.Debugw("starting informer, reading new cluster request for default cluster")
 		labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 			//kubectl  get  secret --field-selector type==cluster.request/modify --all-namespaces
 			opts.FieldSelector = "type==cluster.request/modify"
@@ -246,9 +246,10 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 		informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, labelOptions)
 		stopper := make(chan struct{})
 		secretInformer := informerFactory.Core().V1().Secrets()
-		secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		_, err = secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				impl.logger.Debugw("Event received in cluster secret Add informer", "time", time.Now())
+				startTime := time.Now()
+				impl.logger.Debugw("CLUSTER_ADD_INFORMER: cluster secret add event received", "obj", obj, "time", time.Now())
 				if secretObject, ok := obj.(*coreV1.Secret); ok {
 					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
 						return
@@ -276,10 +277,12 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 							return
 						}
 					}
+					impl.logger.Infow("CLUSTER_ADD_INFORMER: registered informer for cluster", "clusterId", idInt, "timeTaken", time.Since(startTime))
 				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				impl.logger.Debugw("Event received in cluster secret update informer", "time", time.Now())
+				startTime := time.Now()
+				impl.logger.Debugw("CLUSTER_UPDATE_INFORMER: cluster secret update event received", "oldObj", oldObj, "newObj", newObj, "time", time.Now())
 				if secretObject, ok := newObj.(*coreV1.Secret); ok {
 					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
 						return
@@ -304,10 +307,12 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 						impl.OnStateChange(idInt, string(action))
 						impl.informOtherListeners(idInt, string(action))
 					}
+					impl.logger.Infow("CLUSTER_UPDATE_INFORMER: registered informer for cluster", "clusterId", idInt, "timeTaken", time.Since(startTime))
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				impl.logger.Debugw("Event received in secret delete informer", "time", time.Now())
+				startTime := time.Now()
+				impl.logger.Debugw("CLUSTER_DELETE_INFORMER: secret delete event received", "obj", obj, "time", time.Now())
 				if secretObject, ok := obj.(*coreV1.Secret); ok {
 					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
 						return
@@ -324,9 +329,14 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 						impl.OnStateChange(idInt, string(action))
 						impl.informOtherListeners(idInt, string(action))
 					}
+					impl.logger.Infow("CLUSTER_DELETE_INFORMER: registered informer for cluster", "clusterId", idInt, "timeTaken", time.Since(startTime))
 				}
 			},
 		})
+		if err != nil {
+			impl.logger.Errorw("error in adding event handler for cluster secret informer", "err", err)
+			return err
+		}
 		informerFactory.Start(stopper)
 		//impl.informerStopper[clusterInfo.ClusterName+"_second_informer"] = stopper
 
@@ -376,18 +386,24 @@ func (impl *K8sInformerImpl) stopInformer(clusterId int) {
 	return
 }
 
-func (impl *K8sInformerImpl) transformHelmRelease(clusterModel *repository.Cluster, obj any) (*client.DeployedAppDetail, error) {
+func (impl *K8sInformerImpl) transformHelmRelease(clusterModel *repository.Cluster, obj any) (*coreV1.Secret, error) {
 	startTime := time.Now()
 	if secretObject, ok := obj.(*coreV1.Secret); ok && secretObject.Type == HELM_RELEASE_SECRET_TYPE {
 		releaseDTO, err := decodeRelease(string(secretObject.Data["release"]))
 		if err != nil {
-			impl.logger.Error("error in decoding helm release", "clusterId", clusterModel.Id, "time", time.Since(startTime), "err", err)
+			impl.logger.Error("error in decoding helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
 			return nil, err
 		}
 		appDetail := adapter.ParseDeployedAppDetail(int32(clusterModel.Id), clusterModel.ClusterName, releaseDTO)
-		impl.logger.Debugw("successfully decoded helm release", "clusterId", clusterModel.Id, "time", time.Since(startTime))
+		transformedSecretData, err := parseSecretDataForDeployedAppDetail(appDetail)
+		if err != nil {
+			impl.logger.Error("error in parsing secret data for deployed app detail", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
+			return nil, err
+		}
+		secretObject.Data = transformedSecretData
+		impl.logger.Debugw("successfully decoded helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime))
 		middleware.InformerDataTransformDuration.WithLabelValues(clusterModel.ClusterName, releaseDTO.Namespace, releaseDTO.Name).Observe(time.Since(startTime).Seconds())
-		return appDetail, nil
+		return secretObject, nil
 	}
 	impl.logger.Warnw("not a helm release secret", "clusterId", clusterModel.Id, "obj", obj)
 	return nil, errors.New("error: not a helm release secret")
@@ -443,41 +459,77 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 	secretInformer := informerFactory.Core().V1().Secrets()
 	_, err = secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
-			impl.logger.Debugw("Event received in Helm secret add informer", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
-			if appDetail, ok := obj.(*client.DeployedAppDetail); ok {
+			startTime := time.Now()
+			impl.logger.Debugw("RELEASE_ADD_INFORMER: helm secret add event received", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
+			if secretObject, ok := obj.(*coreV1.Secret); ok {
+				if secretObject == nil {
+					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
+					return
+				}
+				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
+				if err != nil {
+					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					return
+				}
 				if appDetail == nil {
+					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
 				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail))] = appDetail
+				impl.logger.Infow("RELEASE_ADD_INFORMER: added app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			impl.logger.Debugw("Event received in Helm secret update informer", "clusterId", clusterModel.Id, "oldObj", oldObj, "newObj", newObj, "time", time.Now())
-			if appDetail, ok := newObj.(*client.DeployedAppDetail); ok {
+			startTime := time.Now()
+			impl.logger.Debugw("RELEASE_UPDATE_INFORMER: helm secret update event received", "clusterId", clusterModel.Id, "oldObj", oldObj, "newObj", newObj, "time", time.Now())
+			if secretObject, ok := newObj.(*coreV1.Secret); ok {
+				if secretObject == nil {
+					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
+					return
+				}
+				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
+				if err != nil {
+					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					return
+				}
 				if appDetail == nil {
+					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
 				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail))] = appDetail
+				impl.logger.Infow("RELEASE_UPDATE_INFORMER: updated app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			impl.logger.Debugw("Event received in Helm secret delete informer", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
-			if appDetail, ok := obj.(*client.DeployedAppDetail); ok {
+			startTime := time.Now()
+			impl.logger.Debugw("RELEASE_DELETE_INFORMER: helm secret delete event received", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
+			if secretObject, ok := obj.(*coreV1.Secret); ok {
+				if secretObject == nil {
+					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
+					return
+				}
+				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
+				if err != nil {
+					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					return
+				}
 				if appDetail == nil {
+					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
 				delete(impl.HelmListClusterMap[clusterId], impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail)))
+				impl.logger.Infow("RELEASE_DELETE_INFORMER: deleted app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
 			}
 		},
 	})
 	if err != nil {
-		impl.logger.Errorw("error in adding event handler for cluster secret informer", "clusterId", clusterId, "err", err)
+		impl.logger.Errorw("error in adding event handler for helm secret informer", "clusterId", clusterId, "err", err)
 		return err
 	}
 	informerFactory.Start(stopper)
