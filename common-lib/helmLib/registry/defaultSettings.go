@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"github.com/devtron-labs/common-lib/constants"
 	"go.uber.org/zap"
 	"helm.sh/helm/v3/pkg/registry"
 )
@@ -56,7 +57,7 @@ func (s *DefaultSettingsGetterImpl) getRegistryClient(config *Configuration) (*r
 		return nil, err
 	}
 
-	if config != nil && !config.IsPublicRegistry && !(config.CredentialsType == string(CredentialsTypeAnonymous)) {
+	if config != nil && !config.IsPublicRegistry && !(config.CredentialsType == string(constants.CredentialsTypeAnonymous)) {
 		registryClient, err = GetLoggedInClient(registryClient, config)
 		if err != nil {
 			return nil, err
