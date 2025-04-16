@@ -176,6 +176,7 @@ func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequ
 				SecretKey:          commonWorkflowRequest.SecretKey,
 				DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
 				DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
+				CredentialsType:    commonWorkflowRequest.CredentialsType,
 			})
 			if err != nil {
 				return err
