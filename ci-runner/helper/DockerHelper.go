@@ -31,6 +31,7 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
+	"github.com/devtron-labs/common-lib/constants"
 
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
@@ -225,7 +226,7 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 }
 
 func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
-	if dockerCredentials.CredentialsType == "anonymous" {
+	if dockerCredentials.CredentialsType == string(constants.CredentialsTypeAnonymous) {
 		return nil
 	}
 	performDockerLogin := func() error {
