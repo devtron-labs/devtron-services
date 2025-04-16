@@ -18,17 +18,27 @@ package k8sInformer
 
 import (
 	"errors"
-	"helm.sh/helm/v3/pkg/release"
+	"fmt"
+	client "github.com/devtron-labs/kubelink/grpc"
 )
 
-type ReleaseDto struct {
-	*release.Release
+type DeployedAppDetailDto struct {
+	*client.DeployedAppDetail
 }
 
-func (r *ReleaseDto) getUniqueReleaseIdentifier() string {
-	return r.Namespace + "_" + r.Name
+func NewDeployedAppDetailDto(appDetail *client.DeployedAppDetail) *DeployedAppDetailDto {
+	return &DeployedAppDetailDto{DeployedAppDetail: appDetail}
+}
+
+func (r *DeployedAppDetailDto) getUniqueReleaseIdentifier() string {
+	if r == nil || r.EnvironmentDetail == nil {
+		return ""
+	}
+	// adding cluster id with release name and namespace because there can be case when two cluster or two namespaces have release with same name
+	return fmt.Sprintf("%s_%s_%d", r.EnvironmentDetail.Namespace, r.AppName, r.EnvironmentDetail.ClusterId)
 }
 
 var (
 	ErrorCacheMissReleaseNotFound = errors.New("release not found in cache")
+	InformerAlreadyExistError     = errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
 )
