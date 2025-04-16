@@ -83,7 +83,6 @@ type PgQueryEvent struct {
 	StartTime time.Time
 	Error     error
 	Query     string
-	FuncName  string
 }
 
 type TargetPlatform struct {
