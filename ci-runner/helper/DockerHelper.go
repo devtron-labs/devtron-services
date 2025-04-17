@@ -31,6 +31,7 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
+	"github.com/devtron-labs/common-lib/constants"
 
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
@@ -176,6 +177,7 @@ func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequ
 				SecretKey:          commonWorkflowRequest.SecretKey,
 				DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
 				DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
+				CredentialsType:    commonWorkflowRequest.CredentialsType,
 			})
 			if err != nil {
 				return err
@@ -210,7 +212,7 @@ const CacheModeMax = "max"
 const CacheModeMin = "min"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType, CredentialsType string
 }
 
 type EnvironmentVariables struct {
@@ -224,6 +226,9 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 }
 
 func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
+	if dockerCredentials.CredentialsType == string(constants.CredentialsTypeAnonymous) {
+		return nil
+	}
 	performDockerLogin := func() error {
 		username := dockerCredentials.DockerUsername
 		pwd := dockerCredentials.DockerPassword

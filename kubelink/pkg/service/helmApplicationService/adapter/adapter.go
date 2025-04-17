@@ -24,6 +24,7 @@ func NewRegistryConfig(credential *client.RegistryCredential) (*registry.Configu
 			RegistryCertificateString: credential.RegistryCertificate,
 			RegistryType:              credential.RegistryType,
 			IsPublicRegistry:          credential.IsPublic,
+			CredentialsType:           credential.CredentialsType,
 		}
 
 		if credential.Connection == registry.SECURE_WITH_CERT {

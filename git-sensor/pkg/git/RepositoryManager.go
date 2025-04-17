@@ -45,7 +45,7 @@ type RepositoryManager interface {
 	InitRepoAndGetSshPrivateKeyPath(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (string, string, error)
 	FetchRepo(gitCtx GitContext, location string) (errMsg string, err error)
 	BackupGitMaterialBeforeUpdate(detailedExistingMaterial *sql.GitMaterial) error
-	GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, httpMatched bool, shMatched bool, err error)
+	GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, err error)
 	GetCheckoutLocation(gitCtx GitContext, material *sql.GitMaterial, url, checkoutPath string) string
 	TrimLastGitCommit(gitCommits []*GitCommitBase, count int) []*GitCommitBase
 	// Clean cleans a directory
@@ -122,24 +122,38 @@ func (impl *RepositoryManagerImpl) getBackupDirForMaterial(material *sql.GitMate
 	return path.Join(BACKUP_BASE_DIR, strconv.Itoa(material.Id), time.Now().Format("02-Jan-2006 15:04:05"))
 }
 
-func (impl *RepositoryManagerImpl) GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, httpMatched bool, shMatched bool, err error) {
+func (impl *RepositoryManagerImpl) GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, err error) {
 	//gitRegex := `/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/`
 	httpsRegex := `^https.*`
 	httpsMatched, err := regexp.MatchString(httpsRegex, material.Url)
 	if httpsMatched {
 		locationWithoutProtocol := strings.ReplaceAll(material.Url, "https://", "")
 		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), locationWithoutProtocol)
-		return checkoutPath, httpsMatched, false, nil
+		return checkoutPath, nil
+	}
+	httpRegex := `^http.*`
+	httpMatch, err := regexp.MatchString(httpRegex, material.Url)
+	if httpMatch {
+		locationWithoutProtocol := strings.ReplaceAll(material.Url, "http://", "")
+		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), locationWithoutProtocol)
+		return checkoutPath, nil
 	}
 
 	sshRegex := `^git@.*`
 	sshMatched, err := regexp.MatchString(sshRegex, material.Url)
 	if sshMatched {
 		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), material.Url)
-		return checkoutPath, httpsMatched, sshMatched, nil
+		return checkoutPath, nil
+	}
+	// this regex is used to generic ssh providers like gogs where format is <user>@<host>:<org>/<repo>.git
+	scpLikeSSHRegex := `^[\w-]+@[\w.-]+:[\w./-]+\.git$`
+	rootMatched, err := regexp.MatchString(scpLikeSSHRegex, material.Url)
+	if rootMatched {
+		checkoutPath := path.Join(impl.getBaseDirForMaterial(material), material.Url)
+		return checkoutPath, nil
 	}
 
-	return "", httpsMatched, sshMatched, fmt.Errorf("unsupported format url %s", material.Url)
+	return "", fmt.Errorf("unsupported format url %s", material.Url)
 }
 
 func (impl *RepositoryManagerImpl) GetCheckoutLocation(gitCtx GitContext, material *sql.GitMaterial, url, checkoutPath string) string {

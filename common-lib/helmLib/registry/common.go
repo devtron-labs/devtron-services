@@ -14,6 +14,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -176,4 +177,11 @@ func GetTlsConfig(config *Configuration) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-// TODO: add support for certFile, keyFile on UI?
+func IsPlainHttp(URL string) bool {
+	parsedURL, err := url.Parse(URL)
+	if err != nil {
+		return false
+	}
+	plainHttp := parsedURL.Scheme == HTTP
+	return plainHttp
+}

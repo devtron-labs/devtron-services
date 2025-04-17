@@ -474,6 +474,7 @@ message RegistryCredential {
   string Connection = 11;
   string RegistryName = 12;
   string RegistryCertificate = 13;
+  string CredentialsType = 14;
 }
 
 enum RemoteConnectionMethod {

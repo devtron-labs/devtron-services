@@ -57,6 +57,7 @@ type DockerArtifactStore struct {
 	Cert                     string       `sql:"cert" json:"cert,omitempty"`
 	Active                   bool         `sql:"active,notnull" json:"active"`
 	RemoteConnectionConfigId int          `sql:"remote_connection_config_id"`
+	CredentialsType          string       `sql:"credentials_type,notnull"`
 	OCIRegistryConfig        []*OCIRegistryConfig
 	RemoteConnectionConfig   *RemoteConnectionConfig
 	AuditLog
