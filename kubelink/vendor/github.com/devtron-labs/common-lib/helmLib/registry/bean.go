@@ -33,13 +33,6 @@ type Settings struct {
 	Header                 http.Header
 }
 
-type CredentialsType string
-
-const (
-	CredentialsTypeAnonymous        CredentialsType = "anonymous"
-	CredentialsTypeUsernamePassword CredentialsType = "username_password"
-)
-
 const (
 	REGISTRY_CONNECTION_TYPE_DIRECT RegistryConnectionType = "DIRECT"
 	REGISTRY_CONNECTION_TYPE_PROXY  RegistryConnectionType = "PROXY"
