@@ -20,6 +20,7 @@ type Configuration struct {
 	RegistryType              string
 	IsPublicRegistry          bool
 	RemoteConnectionConfig    *bean.RemoteConnectionConfigBean
+	CredentialsType           string
 }
 
 type RegistryConnectionType string
@@ -52,4 +53,8 @@ const (
 
 const (
 	REGISTRY_CREDENTIAL_BASE_PATH = "/home/devtron/registry-credentials"
+)
+
+const (
+	HTTP = "http"
 )
