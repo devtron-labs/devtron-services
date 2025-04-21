@@ -17,10 +17,6 @@
 package k8sInformer
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/async"
@@ -33,8 +29,6 @@ import (
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/helmApplicationService/adapter"
 	"go.uber.org/zap"
-	"helm.sh/helm/v3/pkg/release"
-	"io"
 	coreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -143,40 +137,6 @@ func (impl *K8sInformerImpl) OnStateChange(clusterId int, action string) {
 func (impl *K8sInformerImpl) RegisterListener(listener ClusterSecretUpdateListener) {
 	impl.logger.Infow("registering listener %s", reflect.TypeOf(listener))
 	impl.listeners = append(impl.listeners, listener)
-}
-
-func decodeRelease(data string) (*release.Release, error) {
-	// base64 decode string
-	b64 := base64.StdEncoding
-	b, err := b64.DecodeString(data)
-	if err != nil {
-		return nil, err
-	}
-
-	var magicGzip = []byte{0x1f, 0x8b, 0x08}
-
-	// For backwards compatibility with releases that were stored before
-	// compression was introduced we skip decompression if the
-	// gzip magic header is not found
-	if len(b) > 3 && bytes.Equal(b[0:3], magicGzip) {
-		r, err := gzip.NewReader(bytes.NewReader(b))
-		if err != nil {
-			return nil, err
-		}
-		defer r.Close()
-		b2, err := io.ReadAll(r)
-		if err != nil {
-			return nil, err
-		}
-		b = b2
-	}
-
-	var rls release.Release
-	// unmarshal release object bytes
-	if err := json.Unmarshal(b, &rls); err != nil {
-		return nil, err
-	}
-	return &rls, nil
 }
 
 func (impl *K8sInformerImpl) BuildInformerForAllClusters(clusterInfos []*bean.ClusterInfo) error {
