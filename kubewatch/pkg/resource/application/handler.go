@@ -22,6 +22,7 @@ import (
 	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	applicationInformer "github.com/argoproj/argo-cd/v2/pkg/client/informers/externalversions/application/v1alpha1"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -42,7 +43,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	}
 }
 
-func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
 	defer func() {
 		impl.logger.Debugw("registered application informer", "namespace", namespace, "time", time.Since(startTime))
@@ -66,7 +67,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8s
 					if newApp.Status.History != nil && len(newApp.Status.History) > 0 {
 						if oldApp.Status.History == nil || len(oldApp.Status.History) == 0 {
 							impl.logger.Debug("new deployment detected")
-							impl.sendAppUpdate(clusterId, newApp, statusTime)
+							impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
 						} else {
 							impl.logger.Debugf("old deployment detected for update: %s, status:%s", oldApp.Name, oldApp.Status.Health.Status)
 							oldRevision := oldApp.Status.Sync.Revision
@@ -76,7 +77,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8s
 							newSyncStatus := string(newApp.Status.Sync.Status)
 							oldSyncStatus := string(oldApp.Status.Sync.Status)
 							if (oldRevision != newRevision) || (oldStatus != newStatus) || (newSyncStatus != oldSyncStatus) {
-								impl.sendAppUpdate(clusterId, newApp, statusTime)
+								impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
 								impl.logger.Debug("send update app:" + oldApp.Name + ", oldRevision: " + oldRevision + ", newRevision:" +
 									newRevision + ", oldStatus: " + oldStatus + ", newStatus: " + newStatus +
 									", newSyncStatus: " + newSyncStatus + ", oldSyncStatus: " + oldSyncStatus)
@@ -98,7 +99,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8s
 			if app, ok := obj.(*applicationBean.Application); ok {
 				statusTime := time.Now()
 				impl.logger.Debugf("app delete detected: %s, status:%s", app.Name, app.Status.Health.Status)
-				impl.sendAppDelete(clusterId, app, statusTime)
+				impl.sendAppDelete(clusterLabels.ClusterId, app, statusTime)
 			}
 		},
 	})
