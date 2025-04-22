@@ -349,7 +349,7 @@ func (impl *K8sInformerImpl) stopInformer(clusterId int) {
 func (impl *K8sInformerImpl) transformHelmRelease(clusterModel *repository.Cluster, obj any) (*coreV1.Secret, error) {
 	startTime := time.Now()
 	if secretObject, ok := obj.(*coreV1.Secret); ok && secretObject.Type == HELM_RELEASE_SECRET_TYPE {
-		releaseDTO, err := decodeRelease(string(secretObject.Data["release"]))
+		releaseDTO, err := decodeHelmReleaseData(string(secretObject.Data["release"]))
 		if err != nil {
 			impl.logger.Error("error in decoding helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
 			return nil, err

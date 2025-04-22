@@ -17,9 +17,12 @@
 package k8sInformer
 
 import (
-	"errors"
 	"fmt"
 	client "github.com/devtron-labs/kubelink/grpc"
+)
+
+const (
+	secretKeyAppDetailKey = "appDetail"
 )
 
 type DeployedAppDetailDto struct {
@@ -37,10 +40,3 @@ func (r *DeployedAppDetailDto) getUniqueReleaseIdentifier() string {
 	// adding cluster id with release name and namespace because there can be case when two cluster or two namespaces have release with same name
 	return fmt.Sprintf("%s_%s_%d", r.EnvironmentDetail.Namespace, r.AppName, r.EnvironmentDetail.ClusterId)
 }
-
-var (
-	ErrorCacheMissReleaseNotFound = errors.New("release not found in cache")
-	InformerAlreadyExistError     = errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
-)
-
-const secretKeyAppDetailKey = "appDetail"
