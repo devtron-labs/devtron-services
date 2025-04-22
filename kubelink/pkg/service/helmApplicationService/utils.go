@@ -33,3 +33,10 @@ const (
 func IsReleaseNotFoundInCacheError(err error) bool {
 	return errors.Is(err, k8sInformer.ErrorCacheMissReleaseNotFound)
 }
+
+func runInstallInAsyncMode(installedAppVersionHistoryId int32, isAsyncEnabled bool) bool {
+	if installedAppVersionHistoryId == 0 {
+		return false
+	}
+	return isAsyncEnabled
+}

@@ -46,5 +46,6 @@ func NewToRegistryConfig(store *sql.DockerArtifactStore) (*registry.Configuratio
 		RegistryType:              string(store.RegistryType),
 		IsPublicRegistry:          store.OCIRegistryConfig[0].IsPublic,
 		RemoteConnectionConfig:    remoteConnectionConfig,
+		CredentialsType:           store.CredentialsType,
 	}, nil
 }

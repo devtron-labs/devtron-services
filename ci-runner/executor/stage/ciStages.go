@@ -692,7 +692,10 @@ func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *
 			// in these cases we don't get docker build config, so setting useBuildx as false explicitly
 			useBuildx = false
 		} else {
-			useBuildx = ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
+			if ciCdRequest.CommonWorkflowRequest.CiBuildConfig != nil &&
+				ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig != nil {
+				useBuildx = ciCdRequest.CommonWorkflowRequest.CiBuildConfig.DockerBuildConfig.CheckForBuildX()
+			}
 		}
 		start := time.Now()
 		eg := new(errgroup.Group)
