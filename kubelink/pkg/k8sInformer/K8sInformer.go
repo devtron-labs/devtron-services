@@ -351,21 +351,21 @@ func (impl *K8sInformerImpl) transformHelmRelease(clusterModel *repository.Clust
 	if secretObject, ok := obj.(*coreV1.Secret); ok && secretObject.Type == HELM_RELEASE_SECRET_TYPE {
 		releaseDTO, err := decodeHelmReleaseData(string(secretObject.Data["release"]))
 		if err != nil {
-			impl.logger.Error("error in decoding helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
+			impl.logger.Errorw("TRANSFORM_HELM_RELEASE: error in decoding helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
 			return nil, err
 		}
 		appDetail := adapter.ParseDeployedAppDetail(int32(clusterModel.Id), clusterModel.ClusterName, releaseDTO)
 		transformedSecretData, err := parseSecretDataForDeployedAppDetail(appDetail)
 		if err != nil {
-			impl.logger.Error("error in parsing secret data for deployed app detail", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
+			impl.logger.Errorw("TRANSFORM_HELM_RELEASE: error in parsing secret data for deployed app detail", "clusterId", clusterModel.Id, "appDetail", appDetail, "timeTaken", time.Since(startTime), "err", err)
 			return nil, err
 		}
 		secretObject.Data = transformedSecretData
-		impl.logger.Debugw("successfully decoded helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime))
+		impl.logger.Debugw("TRANSFORM_HELM_RELEASE: successfully decoded helm release", "clusterId", clusterModel.Id, "appDetail", appDetail, "timeTaken", time.Since(startTime))
 		middleware.InformerDataTransformDuration.WithLabelValues(clusterModel.ClusterName, releaseDTO.Namespace, releaseDTO.Name).Observe(time.Since(startTime).Seconds())
 		return secretObject, nil
 	}
-	impl.logger.Warnw("not a helm release secret", "clusterId", clusterModel.Id, "obj", obj)
+	impl.logger.Warnw("TRANSFORM_HELM_RELEASE: not a helm release secret", "clusterId", clusterModel.Id, "obj", obj)
 	return nil, errors.New("error: not a helm release secret")
 }
 
@@ -420,71 +420,83 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 	_, err = secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			startTime := time.Now()
-			impl.logger.Debugw("RELEASE_ADD_INFORMER: helm secret add event received", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
+			impl.logger.Debugw("RELEASE_ADD_INFORMER: helm secret add event received", "clusterId", clusterModel.Id, "time", time.Now())
 			if secretObject, ok := obj.(*coreV1.Secret); ok {
 				if secretObject == nil {
-					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
+					impl.logger.Errorw("RELEASE_ADD_INFORMER: secret object is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
+				impl.logger.Debugw("RELEASE_ADD_INFORMER: secret object found", "clusterId", clusterModel.Id, "secretObject", secretObject.Data)
 				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
 				if err != nil {
-					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					impl.logger.Errorw("RELEASE_ADD_INFORMER: error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
 					return
 				}
 				if appDetail == nil {
-					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
+					impl.logger.Errorw("RELEASE_ADD_INFORMER: app detail is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
+				impl.logger.Debugw("RELEASE_ADD_INFORMER: app detail found", "clusterId", clusterModel.Id, "appDetail", appDetail)
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
 				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail))] = appDetail
 				impl.logger.Infow("RELEASE_ADD_INFORMER: added app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
+			} else {
+				impl.logger.Errorw("RELEASE_ADD_INFORMER: not a secret object", "clusterId", clusterModel.Id, "obj", obj)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			startTime := time.Now()
-			impl.logger.Debugw("RELEASE_UPDATE_INFORMER: helm secret update event received", "clusterId", clusterModel.Id, "oldObj", oldObj, "newObj", newObj, "time", time.Now())
+			impl.logger.Debugw("RELEASE_UPDATE_INFORMER: helm secret update event received", "clusterId", clusterModel.Id, "time", time.Now())
 			if secretObject, ok := newObj.(*coreV1.Secret); ok {
 				if secretObject == nil {
 					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
+				impl.logger.Debugw("RELEASE_UPDATE_INFORMER: secret object found", "clusterId", clusterModel.Id, "secretObject", secretObject.Data)
 				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
 				if err != nil {
-					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					impl.logger.Errorw("RELEASE_UPDATE_INFORMER: error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
 					return
 				}
 				if appDetail == nil {
-					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
+					impl.logger.Errorw("RELEASE_UPDATE_INFORMER: app detail is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
+				impl.logger.Debugw("RELEASE_UPDATE_INFORMER: app detail found", "clusterId", clusterModel.Id, "appDetail", appDetail)
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
 				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail))] = appDetail
 				impl.logger.Infow("RELEASE_UPDATE_INFORMER: updated app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
+			} else {
+				impl.logger.Errorw("RELEASE_UPDATE_INFORMER: not a secret object", "clusterId", clusterModel.Id, "obj", newObj)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			startTime := time.Now()
-			impl.logger.Debugw("RELEASE_DELETE_INFORMER: helm secret delete event received", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
+			impl.logger.Debugw("RELEASE_DELETE_INFORMER: helm secret delete event received", "clusterId", clusterModel.Id, "time", time.Now())
 			if secretObject, ok := obj.(*coreV1.Secret); ok {
 				if secretObject == nil {
-					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
+					impl.logger.Errorw("RELEASE_DELETE_INFORMER: secret object is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
+				impl.logger.Debugw("RELEASE_DELETE_INFORMER: secret object found", "clusterId", clusterModel.Id, "secretObject", secretObject.Data)
 				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
 				if err != nil {
-					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					impl.logger.Errorw("RELEASE_DELETE_INFORMER: error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
 					return
 				}
 				if appDetail == nil {
-					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
+					impl.logger.Errorw("RELEASE_DELETE_INFORMER: app detail is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
+				impl.logger.Debugw("RELEASE_DELETE_INFORMER: app detail found", "clusterId", clusterModel.Id, "appDetail", appDetail)
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
 				delete(impl.HelmListClusterMap[clusterId], impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail)))
 				impl.logger.Infow("RELEASE_DELETE_INFORMER: deleted app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
+			} else {
+				impl.logger.Errorw("RELEASE_DELETE_INFORMER: not a secret object", "clusterId", clusterModel.Id, "obj", obj)
 			}
 		},
 	})
@@ -493,7 +505,7 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 		return err
 	}
 	informerFactory.Start(stopper)
-	impl.logger.Infow("informer started for cluster: ", "clusterId", clusterModel.Id, "clusterName", clusterModel.ClusterName)
+	impl.logger.Infow("informer started for cluster", "clusterId", clusterModel.Id, "clusterName", clusterModel.ClusterName)
 	impl.informerStopper[clusterId] = stopper
 	return nil
 }
