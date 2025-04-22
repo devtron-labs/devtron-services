@@ -17,10 +17,6 @@
 package k8sInformer
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/async"
@@ -29,11 +25,10 @@ import (
 	globalConfig "github.com/devtron-labs/kubelink/config"
 	"github.com/devtron-labs/kubelink/converter"
 	client "github.com/devtron-labs/kubelink/grpc"
+	"github.com/devtron-labs/kubelink/internals/middleware"
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/helmApplicationService/adapter"
 	"go.uber.org/zap"
-	"helm.sh/helm/v3/pkg/release"
-	"io/ioutil"
 	coreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -57,10 +52,6 @@ const (
 )
 
 type K8sInformer interface {
-	startInformer(clusterInfo bean.ClusterInfo) error
-	syncInformer(clusterId int) error
-	stopInformer(clusterName string, clusterId int)
-	startInformerAndPopulateCache(clusterId int) error
 	GetAllReleaseByClusterId(clusterId int) []*client.DeployedAppDetail
 	CheckReleaseExists(clusterId int32, releaseIdentifier string) bool
 	GetClusterClientSet(clusterInfo bean.ClusterInfo) (*kubernetes.Clientset, error)
@@ -129,7 +120,7 @@ func (impl *K8sInformerImpl) OnStateChange(clusterId int, action string) {
 	switch action {
 	case UPDATE:
 		err := impl.syncInformer(clusterId)
-		if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
+		if err != nil && !errors.Is(err, InformerAlreadyExistError) {
 			impl.logger.Errorw("error in updating informer for cluster", "id", clusterId, "err", err)
 			return
 		}
@@ -139,51 +130,13 @@ func (impl *K8sInformerImpl) OnStateChange(clusterId int, action string) {
 			impl.logger.Errorw("Error in fetching cluster by id", "cluster-id ", clusterId)
 			return
 		}
-		impl.stopInformer(deleteClusterInfo.ClusterName, deleteClusterInfo.Id)
-		if err != nil {
-			impl.logger.Errorw("error in updating informer for cluster", "id", clusterId, "err", err)
-			return
-		}
+		impl.stopInformer(deleteClusterInfo.Id)
 	}
 }
 
 func (impl *K8sInformerImpl) RegisterListener(listener ClusterSecretUpdateListener) {
 	impl.logger.Infow("registering listener %s", reflect.TypeOf(listener))
 	impl.listeners = append(impl.listeners, listener)
-}
-
-func decodeRelease(data string) (*release.Release, error) {
-	// base64 decode string
-	b64 := base64.StdEncoding
-	b, err := b64.DecodeString(data)
-	if err != nil {
-		return nil, err
-	}
-
-	var magicGzip = []byte{0x1f, 0x8b, 0x08}
-
-	// For backwards compatibility with releases that were stored before
-	// compression was introduced we skip decompression if the
-	// gzip magic header is not found
-	if len(b) > 3 && bytes.Equal(b[0:3], magicGzip) {
-		r, err := gzip.NewReader(bytes.NewReader(b))
-		if err != nil {
-			return nil, err
-		}
-		defer r.Close()
-		b2, err := ioutil.ReadAll(r)
-		if err != nil {
-			return nil, err
-		}
-		b = b2
-	}
-
-	var rls release.Release
-	// unmarshal release object bytes
-	if err := json.Unmarshal(b, &rls); err != nil {
-		return nil, err
-	}
-	return &rls, nil
 }
 
 func (impl *K8sInformerImpl) BuildInformerForAllClusters(clusterInfos []*bean.ClusterInfo) error {
@@ -245,7 +198,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 
 	// for default cluster adding an extra informer, this informer will add informer on new clusters
 	if clusterInfo.ClusterName == DEFAULT_CLUSTER {
-		impl.logger.Debugw("Starting informer, reading new cluster request for default cluster")
+		impl.logger.Debugw("starting informer, reading new cluster request for default cluster")
 		labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
 			//kubectl  get  secret --field-selector type==cluster.request/modify --all-namespaces
 			opts.FieldSelector = "type==cluster.request/modify"
@@ -253,9 +206,10 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 		informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, labelOptions)
 		stopper := make(chan struct{})
 		secretInformer := informerFactory.Core().V1().Secrets()
-		secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		_, err = secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				impl.logger.Debugw("Event received in cluster secret Add informer", "time", time.Now())
+				startTime := time.Now()
+				impl.logger.Debugw("CLUSTER_ADD_INFORMER: cluster secret add event received", "obj", obj, "time", time.Now())
 				if secretObject, ok := obj.(*coreV1.Secret); ok {
 					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
 						return
@@ -263,26 +217,32 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 					data := secretObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
-					id_int, _ := strconv.Atoi(id)
-
+					var idInt int
+					idInt, err = strconv.Atoi(id)
+					if err != nil {
+						impl.logger.Errorw("error in converting cluster id to int", "clusterId", id, "err", err)
+						return
+					}
 					if string(action) == ADD {
-						err = impl.startInformerAndPopulateCache(id_int)
-						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
-							impl.logger.Debugw("error in adding informer for cluster", "id", id_int, "err", err)
+						err = impl.startInformerAndPopulateCache(idInt)
+						if err != nil && !errors.Is(err, InformerAlreadyExistError) {
+							impl.logger.Errorw("error in adding informer for cluster", "id", idInt, "err", err)
 							return
 						}
 					}
 					if string(action) == UPDATE {
-						err = impl.syncInformer(id_int)
-						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
-							impl.logger.Debugw("error in updating informer for cluster", "id", clusterInfo.ClusterId, "name", clusterInfo.ClusterName, "err", err)
+						err = impl.syncInformer(idInt)
+						if err != nil && !errors.Is(err, InformerAlreadyExistError) {
+							impl.logger.Errorw("error in updating informer for cluster", "id", clusterInfo.ClusterId, "name", clusterInfo.ClusterName, "err", err)
 							return
 						}
 					}
+					impl.logger.Infow("CLUSTER_ADD_INFORMER: registered informer for cluster", "clusterId", idInt, "timeTaken", time.Since(startTime))
 				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				impl.logger.Debugw("Event received in cluster secret update informer", "time", time.Now())
+				startTime := time.Now()
+				impl.logger.Debugw("CLUSTER_UPDATE_INFORMER: cluster secret update event received", "oldObj", oldObj, "newObj", newObj, "time", time.Now())
 				if secretObject, ok := newObj.(*coreV1.Secret); ok {
 					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
 						return
@@ -290,23 +250,29 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 					data := secretObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
-					id_int, _ := strconv.Atoi(id)
-
+					var idInt int
+					idInt, err = strconv.Atoi(id)
+					if err != nil {
+						impl.logger.Errorw("error in converting cluster id to int", "clusterId", id, "err", err)
+						return
+					}
 					if string(action) == ADD {
-						err = impl.startInformerAndPopulateCache(clusterInfo.ClusterId)
-						if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
-							impl.logger.Errorw("error in adding informer for cluster", "id", id_int, "err", err)
+						err = impl.startInformerAndPopulateCache(idInt)
+						if err != nil && !errors.Is(err, InformerAlreadyExistError) {
+							impl.logger.Errorw("error in adding informer for cluster", "clusterId", idInt, "err", err)
 							return
 						}
 					}
 					if string(action) == UPDATE {
-						impl.OnStateChange(id_int, string(action))
-						impl.informOtherListeners(id_int, string(action))
+						impl.OnStateChange(idInt, string(action))
+						impl.informOtherListeners(idInt, string(action))
 					}
+					impl.logger.Infow("CLUSTER_UPDATE_INFORMER: registered informer for cluster", "clusterId", idInt, "timeTaken", time.Since(startTime))
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				impl.logger.Debugw("Event received in secret delete informer", "time", time.Now())
+				startTime := time.Now()
+				impl.logger.Debugw("CLUSTER_DELETE_INFORMER: secret delete event received", "obj", obj, "time", time.Now())
 				if secretObject, ok := obj.(*coreV1.Secret); ok {
 					if secretObject.Type != CLUSTER_MODIFY_EVENT_SECRET_TYPE {
 						return
@@ -314,15 +280,23 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 					data := secretObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
-					id_int, _ := strconv.Atoi(id)
-
-					if string(action) == DELETE {
-						impl.OnStateChange(id_int, string(action))
-						impl.informOtherListeners(id_int, string(action))
+					idInt, err := strconv.Atoi(id)
+					if err != nil {
+						impl.logger.Errorw("error in converting cluster id to int", "clusterId", id, "err", err)
+						return
 					}
+					if string(action) == DELETE {
+						impl.OnStateChange(idInt, string(action))
+						impl.informOtherListeners(idInt, string(action))
+					}
+					impl.logger.Infow("CLUSTER_DELETE_INFORMER: registered informer for cluster", "clusterId", idInt, "timeTaken", time.Since(startTime))
 				}
 			},
 		})
+		if err != nil {
+			impl.logger.Errorw("error in adding event handler for cluster secret informer", "err", err)
+			return err
+		}
 		informerFactory.Start(stopper)
 		//impl.informerStopper[clusterInfo.ClusterName+"_second_informer"] = stopper
 
@@ -330,7 +304,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 	// these informers will be used to populate helm release cache
 
 	err = impl.startInformerAndPopulateCache(clusterInfo.ClusterId)
-	if err != nil && err != errors.New(INFORMER_ALREADY_EXIST_MESSAGE) {
+	if err != nil && !errors.Is(err, InformerAlreadyExistError) {
 		impl.logger.Errorw("error in creating informer for new cluster", "err", err)
 		return err
 	}
@@ -348,29 +322,51 @@ func (impl *K8sInformerImpl) syncInformer(clusterId int) error {
 
 	clusterInfo, err := impl.clusterRepository.FindById(clusterId)
 	if err != nil {
-		impl.logger.Errorw("error in fetching cluster info by id", "err", err)
+		impl.logger.Errorw("error in fetching cluster info by id", "clusterId", clusterId, "err", err)
 		return err
 	}
 	//before creating new informer for cluster, close existing one
-	impl.logger.Debugw("stopping informer for cluster - ", "cluster-name", clusterInfo.ClusterName, "cluster-id", clusterInfo.Id)
-	impl.stopInformer(clusterInfo.ClusterName, clusterInfo.Id)
-	impl.logger.Debugw("informer stopped", "cluster-name", clusterInfo.ClusterName, "cluster-id", clusterInfo.Id)
+	impl.logger.Debugw("stopping informer for cluster - ", "clusterName", clusterInfo.ClusterName, "clusterId", clusterInfo.Id)
+	impl.stopInformer(clusterInfo.Id)
+	impl.logger.Debugw("informer stopped", "clusterName", clusterInfo.ClusterName, "clusterId", clusterInfo.Id)
 	//create new informer for cluster with new config
 	err = impl.startInformerAndPopulateCache(clusterId)
 	if err != nil {
-		impl.logger.Errorw("error in starting informer for ", "cluster name", clusterInfo.ClusterName)
+		impl.logger.Errorw("error in starting informer for", "clusterName", clusterInfo.ClusterName)
 		return err
 	}
 	return nil
 }
 
-func (impl *K8sInformerImpl) stopInformer(clusterName string, clusterId int) {
-	stopper := impl.informerStopper[clusterId]
-	if stopper != nil {
+func (impl *K8sInformerImpl) stopInformer(clusterId int) {
+	if stopper, ok := impl.informerStopper[clusterId]; ok && stopper != nil {
 		close(stopper)
 		delete(impl.informerStopper, clusterId)
 	}
 	return
+}
+
+func (impl *K8sInformerImpl) transformHelmRelease(clusterModel *repository.Cluster, obj any) (*coreV1.Secret, error) {
+	startTime := time.Now()
+	if secretObject, ok := obj.(*coreV1.Secret); ok && secretObject.Type == HELM_RELEASE_SECRET_TYPE {
+		releaseDTO, err := decodeHelmReleaseData(string(secretObject.Data["release"]))
+		if err != nil {
+			impl.logger.Error("error in decoding helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
+			return nil, err
+		}
+		appDetail := adapter.ParseDeployedAppDetail(int32(clusterModel.Id), clusterModel.ClusterName, releaseDTO)
+		transformedSecretData, err := parseSecretDataForDeployedAppDetail(appDetail)
+		if err != nil {
+			impl.logger.Error("error in parsing secret data for deployed app detail", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime), "err", err)
+			return nil, err
+		}
+		secretObject.Data = transformedSecretData
+		impl.logger.Debugw("successfully decoded helm release", "clusterId", clusterModel.Id, "timeTaken", time.Since(startTime))
+		middleware.InformerDataTransformDuration.WithLabelValues(clusterModel.ClusterName, releaseDTO.Namespace, releaseDTO.Name).Observe(time.Since(startTime).Seconds())
+		return secretObject, nil
+	}
+	impl.logger.Warnw("not a helm release secret", "clusterId", clusterModel.Id, "obj", obj)
+	return nil, errors.New("error: not a helm release secret")
 }
 
 func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error {
@@ -383,7 +379,7 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 
 	if _, ok := impl.informerStopper[clusterId]; ok {
 		impl.logger.Debugw(fmt.Sprintf("informer for %s already exist", clusterModel.ClusterName))
-		return errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
+		return InformerAlreadyExistError
 	}
 
 	impl.logger.Infow("starting informer for cluster - ", "cluster-id ", clusterModel.Id, "cluster-name ", clusterModel.ClusterName)
@@ -415,68 +411,95 @@ func (impl *K8sInformerImpl) startInformerAndPopulateCache(clusterId int) error 
 		opts.LabelSelector = "status!=superseded"
 		opts.FieldSelector = "type==helm.sh/release.v1"
 	})
-	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, labelOptions)
+	transformerFunc := kubeinformers.WithTransform(func(obj any) (any, error) {
+		return impl.transformHelmRelease(clusterModel, obj)
+	})
+	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, labelOptions, transformerFunc)
 	stopper := make(chan struct{})
 	secretInformer := informerFactory.Core().V1().Secrets()
-	secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			impl.logger.Debugw("Event received in Helm secret add informer", "time", time.Now())
+	_, err = secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj any) {
+			startTime := time.Now()
+			impl.logger.Debugw("RELEASE_ADD_INFORMER: helm secret add event received", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
 			if secretObject, ok := obj.(*coreV1.Secret); ok {
-
-				if secretObject.Type != HELM_RELEASE_SECRET_TYPE {
+				if secretObject == nil {
+					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
-				releaseDTO, err := decodeRelease(string(secretObject.Data["release"]))
+				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
 				if err != nil {
-					impl.logger.Error("error in decoding release")
+					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					return
 				}
-				appDetail := adapter.ParseDeployedAppDetail(int32(clusterModel.Id), clusterModel.ClusterName, releaseDTO)
+				if appDetail == nil {
+					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
+					return
+				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
-				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(&ReleaseDto{releaseDTO}, clusterModel.Id)] = appDetail
+				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail))] = appDetail
+				impl.logger.Infow("RELEASE_ADD_INFORMER: added app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			impl.logger.Debugw("Event received in Helm secret update informer", "time", time.Now())
-			if secretObject, ok := oldObj.(*coreV1.Secret); ok {
-				if secretObject.Type != HELM_RELEASE_SECRET_TYPE {
+			startTime := time.Now()
+			impl.logger.Debugw("RELEASE_UPDATE_INFORMER: helm secret update event received", "clusterId", clusterModel.Id, "oldObj", oldObj, "newObj", newObj, "time", time.Now())
+			if secretObject, ok := newObj.(*coreV1.Secret); ok {
+				if secretObject == nil {
+					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
-				releaseDTO, err := decodeRelease(string(secretObject.Data["release"]))
+				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
 				if err != nil {
-					impl.logger.Error("error in decoding release")
+					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					return
 				}
-				appDetail := adapter.ParseDeployedAppDetail(int32(clusterModel.Id), clusterModel.ClusterName, releaseDTO)
+				if appDetail == nil {
+					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
+					return
+				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
-				// adding cluster id with release name and namespace because there can be case when two cluster or two namespaces have release with same name
-				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(&ReleaseDto{releaseDTO}, clusterModel.Id)] = appDetail
+				impl.HelmListClusterMap[clusterId][impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail))] = appDetail
+				impl.logger.Infow("RELEASE_UPDATE_INFORMER: updated app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			impl.logger.Debugw("Event received in Helm secret delete informer", "time", time.Now())
+			startTime := time.Now()
+			impl.logger.Debugw("RELEASE_DELETE_INFORMER: helm secret delete event received", "clusterId", clusterModel.Id, "obj", obj, "time", time.Now())
 			if secretObject, ok := obj.(*coreV1.Secret); ok {
-				if secretObject.Type != HELM_RELEASE_SECRET_TYPE {
+				if secretObject == nil {
+					impl.logger.Errorw("secret object is nil! unexpected...", "clusterId", clusterModel.Id)
 					return
 				}
-				releaseDTO, err := decodeRelease(string(secretObject.Data["release"]))
+				appDetail, err := getDeployedAppDetailFromSecretData(secretObject.Data)
 				if err != nil {
-					impl.logger.Error("error in decoding release")
+					impl.logger.Errorw("error in getting deployed app detail from secret data", "clusterId", clusterModel.Id, "err", err)
+					return
+				}
+				if appDetail == nil {
+					impl.logger.Errorw("app detail is nil! unexpected...", "clusterId", clusterModel.Id)
+					return
 				}
 				impl.mutex.Lock()
 				defer impl.mutex.Unlock()
-				delete(impl.HelmListClusterMap[clusterId], impl.getUniqueReleaseKey(&ReleaseDto{releaseDTO}, clusterModel.Id))
+				delete(impl.HelmListClusterMap[clusterId], impl.getUniqueReleaseKey(NewDeployedAppDetailDto(appDetail)))
+				impl.logger.Infow("RELEASE_DELETE_INFORMER: deleted app detail in cache", "clusterId", clusterModel.Id, "namespace", appDetail.EnvironmentDetail.Namespace, "releaseName", appDetail.AppName, "timeTaken", time.Since(startTime))
 			}
 		},
 	})
+	if err != nil {
+		impl.logger.Errorw("error in adding event handler for helm secret informer", "clusterId", clusterId, "err", err)
+		return err
+	}
 	informerFactory.Start(stopper)
-	impl.logger.Infow("informer started for cluster: ", "cluster_id", clusterModel.Id, "cluster_name", clusterModel.ClusterName)
+	impl.logger.Infow("informer started for cluster: ", "clusterId", clusterModel.Id, "clusterName", clusterModel.ClusterName)
 	impl.informerStopper[clusterId] = stopper
 	return nil
 }
 
-func (impl *K8sInformerImpl) getUniqueReleaseKey(release *ReleaseDto, clusterId int) string {
-	return release.getUniqueReleaseIdentifier() + "_" + strconv.Itoa(clusterId)
+func (impl *K8sInformerImpl) getUniqueReleaseKey(appDetailDto *DeployedAppDetailDto) string {
+	return appDetailDto.getUniqueReleaseIdentifier()
 }
 
 func (impl *K8sInformerImpl) GetAllReleaseByClusterId(clusterId int) []*client.DeployedAppDetail {
