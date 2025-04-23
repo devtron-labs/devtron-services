@@ -14,26 +14,20 @@
  * limitations under the License.
  */
 
-package k8sInformer
+package argoWf
 
 import (
-	"errors"
-	"helm.sh/helm/v3/pkg/release"
+	"fmt"
+	informerBean "github.com/devtron-labs/common-lib/informer"
+	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 )
 
-type ReleaseDto struct {
-	*release.Release
+func GetNatsTopicForWorkflow(workflowType string) (string, error) {
+	switch workflowType {
+	case informerBean.CdWorkflowName:
+		return pubsub.CD_WORKFLOW_STATUS_UPDATE, nil
+	case informerBean.CiWorkflowName:
+		return pubsub.WORKFLOW_STATUS_UPDATE_TOPIC, nil
+	}
+	return "", fmt.Errorf("no topic mapped to workflow type %s", workflowType)
 }
-
-func (r *ReleaseDto) getUniqueReleaseIdentifier() string {
-	return r.Namespace + "_" + r.Name
-}
-
-var (
-	ErrorCacheMissReleaseNotFound = errors.New("release not found in cache")
-)
-
-const (
-	HELM_RELEASE_SECRET_TYPE       = "helm.sh/release.v1"
-	INFORMER_ALREADY_EXIST_MESSAGE = "INFORMER_ALREADY_EXIST"
-)

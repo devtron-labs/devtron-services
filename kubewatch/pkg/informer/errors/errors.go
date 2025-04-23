@@ -21,4 +21,4 @@ import (
 	"github.com/devtron-labs/kubewatch/pkg/informer/bean"
 )
 
-var AlreadyExists = errors.New(bean.INFORMER_ALREADY_EXIST_MESSAGE)
+var AlreadyExists = errors.New(bean.InformerAlreadyExistMessage)
