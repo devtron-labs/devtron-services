@@ -736,7 +736,7 @@ func (impl *HelmAppServiceImpl) installRelease(ctx context.Context, request *cli
 	chartSpec.CreateNamespace = false
 
 	impl.logger.Debugw("Installing release", "name", releaseIdentifier.ReleaseName, "namespace", releaseIdentifier.ReleaseNamespace, "dry-run", dryRun)
-	if runInstallInAsyncMode(request.InstallAppVersionHistoryId, impl.helmReleaseConfig.RunHelmInstallInAsyncMode) {
+	if !runInstallInAsyncMode(request.InstallAppVersionHistoryId, impl.helmReleaseConfig.RunHelmInstallInAsyncMode) {
 		impl.logger.Debugw("Installing release", "name", releaseIdentifier.ReleaseName, "namespace", releaseIdentifier.ReleaseNamespace, "dry-run", dryRun)
 		rel, err := helmClientObj.InstallChart(context.Background(), chartSpec)
 		if err != nil {
@@ -849,7 +849,7 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 	chartSpec.DependencyUpdate = true
 	chartSpec.UpgradeCRDs = true
 
-	if runInstallInAsyncMode(request.InstallAppVersionHistoryId, impl.helmReleaseConfig.RunHelmInstallInAsyncMode) {
+	if !runInstallInAsyncMode(request.InstallAppVersionHistoryId, impl.helmReleaseConfig.RunHelmInstallInAsyncMode) {
 		impl.logger.Debug("Upgrading release with chart info")
 		_, err = helmClientObj.UpgradeReleaseWithChartInfo(context.Background(), chartSpec)
 		if UpgradeErr, ok := err.(*driver.StorageDriverError); ok {
