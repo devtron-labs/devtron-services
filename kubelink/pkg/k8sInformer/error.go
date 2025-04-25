@@ -26,3 +26,8 @@ var (
 	// InformerAlreadyExistError is returned when an informer already exists
 	InformerAlreadyExistError = errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
 )
+
+const (
+	HELM_RELEASE_SECRET_TYPE       = "helm.sh/release.v1"
+	INFORMER_ALREADY_EXIST_MESSAGE = "INFORMER_ALREADY_EXIST"
+)

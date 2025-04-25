@@ -385,7 +385,7 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 	gitCtx = gitCtx.WithCredentials(userName, password).
 		WithTLSData(gitProvider.CaCert, gitProvider.TlsKey, gitProvider.TlsCert, gitProvider.EnableTLSVerification)
 
-	checkoutPath, _, _, err := impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
+	checkoutPath, err := impl.repositoryManager.GetCheckoutLocationFromGitUrl(material, gitCtx.CloningMode)
 	if err != nil {
 		return material, err
 	}
@@ -899,28 +899,28 @@ func (impl RepoManagerImpl) GetWebhookAndCiDataById(id int, ciPipelineMaterialId
 	impl.logger.Debugw("Getting webhook data ", "id", id)
 
 	webhookDataFromDb, err := impl.webhookEventParsedDataRepository.GetWebhookEventParsedDataById(id)
-
 	if err != nil {
-		impl.logger.Errorw("error in getting webhook data for Id ", "Id", id, "err", err)
+		impl.logger.Errorw("error in getting webhook data for id ", "id", id, "err", err)
 		return nil, err
 	}
-
-	filterData, err := impl.webhookEventDataMappingRepository.GetWebhookPayloadFilterDataForPipelineMaterialId(ciPipelineMaterialId, id)
-	if err != nil {
-		impl.logger.Errorw("error in getting webhook payload filter data for webhookParsedId ", "Id", id, "err", err)
-		return nil, err
-	}
-
 	webhookData := impl.webhookEventBeanConverter.ConvertFromWebhookParsedDataSqlBean(webhookDataFromDb)
 
 	webhookAndCiData := &git.WebhookAndCiData{
 		WebhookData: webhookData,
 	}
 
+	filterData, err := impl.webhookEventDataMappingRepository.GetWebhookPayloadFilterDataForPipelineMaterialId(ciPipelineMaterialId, id)
+	if err != nil && !util2.IsErrNoRows(err) {
+		impl.logger.Errorw("error in getting webhook payload filter data for webhookParsedId ", "ciPipelineMaterialId", ciPipelineMaterialId, "id", id, "err", err)
+		return nil, err
+	} else if util2.IsErrNoRows(err) {
+		impl.logger.Warnw("no webhook payload filter data found for webhookParsedId", "ciPipelineMaterialId", ciPipelineMaterialId, "id", id)
+		return webhookAndCiData, nil
+	}
+
 	if filterData != nil {
 		webhookAndCiData.ExtraEnvironmentVariables = util.BuildExtraEnvironmentVariablesForCi(filterData.FilterResults, webhookDataFromDb.CiEnvVariableData)
 	}
-
 	return webhookAndCiData, nil
 }
 
@@ -1070,18 +1070,25 @@ func (impl RepoManagerImpl) GetWebhookPayloadDataForPipelineMaterialId(request *
 }
 
 func (impl RepoManagerImpl) GetWebhookPayloadFilterDataForPipelineMaterialId(request *git.WebhookPayloadFilterDataRequest) (*git.WebhookPayloadFilterDataResponse, error) {
-	impl.logger.Debugw("Getting webhook payload filter data ", "request", request)
-
-	mapping, err := impl.webhookEventDataMappingRepository.GetWebhookPayloadFilterDataForPipelineMaterialId(request.CiPipelineMaterialId, request.ParsedDataId)
-	if err != nil {
-		impl.logger.Errorw("error in getting webhook filter payload data ", "err", err)
-		return nil, err
-	}
+	impl.logger.Debugw("Getting webhook payload filter data", "request", request)
 
 	parsedData, err := impl.webhookEventParsedDataRepository.GetWebhookEventParsedDataById(request.ParsedDataId)
 	if err != nil {
-		impl.logger.Errorw("error in getting parsed webhook data ", "err", err)
+		impl.logger.Errorw("error in getting parsed webhook data by id", "id", request.ParsedDataId, "err", err)
 		return nil, err
+	}
+
+	webhookPayloadFilterDataResponse := &git.WebhookPayloadFilterDataResponse{
+		PayloadId: parsedData.PayloadDataId,
+	}
+
+	mapping, err := impl.webhookEventDataMappingRepository.GetWebhookPayloadFilterDataForPipelineMaterialId(request.CiPipelineMaterialId, request.ParsedDataId)
+	if err != nil && !util2.IsErrNoRows(err) {
+		impl.logger.Errorw("error in getting webhook filter payload data", "ciPipelineMaterialId", request.CiPipelineMaterialId, "parsedDataId", request.ParsedDataId, "err", err)
+		return nil, err
+	} else if util2.IsErrNoRows(err) {
+		impl.logger.Warnw("no webhook filter payload data found for parsedDataId", "ciPipelineMaterialId", request.CiPipelineMaterialId, "parsedDataId", request.ParsedDataId)
+		return webhookPayloadFilterDataResponse, nil
 	}
 
 	filterResults := mapping.FilterResults
@@ -1099,11 +1106,7 @@ func (impl RepoManagerImpl) GetWebhookPayloadFilterDataForPipelineMaterialId(req
 			webhookPayloadFilterDataSelectorResponses = append(webhookPayloadFilterDataSelectorResponses, webhookPayloadFilterDataSelectorResponse)
 		}
 	}
-
-	webhookPayloadFilterDataResponse := &git.WebhookPayloadFilterDataResponse{
-		PayloadId:     parsedData.PayloadDataId,
-		SelectorsData: webhookPayloadFilterDataSelectorResponses,
-	}
+	webhookPayloadFilterDataResponse.SelectorsData = webhookPayloadFilterDataSelectorResponses
 
 	return webhookPayloadFilterDataResponse, nil
 }
