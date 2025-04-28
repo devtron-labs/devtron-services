@@ -18,19 +18,13 @@ package k8sInformer
 
 import (
 	"errors"
-	"helm.sh/helm/v3/pkg/release"
 )
 
-type ReleaseDto struct {
-	*release.Release
-}
-
-func (r *ReleaseDto) getUniqueReleaseIdentifier() string {
-	return r.Namespace + "_" + r.Name
-}
-
 var (
+	// ErrorCacheMissReleaseNotFound is returned when a release is not found in the cache
 	ErrorCacheMissReleaseNotFound = errors.New("release not found in cache")
+	// InformerAlreadyExistError is returned when an informer already exists
+	InformerAlreadyExistError = errors.New(INFORMER_ALREADY_EXIST_MESSAGE)
 )
 
 const (
