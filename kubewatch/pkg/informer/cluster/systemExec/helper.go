@@ -217,6 +217,11 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 		}
 	}
 
+	if pod.Status.Phase == coreV1.PodFailed {
+		// Don't mark as succeeded if the pod itself is failed, even if we couldn't determine why
+		return v1alpha1.NodeFailed, "Pod reported failed status"
+	}
+
 	// If we get here, we have detected that the main/wait containers succeed but the sidecar(s)
 	// were  SIGKILL'd. The executor may have had to forcefully terminate the sidecar (kill -9),
 	// resulting in a 137 exit code (which we had ignored earlier). If failMessages is empty, it
