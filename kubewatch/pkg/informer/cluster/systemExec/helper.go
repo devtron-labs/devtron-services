@@ -217,9 +217,10 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 		}
 	}
 
-	if pod.Status.Phase == coreV1.PodFailed {
+	if pod.Status.Phase == coreV1.PodFailed && pod.DeletionTimestamp != nil {
+		impl.logger.Debugw("Pod is deleted", "podName", pod.Name, "deletionTimestamp", pod.DeletionTimestamp)
 		// Don't mark as succeeded if the pod itself is failed, even if we couldn't determine why
-		return v1alpha1.NodeFailed, "Pod reported failed status"
+		return v1alpha1.NodeFailed, informerBean.PodDeletedMessage
 	}
 
 	// If we get here, we have detected that the main/wait containers succeed but the sidecar(s)
