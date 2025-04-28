@@ -217,17 +217,15 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 		}
 	}
 
-	if pod.Status.Phase == coreV1.PodFailed && pod.DeletionTimestamp != nil {
-		impl.logger.Debugw("Pod is deleted", "podName", pod.Name, "deletionTimestamp", pod.DeletionTimestamp)
-		// Don't mark as succeeded if the pod itself is failed, even if we couldn't determine why
-		return v1alpha1.NodeFailed, informerBean.PodDeletedMessage
-	}
-
 	// If we get here, we have detected that the main/wait containers succeed but the sidecar(s)
 	// were  SIGKILL'd. The executor may have had to forcefully terminate the sidecar (kill -9),
 	// resulting in a 137 exit code (which we had ignored earlier). If failMessages is empty, it
 	// indicates that this is the case and we return Success instead of Failure.
-	return v1alpha1.NodeSucceeded, ""
+
+	// Update diff from argo workflow here as we only have one main container.
+	// Handling this for case of spot interruption where containers are in running state (no termination state found), in that case
+	// it was marking it successful, doing this as it will be skipped at upper level, and delete event will handle it.
+	return v1alpha1.NodeFailed, ""
 }
 
 func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
