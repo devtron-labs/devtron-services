@@ -217,10 +217,10 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 		}
 	}
 
-	//if pod.Status.Phase == coreV1.PodFailed {
-	//	// Don't mark as succeeded if the pod itself is failed, even if we couldn't determine why
-	//	return v1alpha1.NodeFailed, "Pod reported failed status"
-	//}
+	if pod.Status.Phase == coreV1.PodFailed {
+		// Don't mark as succeeded if the pod itself is failed, even if we couldn't determine why
+		return v1alpha1.NodeFailed, "Pod reported failed status"
+	}
 
 	// If we get here, we have detected that the main/wait containers succeed but the sidecar(s)
 	// were  SIGKILL'd. The executor may have had to forcefully terminate the sidecar (kill -9),
@@ -243,17 +243,16 @@ func foundAnyUpdateInPodStatus(from *coreV1.Pod, to *coreV1.Pod) bool {
 	if from == nil || to == nil {
 		return true
 	}
-	return isAnyChangeInPodStatus(from, to)
+	return isAnyChangeInPodStatus(&from.Status, &to.Status)
 }
 
-func isAnyChangeInPodStatus(from *coreV1.Pod, to *coreV1.Pod) bool {
-	return from.Status.Phase != to.Status.Phase ||
-		from.Status.Message != to.Status.Message ||
-		from.Status.PodIP != to.Status.PodIP ||
-		from.GetDeletionTimestamp() != to.GetDeletionTimestamp() ||
-		isAnyChangeInContainersStatus(from.Status.ContainerStatuses, to.Status.ContainerStatuses) ||
-		isAnyChangeInContainersStatus(from.Status.InitContainerStatuses, to.Status.InitContainerStatuses) ||
-		isAnyChangeInPodConditions(from.Status.Conditions, to.Status.Conditions)
+func isAnyChangeInPodStatus(from *coreV1.PodStatus, to *coreV1.PodStatus) bool {
+	return from.Phase != to.Phase ||
+		from.Message != to.Message ||
+		from.PodIP != to.PodIP ||
+		isAnyChangeInContainersStatus(from.ContainerStatuses, to.ContainerStatuses) ||
+		isAnyChangeInContainersStatus(from.InitContainerStatuses, to.InitContainerStatuses) ||
+		isAnyChangeInPodConditions(from.Conditions, to.Conditions)
 }
 
 func isAnyChangeInContainersStatus(from []coreV1.ContainerStatus, to []coreV1.ContainerStatus) bool {
