@@ -225,6 +225,7 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 	// Update diff from argo workflow here as we only have one main container.
 	// Handling this for case of spot interruption where containers are in running state (no termination state found), in that case
 	// it was marking it successful, doing this as it will be skipped at upper level, and delete event will handle it.
+	// ticket - you can find debug logs/details here - https://github.com/devtron-labs/sprint-tasks/issues/2092
 	return v1alpha1.NodeFailed, ""
 }
 
