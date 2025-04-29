@@ -21,37 +21,39 @@ import (
 	"fmt"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/utils/k8s/health"
-	"helm.sh/helm/v3/pkg/release"
+	"github.com/devtron-labs/kubelink/pkg/service/helmApplicationService/release"
+	helmRelease "helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage/driver"
 )
 
-// GetAppId returns AppID by logic  cluster_id|namespace|release_name
+// GetAppId returns AppID by logic
+//   - format: cluster_id|namespace|release_name
 func GetAppId(clusterId int32, release *release.Release) string {
 	return fmt.Sprintf("%d|%s|%s", clusterId, release.Namespace, release.Name)
 }
 
-func GetMessageFromReleaseStatus(releaseStatus release.Status) string {
+func GetMessageFromReleaseStatus(releaseStatus helmRelease.Status) string {
 	switch releaseStatus {
-	case release.StatusUnknown:
-		return "The release is in an uncertain state"
-	case release.StatusDeployed:
-		return "The release has been pushed to Kubernetes"
-	case release.StatusUninstalled:
-		return "The release has been uninstalled from Kubernetes"
-	case release.StatusSuperseded:
-		return "The release object is outdated and a newer one exists"
-	case release.StatusFailed:
-		return "The release was not successfully deployed"
-	case release.StatusUninstalling:
-		return "The release uninstall operation is underway"
-	case release.StatusPendingInstall:
-		return "The release install operation is underway"
-	case release.StatusPendingUpgrade:
-		return "The release upgrade operation is underway"
-	case release.StatusPendingRollback:
-		return "The release rollback operation is underway"
+	case helmRelease.StatusUnknown:
+		return "The helmRelease is in an uncertain state"
+	case helmRelease.StatusDeployed:
+		return "The helmRelease has been pushed to Kubernetes"
+	case helmRelease.StatusUninstalled:
+		return "The helmRelease has been uninstalled from Kubernetes"
+	case helmRelease.StatusSuperseded:
+		return "The helmRelease object is outdated and a newer one exists"
+	case helmRelease.StatusFailed:
+		return "The helmRelease was not successfully deployed"
+	case helmRelease.StatusUninstalling:
+		return "The helmRelease uninstall operation is underway"
+	case helmRelease.StatusPendingInstall:
+		return "The helmRelease install operation is underway"
+	case helmRelease.StatusPendingUpgrade:
+		return "The helmRelease upgrade operation is underway"
+	case helmRelease.StatusPendingRollback:
+		return "The helmRelease rollback operation is underway"
 	default:
-		fmt.Println("un handled release status", releaseStatus)
+		fmt.Println("un handled helmRelease status", releaseStatus)
 	}
 
 	return ""
