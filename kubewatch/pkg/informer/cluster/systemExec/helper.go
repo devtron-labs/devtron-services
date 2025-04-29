@@ -221,7 +221,13 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 	// were  SIGKILL'd. The executor may have had to forcefully terminate the sidecar (kill -9),
 	// resulting in a 137 exit code (which we had ignored earlier). If failMessages is empty, it
 	// indicates that this is the case and we return Success instead of Failure.
-	return v1alpha1.NodeSucceeded, ""
+
+	// Update diff from argo workflow here as we only have one main container.
+	// Handling this for case of spot interruption where containers are in running state (no termination state found), in that case
+	// it was marking it successful, doing this as it will be skipped at upper level, and delete event will handle it.
+	// ticket - you can find debug logs/details here - https://github.com/devtron-labs/sprint-tasks/issues/2092
+	impl.logger.Infow("Pod phase was Failed but no container had terminated state, marking it as failed now", "podName", pod.Name, "status", pod.Status)
+	return v1alpha1.NodeFailed, ""
 }
 
 func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
