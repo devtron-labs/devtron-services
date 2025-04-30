@@ -294,7 +294,7 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 		stepIndexFileMountMap := make(map[int]map[string]*fileContentDto)
 		for _, inVar := range step.InputVars {
 			if inVar.Format == commonBean.FormatTypeFile {
-				fileContent := newFileContentDto(inVar.FileContent, inVar.Value)
+				fileContent := newFileContentDto(inVar.FileReferencePath, inVar.Value)
 				if fileMap, ok := stepIndexFileMountMap[inVar.VariableStepIndexInPlugin]; ok {
 					fileMap[inVar.Name] = fileContent
 					stepIndexFileMountMap[inVar.VariableStepIndexInPlugin] = fileMap
@@ -320,8 +320,8 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			if fileMap, ok := stepIndexFileMountMap[step.Index]; ok {
 				for _, inVar := range step.InputVars {
 					if fileContent, ok := fileMap[inVar.Name]; ok {
-						inVar.Value = fileContent.filePath
-						inVar.FileContent = fileContent.content
+						inVar.Value = fileContent.mountPath
+						inVar.FileReferencePath = fileContent.referencePath
 					}
 				}
 			}
