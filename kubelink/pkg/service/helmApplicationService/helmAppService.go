@@ -1197,6 +1197,10 @@ func (impl *HelmAppServiceImpl) getManifestData(restConfig *rest.Config, release
 	liveManifest, _, err := impl.k8sService.GetLiveManifest(restConfig, _namespace, &gvk, desiredManifest.GetName())
 	desiredOrLiveManifest := &bean.DesiredOrLiveManifest{}
 
+	impl.logger.Debug("DEBUG_LOG: initiating sleep....")
+	time.Sleep(time.Duration(impl.helmReleaseConfig.TestDelayRootNodes) * time.Millisecond)
+	impl.logger.Debug("DEBUG_LOG: continuing....")
+
 	if err != nil {
 		impl.logger.Errorw("Error in getting live manifest ", "err", err)
 		statusError, _ := err.(*k8sErrors.StatusError)

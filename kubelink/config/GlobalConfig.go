@@ -26,6 +26,9 @@ type HelmReleaseConfig struct {
 	ParentChildGvkMapping     string `env:"PARENT_CHILD_GVK_MAPPING" envDefault:""`
 	ChartWorkingDirectory     string `env:"CHART_WORKING_DIRECTORY" envDefault:"/home/devtron/devtroncd/charts/"`
 	BuildNodesBatchSize       int    `env:"BUILD_NODES_BATCH_SIZE" envDefault:"2"`
+
+	TestDelayChildNodes int `env:"TEST_DELAY_CHILD_NODES" envDefault:"1000"`
+	TestDelayRootNodes  int `env:"TEST_DELAY_CHILD_NODES" envDefault:"1000"`
 }
 
 func GetHelmReleaseConfig() (*HelmReleaseConfig, error) {

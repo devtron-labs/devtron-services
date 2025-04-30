@@ -38,6 +38,7 @@ import (
 	dynamicClient "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"time"
 )
 
 type ClusterConfig struct {
@@ -158,6 +159,10 @@ func (impl K8sServiceImpl) GetChildObjects(restConfig *rest.Config, namespace st
 		} else {
 			objects, err = client.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
 		}
+
+		impl.logger.Debug("DEBUG_LOG: initiating sleep....")
+		time.Sleep(time.Duration(impl.helmReleaseConfig.TestDelayChildNodes) * time.Millisecond)
+		impl.logger.Debug("DEBUG_LOG: continuing....")
 
 		if err != nil {
 			statusError, ok := err.(*errors2.StatusError)
