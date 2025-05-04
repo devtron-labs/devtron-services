@@ -178,14 +178,14 @@ type executionConf struct {
 }
 
 type fileContentDto struct {
-	content  string
-	filePath string
+	referencePath string
+	mountPath     string
 }
 
-func newFileContentDto(content, filePath string) *fileContentDto {
+func newFileContentDto(fileReferencePath, fileMountPath string) *fileContentDto {
 	return &fileContentDto{
-		content:  content,
-		filePath: filePath,
+		referencePath: fileReferencePath,
+		mountPath:     fileMountPath,
 	}
 }
 
