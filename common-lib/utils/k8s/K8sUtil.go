@@ -31,6 +31,7 @@ import (
 	v1beta12 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
@@ -146,6 +147,7 @@ type K8sService interface {
 	OverrideRestConfigWithCustomTransport(restConfig *rest.Config) (*rest.Config, error)
 	CreateNsWithLabels(namespace string, labels map[string]string, client *v12.CoreV1Client) (ns *v1.Namespace, err error)
 	CreateNs(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, err error)
+	GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error)
 }
 
 func NewK8sUtil(logger *zap.SugaredLogger, runTimeConfig *RuntimeConfig) (*K8sServiceImpl, error) {
@@ -1904,4 +1906,26 @@ func (impl *K8sServiceImpl) CreateOrUpdateSecretByName(client *v12.CoreV1Client,
 		}
 	}
 	return nil
+}
+
+func (impl *K8sServiceImpl) GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error) {
+
+	restConfig, err := impl.GetRestConfigByCluster(config)
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig.ContentConfig = rest.ContentConfig{
+		GroupVersion:         groupVersion,
+		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
+	}
+	restConfig.APIPath = "/apis"
+
+	restClient, err := rest.RESTClientFor(restConfig)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return restClient, nil
 }
