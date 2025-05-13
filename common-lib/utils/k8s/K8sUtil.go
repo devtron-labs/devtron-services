@@ -148,6 +148,7 @@ type K8sService interface {
 	CreateNsWithLabels(namespace string, labels map[string]string, client *v12.CoreV1Client) (ns *v1.Namespace, err error)
 	CreateNs(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, err error)
 	GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error)
+	PatchResourceByRestClient(restClient *rest.RESTClient, resource, name, namespace string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) rest.Result
 }
 
 func NewK8sUtil(logger *zap.SugaredLogger, runTimeConfig *RuntimeConfig) (*K8sServiceImpl, error) {
@@ -1928,4 +1929,16 @@ func (impl *K8sServiceImpl) GetRestClientForCRD(config *ClusterConfig, groupVers
 	}
 
 	return restClient, nil
+}
+
+func (impl *K8sServiceImpl) PatchResourceByRestClient(restClient *rest.RESTClient, resource, name, namespace string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) rest.Result {
+	result := restClient.Patch(pt).
+		Namespace(namespace).
+		Resource(resource).
+		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(data).
+		Do(context.Background())
+	return result
 }
