@@ -60,33 +60,16 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			statusTime := time.Now()
 			if oldApp, ok := old.(*applicationBean.Application); ok {
 				if newApp, ok := new.(*applicationBean.Application); ok {
-					if isNewDeploymentFound(oldApp, newApp) {
+					// Check if the application has a new deployment history
+					if isNewDeploymentHistoryFound(oldApp, newApp) {
 						impl.logger.Debugw("ARGO_CD_APPLICATION: new deployment detected", "appName", newApp.Name, "status", newApp.Status.Health.Status)
 						impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
 					} else {
-						impl.logger.Debugw("ARGO_CD_APPLICATION: old deployment detected for update", "appName", oldApp.Name, "status", oldApp.Status.Health.Status)
-						oldRevision := oldApp.Status.Sync.Revision
-						newRevision := newApp.Status.Sync.Revision
-						oldStatus := string(oldApp.Status.Health.Status)
-						newStatus := string(newApp.Status.Health.Status)
-						newSyncStatus := string(newApp.Status.Sync.Status)
-						oldSyncStatus := string(oldApp.Status.Sync.Status)
-						oldAppLastSyncedResourcesCount := getApplicationLastSyncedResourcesCount(oldApp)
-						newAppLastSyncedResourcesCount := getApplicationLastSyncedResourcesCount(newApp)
-						if (oldRevision != newRevision) ||
-							(oldStatus != newStatus) ||
-							(newSyncStatus != oldSyncStatus) ||
-							(oldAppLastSyncedResourcesCount != newAppLastSyncedResourcesCount) {
+						if IsApplicationObjectUpdated(impl.logger, oldApp, newApp) {
 							impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
-							impl.logger.Debugw("ARGO_CD_APPLICATION: send update event for application object", "appName", oldApp.Name, "oldRevision", oldRevision, "newRevision",
-								newRevision, "oldStatus", oldStatus, "newStatus", newStatus,
-								"newSyncStatus", newSyncStatus, "oldSyncStatus", oldSyncStatus,
-								"oldAppLastSyncedResourcesCount", oldAppLastSyncedResourcesCount, "newAppLastSyncedResourcesCount", newAppLastSyncedResourcesCount)
+							impl.logger.Debugw("ARGO_CD_APPLICATION: send update event for application object", "appName", oldApp.Name)
 						} else {
-							impl.logger.Debugw("ARGO_CD_APPLICATION: skip updating event for application object", "appName", oldApp.Name, "oldRevision", oldRevision, "newRevision",
-								newRevision, "oldStatus", oldStatus, "newStatus", newStatus,
-								"newSyncStatus", newSyncStatus, "oldSyncStatus", oldSyncStatus,
-								"oldAppLastSyncedResourcesCount", oldAppLastSyncedResourcesCount, "newAppLastSyncedResourcesCount", newAppLastSyncedResourcesCount)
+							impl.logger.Debugw("ARGO_CD_APPLICATION: skip updating event for application object", "appName", oldApp.Name)
 						}
 					}
 				} else {
