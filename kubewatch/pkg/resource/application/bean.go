@@ -27,6 +27,17 @@ type applicationDetail struct {
 	ClusterId   int                   `json:"clusterId"`
 }
 
+// isNewDeploymentFound checks if a new deployment is found by comparing the history of old and new application objects.
+func isNewDeploymentFound(oldAppObj, newAppObj *v1alpha1.Application) bool {
+	if len(oldAppObj.Status.History) < len(newAppObj.Status.History) {
+		return true
+	} else if len(oldAppObj.Status.History) != 0 && len(oldAppObj.Status.History) == len(newAppObj.Status.History) {
+		return oldAppObj.Status.History.LastRevisionHistory().ID < newAppObj.Status.History.LastRevisionHistory().ID
+	}
+	return false
+}
+
+// getApplicationLastSyncedResourcesCount returns the count of resources that were last synced in the application.
 func getApplicationLastSyncedResourcesCount(appObj *v1alpha1.Application) int {
 	if appObj.Status.OperationState == nil || appObj.Status.OperationState.SyncResult == nil {
 		return 0

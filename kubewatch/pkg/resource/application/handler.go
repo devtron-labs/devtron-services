@@ -60,7 +60,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			statusTime := time.Now()
 			if oldApp, ok := old.(*applicationBean.Application); ok {
 				if newApp, ok := new.(*applicationBean.Application); ok {
-					if len(oldApp.Status.History) < len(newApp.Status.History) {
+					if isNewDeploymentFound(oldApp, newApp) {
 						impl.logger.Debugw("ARGO_CD_APPLICATION: new deployment detected", "appName", newApp.Name, "status", newApp.Status.Health.Status)
 						impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
 					} else {
