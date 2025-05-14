@@ -71,15 +71,22 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 						newStatus := string(newApp.Status.Health.Status)
 						newSyncStatus := string(newApp.Status.Sync.Status)
 						oldSyncStatus := string(oldApp.Status.Sync.Status)
-						if (oldRevision != newRevision) || (oldStatus != newStatus) || (newSyncStatus != oldSyncStatus) {
+						oldAppLastSyncedResourcesCount := getApplicationLastSyncedResourcesCount(oldApp)
+						newAppLastSyncedResourcesCount := getApplicationLastSyncedResourcesCount(newApp)
+						if (oldRevision != newRevision) ||
+							(oldStatus != newStatus) ||
+							(newSyncStatus != oldSyncStatus) ||
+							(oldAppLastSyncedResourcesCount != newAppLastSyncedResourcesCount) {
 							impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
 							impl.logger.Debugw("ARGO_CD_APPLICATION: send update event for application object", "appName", oldApp.Name, "oldRevision", oldRevision, "newRevision",
 								newRevision, "oldStatus", oldStatus, "newStatus", newStatus,
-								"newSyncStatus", newSyncStatus, "oldSyncStatus", oldSyncStatus)
+								"newSyncStatus", newSyncStatus, "oldSyncStatus", oldSyncStatus,
+								"oldAppLastSyncedResourcesCount", oldAppLastSyncedResourcesCount, "newAppLastSyncedResourcesCount", newAppLastSyncedResourcesCount)
 						} else {
 							impl.logger.Debugw("ARGO_CD_APPLICATION: skip updating event for application object", "appName", oldApp.Name, "oldRevision", oldRevision, "newRevision",
 								newRevision, "oldStatus", oldStatus, "newStatus", newStatus,
-								"newSyncStatus", newSyncStatus, "oldSyncStatus", oldSyncStatus)
+								"newSyncStatus", newSyncStatus, "oldSyncStatus", oldSyncStatus,
+								"oldAppLastSyncedResourcesCount", oldAppLastSyncedResourcesCount, "newAppLastSyncedResourcesCount", newAppLastSyncedResourcesCount)
 						}
 					}
 				} else {

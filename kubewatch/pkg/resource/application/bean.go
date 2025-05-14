@@ -26,3 +26,10 @@ type applicationDetail struct {
 	StatusTime  time.Time             `json:"statusTime"`
 	ClusterId   int                   `json:"clusterId"`
 }
+
+func getApplicationLastSyncedResourcesCount(appObj *v1alpha1.Application) int {
+	if appObj.Status.OperationState == nil || appObj.Status.OperationState.SyncResult == nil {
+		return 0
+	}
+	return len(appObj.Status.OperationState.SyncResult.Resources)
+}
