@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package commonHelmService
 
 import (
@@ -33,11 +34,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	runtimeresource "k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	dynamicClient "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"time"
 )
 
 type ClusterConfig struct {
@@ -48,7 +51,21 @@ type ClusterConfig struct {
 type K8sService interface {
 	CanHaveChild(gvk schema.GroupVersionKind) bool
 	GetLiveManifest(restConfig *rest.Config, namespace string, gvk *schema.GroupVersionKind, name string) (*unstructured.Unstructured, *schema.GroupVersionResource, error)
-	GetChildObjects(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error)
+
+	// GetChildObjectsV1 is the old implementation for getting children resource manifests for a parent GVK.
+	// It doesn't support paginated listing,
+	// which can cause high memory consumption if the child GVK are present in a large number.
+	// But as it fetches all the data in a single call, it saves up multiple round trips cost.
+	// This is the deprecated way to get child resources.
+	// Use GetChildObjectsV2 instead.
+	GetChildObjectsV1(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error)
+
+	// GetChildObjectsV2 is the new implementation for getting children resource manifests for a parent GVK.
+	// It supports paginated listing,
+	// which will optimize memory consumption if the child GVK are present in a large number.
+	// But as it fetches all the data in multiple calls, it will cost multiple round trips.
+	// This is the recommended way to get child resources.
+	GetChildObjectsV2(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]*unstructured.Unstructured, error)
 	PatchResource(ctx context.Context, restConfig *rest.Config, r *bean.KubernetesResourcePatchRequest) error
 }
 
@@ -133,7 +150,114 @@ func (impl K8sServiceImpl) GetLiveManifest(restConfig *rest.Config, namespace st
 	}
 }
 
-func (impl K8sServiceImpl) GetChildObjects(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error) {
+func (impl K8sServiceImpl) filterChildrenFromListObjects(request *filterChildrenObjectsRequest) (*filterChildrenObjectsResponse, error) {
+	response := newFilterChildrenObjectsResponse()
+	if request.GetListObjects() == nil {
+		impl.logger.Debugw("filter children objects is empty. skipping...", request.GetLoggerMetadata()...)
+		return response, nil
+	} else if request.IsChildResourceTypePVC() {
+		impl.logger.Debugw("filter children objects is of type pvc. updating pvc list...", request.GetLoggerMetadata()...)
+		response.WithPVCs(request.GetListObjects().Items)
+		return response, nil
+	} else {
+		startTime := time.Now()
+		for _, item := range request.GetListObjects().Items {
+			// special handling for pvcs created via statefulsets
+			ownerRefs, isInferredParentOf := k8sUtils.ResolveResourceReferences(&item)
+			if request.GetChildGvk().Resource == k8sCommonBean.StatefulSetsResourceType && isInferredParentOf != nil {
+				for _, pvc := range request.GetPvcs() {
+					var pvcClaim coreV1.PersistentVolumeClaim
+					err := runtime.DefaultUnstructuredConverter.FromUnstructured(pvc.Object, &pvcClaim)
+					if err != nil {
+						impl.logger.Errorw("error in converting unstructured to pvc", request.GetLoggerMetadata("timeTaken", time.Since(startTime).Seconds(), "err", err)...)
+						return response, err
+					}
+					isCurrentStsParentOfPvc := isInferredParentOf(k8sUtils.ResourceKey{
+						Group:     "",
+						Kind:      pvcClaim.Kind,
+						Namespace: request.GetNamespace(),
+						Name:      pvcClaim.Name,
+					})
+					if isCurrentStsParentOfPvc && item.GetName() == request.GetParentName() {
+						response = response.WithManifest(pvc.DeepCopy())
+					}
+				}
+			}
+			item.SetOwnerReferences(ownerRefs)
+			for _, ownerRef := range item.GetOwnerReferences() {
+				parentApiVersion, parentKind := request.GetParentGvk().ToAPIVersionAndKind()
+				if ownerRef.Name == request.GetParentName() && ownerRef.APIVersion == parentApiVersion && ownerRef.Kind == parentKind {
+					// using deep copy as it replaces item in manifest in loop
+					response = response.WithManifest(item.DeepCopy())
+				}
+			}
+		}
+		impl.logger.Debugw("filtered children objects", request.GetLoggerMetadata("timeTaken", time.Since(startTime).Seconds())...)
+		return response, nil
+	}
+}
+
+func (impl K8sServiceImpl) getK8sResourceClient(k8sResource dynamicClient.NamespaceableResourceInterface, scope meta.RESTScopeName, namespace string) dynamicClient.ResourceInterface {
+	if scope != meta.RESTScopeNameNamespace {
+		return k8sResource
+	}
+	return k8sResource.Namespace(namespace)
+}
+
+func (impl K8sServiceImpl) getChildObject(client *dynamicClient.DynamicClient, pvcs []unstructured.Unstructured,
+	gvrAndScope *k8sCommonBean.GvrAndScope, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]unstructured.Unstructured, []*unstructured.Unstructured, error) {
+	startTime := time.Now()
+	var manifests []*unstructured.Unstructured
+	childGvk := gvrAndScope.Gvr
+	childScope := gvrAndScope.Scope
+	childResourceClient := impl.getK8sResourceClient(client.Resource(childGvk), childScope, namespace)
+	listOptions := metav1.ListOptions{
+		Limit: impl.helmReleaseConfig.ChildObjectListingPageSize,
+	}
+	filterObjRequest := newFilterChildrenObjectsRequest().
+		WithChildGvk(childGvk).
+		WithNamespace(namespace).
+		WithParentGvk(parentGvk).
+		WithParentName(parentName).
+		WithPvcs(pvcs)
+	counter := 1
+	err := runtimeresource.FollowContinue(&listOptions,
+		func(options metav1.ListOptions) (runtime.Object, error) {
+			filterListStartTime := time.Now()
+			childrenObjectsList, k8sErr := childResourceClient.List(context.Background(), options)
+			if k8sErr != nil {
+				statusError, matched := k8sErr.(*errors2.StatusError)
+				if !matched || statusError.ErrStatus.Reason != metav1.StatusReasonNotFound {
+					internalErr := error2.ConvertHelmErrorToInternalError(k8sErr)
+					if internalErr != nil {
+						k8sErr = internalErr
+					}
+					impl.logger.Errorw("error in getting child listObjects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds(), "err", k8sErr)...)
+					return nil, k8sErr
+				}
+			}
+			impl.logger.Debugw("listing child objects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds())...)
+			filterObjRequest = filterObjRequest.WithListObjects(childrenObjectsList)
+			response, filterErr := impl.filterChildrenFromListObjects(filterObjRequest)
+			if filterErr != nil {
+				impl.logger.Errorw("error in filtering child listObjects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds(), "err", filterErr)...)
+				return nil, filterErr
+			}
+			pvcs = response.GetPvcs()
+			manifests = append(manifests, response.GetManifests()...)
+			if childrenObjectsList == nil {
+				return childrenObjectsList.NewEmptyInstance(), nil
+			}
+			return childrenObjectsList, nil
+		})
+	if err != nil {
+		impl.logger.Errorw("error in getting child listObjects", filterObjRequest.GetLoggerMetadata("timeTaken", time.Since(startTime).Seconds(), "err", err)...)
+		return pvcs, manifests, err
+	}
+	return pvcs, manifests, nil
+}
+
+func (impl K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error) {
 	impl.logger.Debugw("Getting child objects ", "namespace", namespace, "parentGvk", parentGvk, "parentName", parentName, "parentApiVersion", parentApiVersion)
 
 	gvrAndScopes, ok := impl.GetChildGvrFromParentGvk(parentGvk)
@@ -210,6 +334,33 @@ func (impl K8sServiceImpl) GetChildObjects(restConfig *rest.Config, namespace st
 
 	}
 
+	return manifests, nil
+}
+
+func (impl K8sServiceImpl) GetChildObjectsV2(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]*unstructured.Unstructured, error) {
+	startTime := time.Now()
+	impl.logger.Debugw("Getting child listObjects", "namespace", namespace, "parentGvk", parentGvk, "parentName", parentName, "startTime", startTime)
+	gvrAndScopes, ok := impl.GetChildGvrFromParentGvk(parentGvk)
+	if !ok {
+		impl.logger.Errorw("gvr not found for given kind", "parentGvk", parentGvk, "timeTaken", time.Since(startTime).Seconds())
+		return nil, errors.New("grv not found for given kind")
+	}
+	client, err := dynamicClient.NewForConfig(restConfig)
+	if err != nil {
+		impl.logger.Errorw("error in creating dynamic client", "host", restConfig.Host, "namespace", namespace, "timeTaken", time.Since(startTime).Seconds(), "err", err)
+		return nil, err
+	}
+	var pvcs []unstructured.Unstructured
+	var manifests []*unstructured.Unstructured
+	for _, gvrAndScope := range gvrAndScopes {
+		childrenPVCs, childObjManifests, err := impl.getChildObject(client, pvcs, gvrAndScope, namespace, parentGvk, parentName)
+		if err != nil {
+			impl.logger.Errorw("error in getting child listObjects", "namespace", namespace, "childGvk", gvrAndScope.Gvr, "parentGvk", parentGvk, "timeTaken", time.Since(startTime).Seconds(), "err", err)
+			return manifests, err
+		}
+		pvcs = append(pvcs, childrenPVCs...)
+		manifests = append(manifests, childObjManifests...)
+	}
 	return manifests, nil
 }
 
