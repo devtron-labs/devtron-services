@@ -73,7 +73,7 @@ func IsApplicationObjectUpdated(logger *zap.SugaredLogger, oldAppObj, newAppObj 
 	oldAppLastSyncedResourcesCount := getApplicationLastSyncedResourcesCount(oldAppObj)
 	newAppLastSyncedResourcesCount := getApplicationLastSyncedResourcesCount(newAppObj)
 
-	logger.Debugw("oldRevision", oldRevision, "newRevision", newRevision,
+	logger.Debugw("ARGO_CD_APPLICATION: update event captured with", "oldRevision", oldRevision, "newRevision", newRevision,
 		"oldOperationRevision", oldOperationRevision, "newOperationRevision", newOperationRevision,
 		"oldStatus", oldStatus, "newStatus", newStatus,
 		"oldOperationPhase", oldOperationPhase, "newOperationPhase", newOperationPhase,
