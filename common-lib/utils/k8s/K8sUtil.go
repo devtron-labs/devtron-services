@@ -53,6 +53,7 @@ import (
 	v14 "k8s.io/api/apps/v1"
 	batchV1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -148,6 +149,7 @@ type K8sService interface {
 	CreateNsWithLabels(namespace string, labels map[string]string, client *v12.CoreV1Client) (ns *v1.Namespace, err error)
 	CreateNs(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, err error)
 	GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error)
+	GetGVRForCRD(config *rest.Config, CRDName string) (schema.GroupVersionResource, error)
 	PatchResourceByRestClient(restClient *rest.RESTClient, resource, name, namespace string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) rest.Result
 }
 
@@ -1907,6 +1909,31 @@ func (impl *K8sServiceImpl) CreateOrUpdateSecretByName(client *v12.CoreV1Client,
 		}
 	}
 	return nil
+}
+
+func (impl *K8sServiceImpl) GetGVRForCRD(config *rest.Config, CRDName string) (schema.GroupVersionResource, error) {
+	apiExtClient, err := apiextensionsclient.NewForConfig(config)
+	if err != nil {
+		impl.logger.Error("error in getting api extension client", "err", err)
+		return schema.GroupVersionResource{}, err
+	}
+	crd, err := apiExtClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.TODO(), CRDName, metav1.GetOptions{})
+	if err != nil {
+		impl.logger.Error("error in getting terraform crd", "err", err)
+		return schema.GroupVersionResource{}, err
+	}
+	var servedVersion string
+	for _, v := range crd.Spec.Versions {
+		if v.Served {
+			servedVersion = v.Name
+			break
+		}
+	}
+	return schema.GroupVersionResource{
+		Group:    crd.Spec.Group,
+		Version:  servedVersion,
+		Resource: crd.Spec.Names.Plural,
+	}, nil
 }
 
 func (impl *K8sServiceImpl) GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error) {
