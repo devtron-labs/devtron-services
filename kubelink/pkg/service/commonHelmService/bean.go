@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package commonHelmService
 
 import (
 	"errors"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
+	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/workerPool"
 	"github.com/devtron-labs/kubelink/bean"
 	"github.com/devtron-labs/kubelink/pkg/asyncProvider"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 )
@@ -222,3 +225,114 @@ func (resp *BuildNodeResponse) WithHealthStatusArray(healthStatusArray []*common
 var (
 	ErrorReleaseNotFoundOnCluster = errors.New("release not found")
 )
+
+type filterChildrenObjectsResponse struct {
+	pvcs      []unstructured.Unstructured
+	manifests []*unstructured.Unstructured
+}
+
+func newFilterChildrenObjectsResponse() *filterChildrenObjectsResponse {
+	return &filterChildrenObjectsResponse{}
+}
+
+func (resp *filterChildrenObjectsResponse) GetPvcs() []unstructured.Unstructured {
+	return resp.pvcs
+}
+
+func (resp *filterChildrenObjectsResponse) GetManifests() []*unstructured.Unstructured {
+	return resp.manifests
+}
+
+func (resp *filterChildrenObjectsResponse) WithPVCs(pvcs []unstructured.Unstructured) *filterChildrenObjectsResponse {
+	resp.pvcs = append(resp.pvcs, pvcs...)
+	return resp
+}
+
+func (resp *filterChildrenObjectsResponse) WithManifest(manifest *unstructured.Unstructured) *filterChildrenObjectsResponse {
+	if manifest == nil {
+		return resp
+	}
+	resp.manifests = append(resp.manifests, manifest)
+	return resp
+}
+
+type filterChildrenObjectsRequest struct {
+	childGvk    schema.GroupVersionResource
+	pvcs        []unstructured.Unstructured
+	listObjects *unstructured.UnstructuredList
+	namespace   string
+	parentGvk   schema.GroupVersionKind
+	parentName  string
+}
+
+func (req *filterChildrenObjectsRequest) IsChildResourceTypePVC() bool {
+	return req.GetParentGvk().Kind == k8sCommonBean.StatefulSetKind && req.GetChildGvk().Resource == k8sCommonBean.PersistentVolumeClaimsResourceType
+}
+
+func (req *filterChildrenObjectsRequest) GetLoggerMetadata(keysAndValues ...any) []any {
+	metaData := []any{
+		"namespace", req.namespace,
+		"childGvk", req.childGvk,
+		"parentGvk", req.parentGvk,
+		"parentName", req.parentName,
+	}
+	return append(metaData, keysAndValues...)
+}
+
+func (req *filterChildrenObjectsRequest) GetChildGvk() schema.GroupVersionResource {
+	return req.childGvk
+}
+
+func (req *filterChildrenObjectsRequest) GetPvcs() []unstructured.Unstructured {
+	return req.pvcs
+}
+
+func (req *filterChildrenObjectsRequest) GetListObjects() *unstructured.UnstructuredList {
+	return req.listObjects
+}
+
+func (req *filterChildrenObjectsRequest) GetNamespace() string {
+	return req.namespace
+}
+
+func (req *filterChildrenObjectsRequest) GetParentGvk() schema.GroupVersionKind {
+	return req.parentGvk
+}
+
+func (req *filterChildrenObjectsRequest) GetParentName() string {
+	return req.parentName
+}
+
+func newFilterChildrenObjectsRequest() *filterChildrenObjectsRequest {
+	return &filterChildrenObjectsRequest{}
+}
+
+func (req *filterChildrenObjectsRequest) WithChildGvk(gvr schema.GroupVersionResource) *filterChildrenObjectsRequest {
+	req.childGvk = gvr
+	return req
+}
+
+func (req *filterChildrenObjectsRequest) WithPvcs(pvcs []unstructured.Unstructured) *filterChildrenObjectsRequest {
+	req.pvcs = pvcs
+	return req
+}
+
+func (req *filterChildrenObjectsRequest) WithListObjects(objects *unstructured.UnstructuredList) *filterChildrenObjectsRequest {
+	req.listObjects = objects
+	return req
+}
+
+func (req *filterChildrenObjectsRequest) WithNamespace(namespace string) *filterChildrenObjectsRequest {
+	req.namespace = namespace
+	return req
+}
+
+func (req *filterChildrenObjectsRequest) WithParentGvk(parentGvk schema.GroupVersionKind) *filterChildrenObjectsRequest {
+	req.parentGvk = parentGvk
+	return req
+}
+
+func (req *filterChildrenObjectsRequest) WithParentName(parentName string) *filterChildrenObjectsRequest {
+	req.parentName = parentName
+	return req
+}
