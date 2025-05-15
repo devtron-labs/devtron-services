@@ -9,6 +9,7 @@
  | CONSUMER_CONFIG_JSON | string | |  |  | false |
  | DEFAULT_LOG_TIME_LIMIT | int64 |1 |  |  | false |
  | ENABLE_STATSVIZ | bool |false |  |  | false |
+ | ENABLE_PROGRESSING_SCAN_CHECK | bool |true | Flag to enable/disable checking for progressing scans at startup | false | false |
  | IMAGE_SCAN_ASYNC_TIMEOUT | int |3 |  |  | false |
  | IMAGE_SCAN_TIMEOUT | int |10 |  |  | false |
  | IMAGE_SCAN_TRY_COUNT | int |1 |  |  | false |
