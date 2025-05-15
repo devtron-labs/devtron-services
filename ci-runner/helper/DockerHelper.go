@@ -1024,6 +1024,7 @@ func (impl *DockerHelperImpl) removeBuildxDriver(ciContext cicxt.CiContext) {
 	fmt.Println(util.DEVTRON, " cmd : ", removeCmd)
 	execRemoveCmd := impl.GetCommandToExecute(removeCmd)
 	_ = impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
+	//not handling error here as this is just a cleanup job, not making it blocking
 }
 
 // this function is deprecated, use cmdExecutor.RunCommand instead
