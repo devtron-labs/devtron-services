@@ -1023,8 +1023,11 @@ func (impl *DockerHelperImpl) removeBuildxDriver(ciContext cicxt.CiContext) {
 	removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
 	fmt.Println(util.DEVTRON, " cmd : ", removeCmd)
 	execRemoveCmd := impl.GetCommandToExecute(removeCmd)
-	_ = impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
-	//not handling error here as this is just a cleanup job, not making it blocking
+	err := impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
+	if err != nil {
+		log.Println("error in executing docker buildx remove command", "err", err)
+		//not returning error here as this is just a cleanup job, not making it blocking
+	}
 }
 
 // this function is deprecated, use cmdExecutor.RunCommand instead
