@@ -111,7 +111,13 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 		RegistryIndexMappingRepository:            registryIndexMappingRepository,
 		CliCommandEnv:                             os.Environ(),
 	}
-	imageScanService.HandleProgressingScans()
+	// Only check for progressing scans if the flag is enabled
+	if imageScanConfig.EnableProgressingScanCheck {
+		logger.Infow("checking for progressing scans at startup")
+		imageScanService.HandleProgressingScans()
+	} else {
+		logger.Infow("skipping progressing scans check at startup as it is disabled")
+	}
 	return imageScanService
 }
 
@@ -125,10 +131,11 @@ func GetImageScannerConfig() (*ImageScanConfig, error) {
 }
 
 type ImageScanConfig struct {
-	ScannerType           string `env:"SCANNER_TYPE" envDefault:""`
-	ScanTryCount          int    `env:"IMAGE_SCAN_TRY_COUNT" envDefault:"1"`
-	ScanImageTimeout      int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`      // Time is considered in minutes
-	ScanImageAsyncTimeout int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"` // Time is considered in minutes
+	ScannerType                string `env:"SCANNER_TYPE" envDefault:""`
+	ScanTryCount               int    `env:"IMAGE_SCAN_TRY_COUNT" envDefault:"1"`
+	ScanImageTimeout           int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`              // Time is considered in minutes
+	ScanImageAsyncTimeout      int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"`         // Time is considered in minutes
+	EnableProgressingScanCheck bool   `env:"ENABLE_PROGRESSING_SCAN_CHECK" envDefault:"true"` // Flag to enable/disable checking for progressing scans at startup
 }
 
 func (impl *ImageScanServiceImpl) GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error) {
