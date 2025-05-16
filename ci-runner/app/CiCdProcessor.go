@@ -100,14 +100,22 @@ func (impl *CiCdProcessor) ProcessCiCdEvent(ciCdRequest *helper.CiCdTriggerEvent
 	if logLevel == "" || logLevel == "DEBUG" {
 		log.Println(util.DEVTRON, " ci-cd request details -----> ", ciCdRequest)
 	}
-
-	defer impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
-	if helper.IsCIOrJobTypeEvent(ciCdRequest.Type) {
-		impl.ciStage.HandleCIEvent(ciCdRequest, &exitCode)
-	} else {
-		impl.cdStage.HandleCDEvent(ciCdRequest, &exitCode)
-	}
+	impl.handleEventBasedOnType(ciCdRequest, &exitCode)
+	impl.HandleCleanup(*ciCdRequest, &exitCode, util.Source_Defer)
 	return
+}
+
+func (impl *CiCdProcessor) handleEventBasedOnType(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
+	defer func() { //recover in this function allows us to process further cleanup even if the code crashes
+		if r := recover(); r != nil {
+			log.Println("recovered from panic in handleEventBasedOnType:", r)
+		}
+	}()
+	if helper.IsCIOrJobTypeEvent(ciCdRequest.Type) {
+		impl.ciStage.HandleCIEvent(ciCdRequest, exitCode)
+	} else {
+		impl.cdStage.HandleCDEvent(ciCdRequest, exitCode)
+	}
 }
 
 func (impl *CiCdProcessor) CleanUpBuildxK8sDriver(ciCdRequest helper.CiCdTriggerEvent, wg *sync.WaitGroup) {
