@@ -105,9 +105,9 @@ func (impl ImageScanHistoryRepositoryImpl) FindOne(id int) (*ImageScanExecutionH
 	return &model, err
 }
 func (impl ImageScanHistoryRepositoryImpl) FindByIds(ids []int) ([]*ImageScanExecutionHistory, error) {
-	var models []*ImageScanExecutionHistory
+	models := make([]*ImageScanExecutionHistory, 0)
 	if len(ids) == 0 {
-		return nil, nil
+		return models, nil
 	}
 	err := impl.dbConnection.Model(&models).
 		Where("id in (?)", pg.In(ids)).Select()

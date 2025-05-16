@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/Knetic/govaluate"
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/async"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	cliUtil "github.com/devtron-labs/image-scanner/internals/step-lib/util/cli-util"
@@ -84,6 +85,7 @@ type ImageScanServiceImpl struct {
 	DockerArtifactStoreRepository             repository.DockerArtifactStoreRepository
 	RegistryIndexMappingRepository            repository.RegistryIndexMappingRepository
 	CliCommandEnv                             []string
+	asyncRunnable                             *async.Runnable
 }
 
 func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository repository.ImageScanHistoryRepository,
@@ -96,7 +98,8 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 	scanToolStepRepository repository.ScanToolStepRepository,
 	scanStepConditionMappingRepository repository.ScanStepConditionMappingRepository,
 	imageScanConfig *ImageScanConfig,
-	dockerArtifactStoreRepository repository.DockerArtifactStoreRepository, registryIndexMappingRepository repository.RegistryIndexMappingRepository) *ImageScanServiceImpl {
+	dockerArtifactStoreRepository repository.DockerArtifactStoreRepository, registryIndexMappingRepository repository.RegistryIndexMappingRepository,
+	asyncRunnable *async.Runnable) *ImageScanServiceImpl {
 	imageScanService := &ImageScanServiceImpl{Logger: logger, ScanHistoryRepository: scanHistoryRepository, ScanResultRepository: scanResultRepository,
 		ScanObjectMetaRepository: scanObjectMetaRepository, CveStoreRepository: cveStoreRepository,
 		ImageScanDeployInfoRepository:             imageScanDeployInfoRepository,
@@ -110,11 +113,12 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 		DockerArtifactStoreRepository:             dockerArtifactStoreRepository,
 		RegistryIndexMappingRepository:            registryIndexMappingRepository,
 		CliCommandEnv:                             os.Environ(),
+		asyncRunnable:                             asyncRunnable,
 	}
 	// Only check for progressing scans if the flag is enabled
 	if imageScanConfig.EnableProgressingScanCheck {
 		logger.Infow("checking for progressing scans at startup")
-		go imageScanService.HandleProgressingScans()
+		asyncRunnable.Execute(imageScanService.HandleProgressingScans)
 	} else {
 		logger.Infow("skipping progressing scans check at startup as it is disabled")
 	}
