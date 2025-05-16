@@ -23,6 +23,7 @@ import (
 	"github.com/devtron-labs/common-lib/monitoring"
 	client "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/image-scanner/api"
+	"github.com/devtron-labs/image-scanner/pkg/asyncProvider"
 	"github.com/devtron-labs/image-scanner/pkg/clairService"
 	"github.com/devtron-labs/image-scanner/pkg/grafeasService"
 	"github.com/devtron-labs/image-scanner/pkg/klarService"
@@ -38,6 +39,7 @@ import (
 
 func InitializeApp() (*App, error) {
 	wire.Build(
+		asyncProvider.AsyncWireSet,
 		NewApp,
 		api.NewRouter,
 		logger.NewSugardLogger,
