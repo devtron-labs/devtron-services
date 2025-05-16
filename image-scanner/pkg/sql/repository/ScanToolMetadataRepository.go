@@ -46,10 +46,12 @@ type ScanToolMetadataRepository interface {
 	FindActiveToolByScanTarget(scanTarget ScanTargetType) (*ScanToolMetadata, error)
 	FindByNameAndVersion(name, version string) (*ScanToolMetadata, error)
 	FindActiveById(id int) (*ScanToolMetadata, error)
+	FindById(id int) (*ScanToolMetadata, error)
 	Save(model *ScanToolMetadata) (*ScanToolMetadata, error)
 	Update(model *ScanToolMetadata) (*ScanToolMetadata, error)
 	MarkToolDeletedById(id int) error
 	FindAllActiveTools() ([]*ScanToolMetadata, error)
+	GetStepsForTool(toolId int) ([]*ScanToolStep, error)
 }
 
 type ScanToolMetadataRepositoryImpl struct {
@@ -138,5 +140,25 @@ func (repo *ScanToolMetadataRepositoryImpl) FindAllActiveTools() ([]*ScanToolMet
 		return nil, err
 	}
 	return models, nil
+}
 
+func (impl *ScanToolMetadataRepositoryImpl) FindById(id int) (*ScanToolMetadata, error) {
+	model := &ScanToolMetadata{}
+	err := impl.dbConnection.Model(model).Where("id = ?", id).Select()
+	if err != nil {
+		impl.logger.Errorw("error in getting scan tool metadata by id", "err", err, "id", id)
+		return nil, err
+	}
+	return model, nil
+}
+
+func (impl *ScanToolMetadataRepositoryImpl) GetStepsForTool(toolId int) ([]*ScanToolStep, error) {
+	var steps []*ScanToolStep
+	err := impl.dbConnection.Model(&steps).Where("scan_tool_id = ?", toolId).
+		Where("deleted = ?", false).Order("index ASC").Select()
+	if err != nil {
+		impl.logger.Errorw("error in getting steps for tool", "err", err, "toolId", toolId)
+		return nil, err
+	}
+	return steps, nil
 }

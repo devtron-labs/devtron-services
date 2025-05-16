@@ -14,6 +14,7 @@ import (
 	"github.com/devtron-labs/image-scanner/pkg/grafeasService"
 	"github.com/devtron-labs/image-scanner/pkg/klarService"
 	"github.com/devtron-labs/image-scanner/pkg/logger"
+	"github.com/devtron-labs/image-scanner/pkg/recovery"
 	"github.com/devtron-labs/image-scanner/pkg/roundTripper"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql"
@@ -69,8 +70,10 @@ func InitializeApp() (*App, error) {
 	roundTripperServiceImpl := roundTripper.NewRoundTripperServiceImpl(sugaredLogger, dockerArtifactStoreRepositoryImpl)
 	clairServiceImpl := clairService.NewClairServiceImpl(sugaredLogger, clairConfig, client, imageScanServiceImpl, dockerArtifactStoreRepositoryImpl, scanToolMetadataRepositoryImpl, roundTripperServiceImpl)
 	restHandlerImpl := api.NewRestHandlerImpl(sugaredLogger, grafeasServiceImpl, userServiceImpl, imageScanServiceImpl, klarServiceImpl, clairServiceImpl, imageScanConfig)
+	recoveryManager := recovery.NewRecoveryManager(sugaredLogger, imageScanConfig, imageScanHistoryRepositoryImpl, scanToolExecutionHistoryMappingRepositoryImpl, scanToolMetadataRepositoryImpl, dockerArtifactStoreRepositoryImpl)
+	recoveryHandlerImpl := api.NewRecoveryHandlerImpl(sugaredLogger, recoveryManager)
 	monitoringRouter := monitoring.NewMonitoringRouter(sugaredLogger)
-	router := api.NewRouter(sugaredLogger, restHandlerImpl, monitoringRouter)
+	router := api.NewRouter(sugaredLogger, restHandlerImpl, recoveryHandlerImpl, monitoringRouter)
 	pubSubClientServiceImpl, err := pubsub_lib.NewPubSubClientServiceImpl(sugaredLogger)
 	if err != nil {
 		return nil, err
@@ -80,6 +83,6 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	app := NewApp(router, sugaredLogger, db, natSubscriptionImpl, pubSubClientServiceImpl)
+	app := NewApp(router, sugaredLogger, db, natSubscriptionImpl, pubSubClientServiceImpl, recoveryManager)
 	return app, nil
 }

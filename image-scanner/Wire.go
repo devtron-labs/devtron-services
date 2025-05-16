@@ -27,6 +27,7 @@ import (
 	"github.com/devtron-labs/image-scanner/pkg/grafeasService"
 	"github.com/devtron-labs/image-scanner/pkg/klarService"
 	"github.com/devtron-labs/image-scanner/pkg/logger"
+	"github.com/devtron-labs/image-scanner/pkg/recovery"
 	"github.com/devtron-labs/image-scanner/pkg/roundTripper"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql"
@@ -98,6 +99,11 @@ func InitializeApp() (*App, error) {
 		monitoring.NewMonitoringRouter,
 
 		roundTripper.NewRoundTripperServiceImpl,
+
+		// Recovery Manager
+		recovery.NewRecoveryManager,
+		api.NewRecoveryHandlerImpl,
+		wire.Bind(new(api.RecoveryHandler), new(*api.RecoveryHandlerImpl)),
 		wire.Bind(new(roundTripper.RoundTripperService), new(*roundTripper.RoundTripperServiceImpl)),
 	)
 	return &App{}, nil

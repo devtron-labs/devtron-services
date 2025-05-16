@@ -32,6 +32,10 @@
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string | |  |  | false |
  | PROJECT_ID | string |projects/devtron-project-id |  |  | false |
+ | RECOVERY_BATCH_DELAY_SECONDS | int |5 |  |  | false |
+ | RECOVERY_BATCH_SIZE | int |10 |  |  | false |
+ | RECOVERY_MAX_WORKERS | int |3 |  |  | false |
+ | RECOVERY_START_DELAY_SECONDS | int |10 |  |  | false |
  | SCANNER_TYPE | string | |  |  | false |
  | SERVER_HTTP_PORT | int |8080 |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |

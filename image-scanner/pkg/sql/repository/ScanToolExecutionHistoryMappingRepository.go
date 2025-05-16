@@ -43,6 +43,8 @@ type ScanToolExecutionHistoryMappingRepository interface {
 	MarkAllRunningStateAsFailedHavingTryCountReachedLimit(tryCount int) error
 	GetAllScanHistoriesByState(state bean.ScanExecutionProcessState) ([]*ScanToolExecutionHistoryMapping, error)
 	GetAllScanHistoriesByExecutionHistoryIdAndStates(executionHistoryId int, states []bean.ScanExecutionProcessState) ([]*ScanToolExecutionHistoryMapping, error)
+	GetBatchOfScanHistoriesByState(state bean.ScanExecutionProcessState, limit, offset int) ([]*ScanToolExecutionHistoryMapping, error)
+	UpdateStateAndIncrementTryCount(executionHistoryId, toolId int, state bean.ScanExecutionProcessState, executionFinishTime time.Time) error
 }
 
 type ScanToolExecutionHistoryMappingRepositoryImpl struct {
@@ -126,4 +128,33 @@ func (repo *ScanToolExecutionHistoryMappingRepositoryImpl) GetAllScanHistoriesBy
 		return nil, err
 	}
 	return models, nil
+}
+
+func (repo *ScanToolExecutionHistoryMappingRepositoryImpl) GetBatchOfScanHistoriesByState(state bean.ScanExecutionProcessState, limit, offset int) ([]*ScanToolExecutionHistoryMapping, error) {
+	var models []*ScanToolExecutionHistoryMapping
+	err := repo.dbConnection.Model(&models).Column("scan_tool_execution_history_mapping.*").
+		Where("state = ?", state).
+		Limit(limit).
+		Offset(offset).
+		Select()
+	if err != nil {
+		repo.logger.Errorw("error in ScanToolExecutionHistoryMappingRepository, GetBatchOfScanHistoriesByState", "err", err)
+		return nil, err
+	}
+	return models, nil
+}
+
+func (repo *ScanToolExecutionHistoryMappingRepositoryImpl) UpdateStateAndIncrementTryCount(executionHistoryId, toolId int, state bean.ScanExecutionProcessState, executionFinishTime time.Time) error {
+	model := &ScanToolExecutionHistoryMapping{}
+	_, err := repo.dbConnection.Model(model).
+		Set("state = ?", state).
+		Set("execution_finish_time = ?", executionFinishTime).
+		Set("try_count = try_count + 1").
+		Where("image_scan_execution_history_id = ?", executionHistoryId).
+		Where("scan_tool_id = ?", toolId).Update()
+	if err != nil {
+		repo.logger.Errorw("error in ScanToolExecutionHistoryMappingRepository, UpdateStateAndIncrementTryCount", "err", err, "model", model)
+		return err
+	}
+	return nil
 }

@@ -111,12 +111,12 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 		RegistryIndexMappingRepository:            registryIndexMappingRepository,
 		CliCommandEnv:                             os.Environ(),
 	}
-	// Only check for progressing scans if the flag is enabled
-	if imageScanConfig.EnableProgressingScanCheck {
-		logger.Infow("checking for progressing scans at startup")
-		imageScanService.HandleProgressingScans()
+	// We no longer process progressing scans synchronously at startup
+	// Instead, this will be handled by the RecoveryManager asynchronously
+	if !imageScanConfig.EnableProgressingScanCheck {
+		logger.Infow("progressing scans check is disabled")
 	} else {
-		logger.Infow("skipping progressing scans check at startup as it is disabled")
+		logger.Infow("progressing scans will be handled asynchronously by the recovery manager")
 	}
 	return imageScanService
 }
@@ -136,6 +136,10 @@ type ImageScanConfig struct {
 	ScanImageTimeout           int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`              // Time is considered in minutes
 	ScanImageAsyncTimeout      int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"`         // Time is considered in minutes
 	EnableProgressingScanCheck bool   `env:"ENABLE_PROGRESSING_SCAN_CHECK" envDefault:"true"` // Flag to enable/disable checking for progressing scans at startup
+	RecoveryBatchSize          int    `env:"RECOVERY_BATCH_SIZE" envDefault:"10"`             // Number of scans to process in each batch during recovery
+	RecoveryBatchDelaySeconds  int    `env:"RECOVERY_BATCH_DELAY_SECONDS" envDefault:"5"`     // Delay between processing batches in seconds
+	RecoveryMaxWorkers         int    `env:"RECOVERY_MAX_WORKERS" envDefault:"3"`             // Maximum number of concurrent workers for recovery
+	RecoveryStartDelaySeconds  int    `env:"RECOVERY_START_DELAY_SECONDS" envDefault:"10"`    // Delay before starting recovery process after startup
 }
 
 func (impl *ImageScanServiceImpl) GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error) {

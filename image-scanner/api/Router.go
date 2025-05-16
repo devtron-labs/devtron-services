@@ -29,11 +29,12 @@ type Router struct {
 	logger           *zap.SugaredLogger
 	Router           *mux.Router
 	restHandler      RestHandler
+	recoveryHandler  RecoveryHandler
 	monitoringRouter *monitoring.MonitoringRouter
 }
 
-func NewRouter(logger *zap.SugaredLogger, restHandler RestHandler, monitoringRouter *monitoring.MonitoringRouter) *Router {
-	return &Router{logger: logger, Router: mux.NewRouter(), restHandler: restHandler, monitoringRouter: monitoringRouter}
+func NewRouter(logger *zap.SugaredLogger, restHandler RestHandler, recoveryHandler RecoveryHandler, monitoringRouter *monitoring.MonitoringRouter) *Router {
+	return &Router{logger: logger, Router: mux.NewRouter(), restHandler: restHandler, recoveryHandler: recoveryHandler, monitoringRouter: monitoringRouter}
 }
 
 func (r Router) Init() {
@@ -59,4 +60,8 @@ func (r Router) Init() {
 	r.Router.Path("/scanner/image").HandlerFunc(r.restHandler.ScanForVulnerability).Methods("POST")
 	r.Router.Path("/scanner/save-result").HandlerFunc(r.restHandler.RegisterAndSaveScannedResult).Methods("POST")
 
+	// Recovery endpoints
+	r.Router.Path("/recovery/status").HandlerFunc(r.recoveryHandler.GetRecoveryStatus).Methods("GET")
+	r.Router.Path("/recovery/start").HandlerFunc(r.recoveryHandler.StartRecovery).Methods("POST")
+	r.Router.Path("/recovery/stop").HandlerFunc(r.recoveryHandler.StopRecovery).Methods("POST")
 }

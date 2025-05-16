@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/image-scanner/pkg/middleware"
+	"github.com/devtron-labs/image-scanner/pkg/recovery"
 	"net/http"
 	"os"
 	"time"
@@ -41,17 +42,19 @@ type App struct {
 	db               *pg.DB
 	natsSubscription *pubsub.NatSubscriptionImpl
 	pubSubClient     *client.PubSubClientServiceImpl
+	recoveryManager  *recovery.RecoveryManager
 }
 
 func NewApp(Router *api.Router, Logger *zap.SugaredLogger,
 	db *pg.DB, natsSubscription *pubsub.NatSubscriptionImpl,
-	pubSubClient *client.PubSubClientServiceImpl) *App {
+	pubSubClient *client.PubSubClientServiceImpl, recoveryManager *recovery.RecoveryManager) *App {
 	return &App{
 		Router:           Router,
 		Logger:           Logger,
 		db:               db,
 		natsSubscription: natsSubscription,
 		pubSubClient:     pubSubClient,
+		recoveryManager:  recoveryManager,
 	}
 }
 
@@ -73,6 +76,13 @@ func (app *App) Start() {
 	app.Router.Router.Use(middleware.PrometheusMiddleware)
 	app.Router.Router.Use(middlewares.Recovery)
 	app.server = server
+
+	// Start the recovery manager if enabled
+	if app.recoveryManager != nil {
+		app.Logger.Infow("starting recovery manager")
+		app.recoveryManager.Start()
+	}
+
 	err = server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		app.Logger.Errorw("error in startup", "err", err)
@@ -84,6 +94,13 @@ func (app *App) Stop() {
 	app.Logger.Infow("image scanner shutdown initiating")
 	timeoutContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// Stop the recovery manager if it exists
+	if app.recoveryManager != nil {
+		app.Logger.Infow("stopping recovery manager")
+		app.recoveryManager.Stop()
+	}
+
 	app.Logger.Infow("closing router")
 	err := app.server.Shutdown(timeoutContext)
 	if err != nil {
