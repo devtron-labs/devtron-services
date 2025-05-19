@@ -136,7 +136,7 @@ func (app *App) initGrpcServer(port int) error {
 	recoveryOption := recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			MaxConnectionAge: 10 * time.Second,
+			MaxConnectionAge: 1 * time.Hour,
 		}),
 		grpc.ChainStreamInterceptor(
 			grpc_prometheus.StreamServerInterceptor,
