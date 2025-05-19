@@ -286,20 +286,29 @@ func (impl RepoManagerImpl) backupGitMaterialBeforeUpdate(existingMaterial *sql.
 	return nil
 }
 
+func getLogWithMaterialId(materialId int, logMessage string) string {
+	return fmt.Sprintf("qwerty%d, %s", materialId, logMessage)
+}
 func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitMaterial) (*sql.GitMaterial, error) {
+	materialId := material.Id
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "update request received"), "material", material)
 	updateInitiatedTime := time.Now()
 	existingMaterial, err := impl.materialRepository.FindById(material.Id)
 	if err != nil {
 		impl.logger.Errorw("error in fetching material", "material", material, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 		return nil, err
 	}
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "existing material fetched"), "existingMaterial", existingMaterial)
 	if material.CreateBackup {
+		impl.logger.Debugw(getLogWithMaterialId(materialId, "got inside createBackup"))
 		err = impl.backupGitMaterialBeforeUpdate(existingMaterial)
+		impl.logger.Debugw(getLogWithMaterialId(materialId, "backupDone"), "err", err)
 		if err != nil {
 			impl.logger.Errorw("error in preserving material", "material", existingMaterial, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 			return nil, err
 		}
 	}
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "db update started"))
 	existingMaterial.Name = material.Name
 	existingMaterial.Url = material.Url
 	existingMaterial.GitProviderId = material.GitProviderId
@@ -309,11 +318,12 @@ func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitM
 	existingMaterial.FetchSubmodules = material.FetchSubmodules
 	existingMaterial.FilterPattern = material.FilterPattern
 	err = impl.materialRepository.Update(existingMaterial)
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "db update done"), "err", err)
 	if err != nil {
 		impl.logger.Errorw("error in updating material ", "material", material, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 		return nil, err
 	}
-
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "lease locker start"))
 	repoLock := impl.locker.LeaseLocker(material.Id)
 	repoLock.Mutex.Lock()
 	defer func() {
@@ -321,19 +331,26 @@ func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitM
 		impl.locker.ReturnLocker(material.Id)
 	}()
 
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "repository clean start"))
+
 	err = impl.repositoryManager.Clean(existingMaterial.CheckoutLocation)
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "repository clean done"), "err", err)
 	if err != nil {
 		impl.logger.Errorw("error in refreshing material", "dir", existingMaterial.CheckoutLocation, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 		return nil, err
 	}
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "checking existing material deleted"))
 
 	if !existingMaterial.Deleted {
+		impl.logger.Debugw(getLogWithMaterialId(materialId, "existing material deleted, checkout updated repo start"))
 		err = impl.checkoutUpdatedRepo(gitCtx, material.Id)
+		impl.logger.Debugw(getLogWithMaterialId(materialId, "existing material deleted, checkout updated repo start done"), "err", err)
 		if err != nil {
 			impl.logger.Errorw("error in checking out updated repo", "materialId", material.Id, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 			return nil, err
 		}
 	}
+	impl.logger.Debugw(getLogWithMaterialId(materialId, "updated material"))
 	impl.logger.Infow("updated material", "material", existingMaterial, "timeTaken", time.Since(updateInitiatedTime))
 	return existingMaterial, nil
 }
