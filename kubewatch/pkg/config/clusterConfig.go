@@ -39,6 +39,9 @@ type ClusterConfig struct {
 	//	- AllClusterType: All clusters are enabled for CD ArgoWorkflow informer
 	//	- InClusterType: Only default cluster is enabled for CD ArgoWorkflow informer
 	ClusterCdArgoWfType string `env:"CLUSTER_CD_ARGO_WF_TYPE" envDefault:"IN_CLUSTER" description:"Determines cluster mode for CD ArgoWorkflow informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER" deprecated:"false"`
+
+	// SecretNamespaceFilter Determines in which namespace the secret informer should be enabled
+	SecretNamespaceFilter string `env:"SECRET_NAMESPACE_FILTER" envDefault:"" description:"Determines in which namespace the secret informer should be enabled. " deprecated:"false"`
 }
 
 func getClusterConfig() (*ClusterConfig, error) {

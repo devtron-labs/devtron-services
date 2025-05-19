@@ -80,6 +80,17 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	}
 }
 
+func (impl *InformerImpl) getInformerFactoryOptions() []kubeinformers.SharedInformerOption {
+	labelOpts := make([]kubeinformers.SharedInformerOption, 0)
+	labelOpts = append(labelOpts, kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
+		opts.FieldSelector = informerBean.ClusterModifyEventFieldSelector
+	}))
+	if len(impl.appConfig.ClusterCfg.SecretNamespaceFilter) > 0 {
+		labelOpts = append(labelOpts, kubeinformers.WithNamespace(impl.appConfig.ClusterCfg.SecretNamespaceFilter))
+	}
+	return labelOpts
+}
+
 func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	startTime := time.Now()
 	defer func() {
@@ -94,10 +105,8 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 		return err
 	}
 	impl.logger.Debug("starting informer, reading new cluster request for default cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
-	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.FieldSelector = informerBean.ClusterModifyEventFieldSelector
-	})
-	//labelOptions2 := kubeinformers.WithNamespace("default")
+	labelOptions := impl.getInformerFactoryOptions()
+
 	// addFunc is called when a new secret is created
 	addFunc := func(secretObject *coreV1.Secret) {
 		if err := impl.handleClusterChangeEvent(secretObject); err != nil {
@@ -123,7 +132,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
 	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
-	secretFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
+	secretFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions...)
 	if err != nil {
 		impl.logger.Errorw("error in registering default cluster secret informer", "err", err)
 		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET_INFORMER)

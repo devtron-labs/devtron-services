@@ -49,7 +49,6 @@ func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, c
 		middleware.IncUnreachableCluster(clusterLabels)
 		return nil, k8sErr
 	}
-	options = append(options, kubeinformers.WithNamespace("default"))
 	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, options...)
 	secretInformer := informerFactory.Core().V1().Secrets()
 	_, eventErr := secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

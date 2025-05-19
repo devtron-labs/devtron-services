@@ -49,7 +49,6 @@ func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, c
 		middleware.IncUnreachableCluster(clusterLabels)
 		return nil, k8sErr
 	}
-	//options = append(options, kubeinformers.WithNamespace("devtron-ci"))
 	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, options...)
 	podInformer := informerFactory.Core().V1().Pods()
 	_, eventErr := podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
