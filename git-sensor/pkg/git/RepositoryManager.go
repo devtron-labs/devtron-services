@@ -41,9 +41,9 @@ type RepositoryManager interface {
 	// and returns the reference to the repo
 	Fetch(gitCtx GitContext, url string, location string) (updated bool, repo *GitRepository, errMsg string, err error)
 	// Add adds and initializes a new git repo , cleans the directory if not empty and fetches latest commits
-	Add(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (errMsg string, err error)
+	Add(gitCtx GitContext, materialId, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (errMsg string, err error)
 	InitRepoAndGetSshPrivateKeyPath(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (string, string, error)
-	FetchRepo(gitCtx GitContext, location string) (errMsg string, err error)
+	FetchRepo(gitCtx GitContext, location string, materialId int) (errMsg string, err error)
 	BackupGitMaterialBeforeUpdate(detailedExistingMaterial *sql.GitMaterial) error
 	GetCheckoutLocationFromGitUrl(material *sql.GitMaterial, cloningMode string) (location string, err error)
 	GetCheckoutLocation(gitCtx GitContext, material *sql.GitMaterial, url, checkoutPath string) string
@@ -160,12 +160,14 @@ func (impl *RepositoryManagerImpl) GetCheckoutLocation(gitCtx GitContext, materi
 	return checkoutPath
 }
 
-func (impl *RepositoryManagerImpl) Add(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (string, error) {
+func (impl *RepositoryManagerImpl) Add(gitCtx GitContext, materialId, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (string, error) {
 	_, errMsg, err := impl.InitRepoAndGetSshPrivateKeyPath(gitCtx, gitProviderId, location, url, authMode, sshPrivateKeyContent)
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "Add,InitRepoAndGetSshPrivateKeyPath done"), "errMsg", errMsg, "err", err)
 	if err != nil {
 		return errMsg, err
 	}
-	return impl.FetchRepo(gitCtx, location)
+
+	return impl.FetchRepo(gitCtx, location, materialId)
 }
 
 func (impl *RepositoryManagerImpl) InitRepoAndGetSshPrivateKeyPath(gitCtx GitContext, gitProviderId int, location, url string, authMode sql.AuthMode, sshPrivateKeyContent string) (string, string, error) {
@@ -209,9 +211,14 @@ func (impl *RepositoryManagerImpl) CleanupAndInitRepo(gitCtx GitContext, locatio
 	}
 	return "", nil
 }
+func GetLogWithMaterialId(materialId int, logMessage string) string {
+	return fmt.Sprintf("qwerty%d, %s", materialId, logMessage)
+}
 
-func (impl *RepositoryManagerImpl) FetchRepo(gitCtx GitContext, location string) (string, error) {
-	opt, errMsg, err := impl.gitManager.Fetch(gitCtx, location)
+func (impl *RepositoryManagerImpl) FetchRepo(gitCtx GitContext, location string, materialId int) (string, error) {
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "FetchRepo start"), "location", location, "materialId", materialId)
+	opt, errMsg, err := impl.gitManager.Fetch(gitCtx, location, materialId)
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "FetchRepo end"), "errMsg", errMsg, "err", err, "opt", opt)
 	if err != nil {
 		impl.logger.Errorw("error in fetching repo", "errorMsg", errMsg, "err", err)
 		return errMsg, err
@@ -244,7 +251,7 @@ func (impl *RepositoryManagerImpl) Fetch(gitCtx GitContext, url string, location
 	if err != nil {
 		return false, r, errMsg, err
 	}
-	res, errMsg, err := impl.gitManager.Fetch(gitCtx, location)
+	res, errMsg, err := impl.gitManager.Fetch(gitCtx, location, 0)
 
 	if err == nil && len(res) > 0 {
 		impl.logger.Infow("repository updated", "location", url)

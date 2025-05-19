@@ -55,7 +55,7 @@ type GitManagerBase interface {
 	// PathMatcher matches paths of files changes with defined regex expression
 	PathMatcher(fileStats *FileStats, gitMaterial *sql.GitMaterial) bool
 	// Fetch executes git fetch
-	Fetch(gitCtx GitContext, rootDir string) (response, errMsg string, err error)
+	Fetch(gitCtx GitContext, rootDir string, materialId int) (response, errMsg string, err error)
 	// Checkout executes git checkout
 	Checkout(gitCtx GitContext, rootDir, branch string) (response, errMsg string, err error)
 	// ConfigureSshCommand configures ssh in git repo
@@ -110,23 +110,31 @@ func parseCmdTimeoutJson(config *internals.Configuration) (map[string]int, error
 	}
 	return commandTimeoutMap, err
 }
+func (impl *GitManagerBaseImpl) Fetch(gitCtx GitContext, rootDir string, materialId int) (response, errMsg string, err error) {
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch start"), "rootDir", rootDir)
 
-func (impl *GitManagerBaseImpl) Fetch(gitCtx GitContext, rootDir string) (response, errMsg string, err error) {
 	impl.logger.Debugw("git fetch ", "location", rootDir)
 	cmd, newGitCtx, cancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, createCmdWithContext done"), "cmd", cmd.String())
+
 	defer cancel()
 	tlsPathInfo, err := commonLibGitManager.CreateFilesForTlsData(commonLibGitManager.BuildTlsData(gitCtx.TLSKey, gitCtx.TLSCertificate, gitCtx.CACert, gitCtx.TLSVerificationEnabled), TLS_FILES_DIR)
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, CreateFilesForTlsData done"), "tlsPathInfo", tlsPathInfo)
+
 	if err != nil {
 		//making it non-blocking
 		impl.logger.Errorw("error encountered in createFilesForTlsData", "err", err)
 	}
 	defer commonLibGitManager.DeleteTlsFiles(tlsPathInfo)
 	output, errMsg, err := impl.runCommandWithCred(cmd, newGitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, runCommandWithCred done"), "output", output, "errMsg", errMsg, "err", err)
 	if strings.Contains(output, util.LOCK_REF_MESSAGE) {
 		impl.logger.Info("error in fetch, pruning local refs and retrying", "rootDir", rootDir)
 		// running git remote prune origin and retrying fetch. gitHub issue - https://github.com/devtron-labs/devtron/issues/4605
 		pruneCmd, newGitCtx, pruneCmdCancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "remote", "prune", "origin")
+		impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, prune command create done"), "pruneCmd", pruneCmd.String())
 		pruneOutput, pruneMsg, pruneErr := impl.runCommandWithCred(pruneCmd, newGitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+		impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, prune command run done"), "pruneOutput", pruneOutput, "pruneMsg", pruneMsg, "pruneErr", pruneMsg)
 		defer pruneCmdCancel()
 		if pruneErr != nil {
 			impl.logger.Errorw("error in pruning local refs that do not exist at remote")
@@ -134,10 +142,13 @@ func (impl *GitManagerBaseImpl) Fetch(gitCtx GitContext, rootDir string) (respon
 		}
 
 		retryFetchCmd, newGitCtx, retryFetchCancel := impl.createCmdWithContext(gitCtx, "git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
+		impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, fetch command create done"), "retryFetchCmd", retryFetchCmd.String())
 		defer retryFetchCancel()
 
 		output, errMsg, err = impl.runCommandWithCred(retryFetchCmd, newGitCtx, gitCtx.Username, gitCtx.Password, tlsPathInfo)
+		impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, fetch command run done"), "output", output, "errMsg", errMsg, "err", err)
 	}
+	impl.logger.Debugw(GetLogWithMaterialId(materialId, "Fetch, total done"), "output", output, "errMsg", errMsg, "err", err)
 	impl.logger.Debugw("fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
