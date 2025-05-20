@@ -807,6 +807,7 @@ func (impl *DockerHelperImpl) installAllSupportedPlatforms(ciContext cicxt.CiCon
 	dockerBuildCMD := impl.GetCommandToExecute(multiPlatformCmd)
 	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
 	if err != nil {
+		log.Println(util.DEVTRON, "error in running multiPlatform command")
 		log.Println(err)
 		return err
 	}
@@ -946,12 +947,16 @@ func readImageDigestFromManifest(manifestFilePath string) (string, error) {
 func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cicxt.CiContext, dockerConnection, buildxDriverImage string) error {
 	err := impl.installAllSupportedPlatforms(ciContext)
 	if err != nil {
+		log.Println(util.DEVTRON, "installAllSupportedPlatforms err : ", err)
 		return err
 	}
+	log.Println(util.DEVTRON, "installAllSupportedPlatforms done ")
 	err = impl.createBuildxBuilder(ciContext, dockerConnection, buildxDriverImage)
 	if err != nil {
+		log.Println(util.DEVTRON, "createBuildxBuilder err : ", err)
 		return err
 	}
+	log.Println(util.DEVTRON, "createBuildxBuilderForMultiArchBuild done ")
 	return nil
 }
 
