@@ -63,7 +63,7 @@ func (impl *K8sServiceImpl) getOpts(opts []K8sServiceOpts) Options {
 }
 
 func (impl *K8sServiceImpl) GetCoreV1Client(clusterConfig *ClusterConfig, opts ...K8sServiceOpts) (*v12.CoreV1Client, error) {
-	cfg, err := impl.WithHttpTransport(impl.getOpts(opts)).GetRestConfigByCluster(clusterConfig)
+	cfg, err := impl.GetRestConfigByCluster(clusterConfig, opts...)
 	if err != nil {
 		impl.logger.Errorw("error in getting rest config for default cluster", "err", err)
 		return nil, err
@@ -73,7 +73,7 @@ func (impl *K8sServiceImpl) GetCoreV1Client(clusterConfig *ClusterConfig, opts .
 
 func (impl *K8sServiceImpl) GetClientForInCluster(opts ...K8sServiceOpts) (*v12.CoreV1Client, error) {
 	// creates the in-cluster config
-	config, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sInClusterRestConfig()
+	config, err := impl.GetK8sInClusterRestConfig(opts...)
 	if err != nil {
 		impl.logger.Errorw("error in getting config", "err", err)
 		return nil, err
@@ -94,7 +94,7 @@ func (impl *K8sServiceImpl) GetClientForInCluster(opts ...K8sServiceOpts) (*v12.
 }
 
 func (impl *K8sServiceImpl) GetK8sDiscoveryClient(clusterConfig *ClusterConfig, opts ...K8sServiceOpts) (*discovery.DiscoveryClient, error) {
-	cfg, err := impl.WithHttpTransport(impl.getOpts(opts)).GetRestConfigByCluster(clusterConfig)
+	cfg, err := impl.GetRestConfigByCluster(clusterConfig, opts...)
 	if err != nil {
 		impl.logger.Errorw("error in getting rest config for default cluster", "err", err)
 		return nil, err
@@ -114,7 +114,7 @@ func (impl *K8sServiceImpl) GetK8sDiscoveryClient(clusterConfig *ClusterConfig, 
 }
 
 func (impl *K8sServiceImpl) GetK8sDiscoveryClientInCluster(opts ...K8sServiceOpts) (*discovery.DiscoveryClient, error) {
-	config, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sInClusterRestConfig()
+	config, err := impl.GetK8sInClusterRestConfig(opts...)
 	if err != nil {
 		impl.logger.Errorw("error in getting config", "err", err)
 		return nil, err
@@ -358,7 +358,7 @@ func (impl *K8sServiceImpl) DeleteSecret(namespace string, name string, client *
 }
 
 func (impl *K8sServiceImpl) DeleteJob(namespace string, name string, clusterConfig *ClusterConfig, opts ...K8sServiceOpts) error {
-	_, _, clientSet, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sConfigAndClients(clusterConfig)
+	_, _, clientSet, err := impl.GetK8sConfigAndClients(clusterConfig, opts...)
 	if err != nil {
 		impl.logger.Errorw("clientSet err, DeleteJob", "err", err)
 		return err
@@ -392,7 +392,7 @@ func (impl *K8sServiceImpl) GetK8sDynamicClient(restConfig *rest.Config, k8sHttp
 }
 
 func (impl *K8sServiceImpl) DiscoveryClientGetLiveZCall(cluster *ClusterConfig, opts ...K8sServiceOpts) ([]byte, error) {
-	_, _, k8sClientSet, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sConfigAndClients(cluster)
+	_, _, k8sClientSet, err := impl.GetK8sConfigAndClients(cluster, opts...)
 	if err != nil {
 		impl.logger.Errorw("errir in getting clients and configs", "err", err, "clusterName", cluster.ClusterName)
 		return nil, err
@@ -417,7 +417,7 @@ func (impl *K8sServiceImpl) GetLiveZCall(path string, k8sClientSet *kubernetes.C
 }
 
 func (impl *K8sServiceImpl) CreateJob(namespace string, name string, clusterConfig *ClusterConfig, job *batchV1.Job, opts ...K8sServiceOpts) error {
-	_, _, clientSet, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sConfigAndClients(clusterConfig)
+	_, _, clientSet, err := impl.GetK8sConfigAndClients(clusterConfig, opts...)
 	if err != nil {
 		impl.logger.Errorw("clientSet err, CreateJob", "err", err)
 	}
@@ -445,7 +445,7 @@ func (impl *K8sServiceImpl) CreateJob(namespace string, name string, clusterConf
 // DeletePod delete pods with label job-name
 
 func (impl *K8sServiceImpl) DeletePodByLabel(namespace string, labels string, clusterConfig *ClusterConfig, opts ...K8sServiceOpts) error {
-	_, _, clientSet, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sConfigAndClients(clusterConfig)
+	_, _, clientSet, err := impl.GetK8sConfigAndClients(clusterConfig, opts...)
 	if err != nil {
 		impl.logger.Errorw("clientSet err, DeletePod", "err", err)
 		return err
@@ -771,7 +771,7 @@ func (impl *K8sServiceImpl) GetKubeVersion() (*version.Info, error) {
 
 func (impl *K8sServiceImpl) GetCoreV1ClientInCluster(opts ...K8sServiceOpts) (*v12.CoreV1Client, error) {
 	restConfig := &rest.Config{}
-	restConfig, err := impl.WithHttpTransport(impl.getOpts(opts)).GetK8sInClusterRestConfig()
+	restConfig, err := impl.GetK8sInClusterRestConfig(opts...)
 	if err != nil {
 		impl.logger.Error("Error in creating config for default cluster", "err", err)
 		return nil, err
@@ -1443,10 +1443,6 @@ func (impl *K8sServiceImpl) GetK8sInClusterConfigAndClients(opts ...K8sServiceOp
 
 func (impl *K8sServiceImpl) GetRestConfigByCluster(clusterConfig *ClusterConfig, opts ...K8sServiceOpts) (*rest.Config, error) {
 	return impl.WithHttpTransport(impl.getOpts(opts)).GetRestConfigByCluster(clusterConfig)
-}
-
-func (impl *K8sServiceImpl) GetRestConfigByClusterWithoutCustomTransport(clusterConfig *ClusterConfig, opts ...K8sServiceOpts) (*rest.Config, error) {
-	return impl.WithHttpTransport(impl.getOpts(opts)).GetRestConfigByClusterWithoutCustomTransport(clusterConfig)
 }
 
 func (impl *K8sServiceImpl) OverrideRestConfigWithCustomTransport(restConfig *rest.Config, opts ...K8sServiceOpts) (*rest.Config, error) {

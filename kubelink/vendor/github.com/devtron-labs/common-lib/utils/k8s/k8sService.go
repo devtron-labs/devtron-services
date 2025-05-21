@@ -120,7 +120,6 @@ type K8sService interface {
 	GetK8sInClusterConfigAndDynamicClients(opts ...K8sServiceOpts) (*rest.Config, *http.Client, dynamic.Interface, error)
 	GetK8sInClusterConfigAndClients(opts ...K8sServiceOpts) (*rest.Config, *http.Client, *kubernetes.Clientset, error)
 	GetRestConfigByCluster(clusterConfig *ClusterConfig, opts ...K8sServiceOpts) (*rest.Config, error)
-	GetRestConfigByClusterWithoutCustomTransport(clusterConfig *ClusterConfig, opts ...K8sServiceOpts) (*rest.Config, error)
 	OverrideRestConfigWithCustomTransport(restConfig *rest.Config, opts ...K8sServiceOpts) (*rest.Config, error)
 	GetK8sConfigAndClientsByRestConfig(restConfig *rest.Config, opts ...K8sServiceOpts) (*http.Client, *kubernetes.Clientset, error)
 }
@@ -133,8 +132,24 @@ type K8sServiceImpl struct {
 	opts                Options
 }
 
+func (impl *K8sServiceImpl) GetCustomHttpClientConfig() *CustomK8sHttpTransportConfig {
+	return impl.httpTransportConfig.customHttpClientConfig
+}
+
+func (impl *K8sServiceImpl) GetDefaultHttpClientConfig() *DefaultK8sHttpTransportConfig {
+	return impl.httpTransportConfig.defaultHttpClientConfig
+}
+
 type Options struct {
 	transportType TransportType
+}
+
+func (opt *Options) SetTransportType(transportType TransportType) {
+	opt.transportType = transportType
+}
+
+func (opt *Options) GetTransportType() TransportType {
+	return opt.transportType
 }
 
 func NewK8sUtil(
@@ -161,22 +176,28 @@ func NewK8sUtil(
 
 func (impl *K8sServiceImpl) NewKubeConfigImpl(
 	httpTransportConfig HttpTransportInterface,
+	kubeConfigBuilder KubeConfigBuilderInterface,
 ) *KubeConfigImpl {
 	return &KubeConfigImpl{
 		logger:              impl.logger,
 		runTimeConfig:       impl.runTimeConfig,
 		kubeconfig:          impl.kubeconfig,
 		httpTransportConfig: httpTransportConfig,
+		kubeConfigBuilder:   kubeConfigBuilder,
 	}
 }
 
+// WithHttpTransport toggles between default and overridden transport.
+// This is used to create a new KubeConfigImpl with the specified transport type.
+// It is used in K8sUtilExtended to override the NewKubeConfigBuilder.
+// NOTE: Any modifications here is subject to change in K8sUtilExtended as well.
 func (impl *K8sServiceImpl) WithHttpTransport(opt Options) KubeConfigInterface {
-	switch opt.transportType {
+	switch opt.GetTransportType() {
 	case TransportTypeDefault:
-		return impl.NewKubeConfigImpl(impl.httpTransportConfig.defaultHttpClientConfig)
+		return impl.NewKubeConfigImpl(impl.GetDefaultHttpClientConfig(), NewKubeConfigBuilder())
 	default:
 		// default fallback is custom transport
-		return impl.NewKubeConfigImpl(impl.httpTransportConfig.customHttpClientConfig)
+		return impl.NewKubeConfigImpl(impl.GetCustomHttpClientConfig(), NewKubeConfigBuilder())
 	}
 }
 
@@ -184,13 +205,17 @@ type K8sServiceOpts func(Options) Options
 
 // WithDefaultHttpTransport ensures the transport type is default and rest config is not modified
 // This is necessary when we use clients such as SPDY, that has its own transport
-func WithDefaultHttpTransport(opts Options) Options {
-	opts.transportType = TransportTypeDefault
-	return opts
+func WithDefaultHttpTransport() K8sServiceOpts {
+	return func(opts Options) Options {
+		opts.transportType = TransportTypeDefault
+		return opts
+	}
 }
 
 // WithOverriddenHttpTransport ensures the transport is overridden and rest config is modified
-func WithOverriddenHttpTransport(opts Options) Options {
-	opts.transportType = TransportTypeOverridden
-	return opts
+func WithOverriddenHttpTransport() K8sServiceOpts {
+	return func(opts Options) Options {
+		opts.transportType = TransportTypeOverridden
+		return opts
+	}
 }
