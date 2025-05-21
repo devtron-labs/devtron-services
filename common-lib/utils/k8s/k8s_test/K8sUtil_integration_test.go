@@ -14,27 +14,35 @@
  * limitations under the License.
  */
 
-package k8s
+package k8s_test
 
 import (
+	"flag"
 	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/k8s"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
+	"io"
+	"os"
 	"testing"
 )
 
-var k8sUtilClient *K8sServiceImpl
-var clusterConfig *ClusterConfig
-
-func init() {
-	config := &RuntimeConfig{LocalDevMode: true}
+func intiK8sUtil() *k8s.K8sServiceImpl {
+	config := &k8s.RuntimeConfig{LocalDevMode: true}
 	logger, _ := utils.NewSugardLogger()
-	k8sUtilClient, _ = NewK8sUtil(logger, config)
-	clusterConfig = &ClusterConfig{
-		Host:        "",
-		BearerToken: "",
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	flag.CommandLine.SetOutput(io.Discard)
+	flag.CommandLine.Usage = flag.Usage
+	k8sUtilClient, _ := k8s.NewK8sUtil(logger, config)
+	return k8sUtilClient
+}
+
+func getDefaultClusterConfig() *k8s.ClusterConfig {
+	return &k8s.ClusterConfig{
+		Host: commonBean.DefaultClusterUrl,
 	}
 }
 
-func TestK8sUtil_checkIfNsExists(t *testing.T) {
+func TestK8sUtil_GetNsIfExists(t *testing.T) {
 	tests := []struct {
 		name       string
 		namespace  string
@@ -56,8 +64,8 @@ func TestK8sUtil_checkIfNsExists(t *testing.T) {
 	for _, tt := range tests {
 		t.SkipNow()
 		t.Run(tt.name, func(t *testing.T) {
-			impl := k8sUtilClient
-			k8s, _ := impl.GetCoreV1Client(clusterConfig)
+			impl := intiK8sUtil()
+			k8s, _ := impl.GetCoreV1Client(getDefaultClusterConfig())
 			_, gotExists, err := impl.GetNsIfExists(tt.namespace, k8s)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("K8sServiceImpl.checkIfNsExists() error = %v, wantErr %v", err, tt.wantErr)
@@ -85,12 +93,12 @@ func TestK8sUtil_CreateNsIfNotExists(t *testing.T) {
 	for _, tt := range tests {
 		t.SkipNow()
 		t.Run(tt.name, func(t *testing.T) {
-			impl := k8sUtilClient
-			if _, _, err := impl.CreateNsIfNotExists(tt.namespace, clusterConfig); (err != nil) != tt.wantErr {
+			impl := intiK8sUtil()
+			if _, _, err := impl.CreateNsIfNotExists(tt.namespace, getDefaultClusterConfig()); (err != nil) != tt.wantErr {
 				t.Errorf("K8sServiceImpl.CreateNsIfNotExists() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			k8s, _ := impl.GetCoreV1Client(clusterConfig)
-			if err := impl.deleteNs(tt.namespace, k8s); (err != nil) != tt.wantErr {
+			k8s, _ := impl.GetCoreV1Client(getDefaultClusterConfig())
+			if err := impl.DeleteNs(tt.namespace, k8s); (err != nil) != tt.wantErr {
 				t.Errorf("K8sServiceImpl.deleteNs() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
