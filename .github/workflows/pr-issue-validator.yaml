@@ -20,7 +20,7 @@ on:
     #   - 'manifests/'
     #   - 'sample-docker-templates/'
 jobs:
-  pr-validation:
+  validate-PR-issue:
     runs-on: ubuntu-latest
 
     steps:
