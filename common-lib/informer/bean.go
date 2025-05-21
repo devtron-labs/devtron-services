@@ -21,8 +21,8 @@ const (
 	ClusterActionAdd             = "add"
 	ClusterActionUpdate          = "update"
 	ClusterActionDelete          = "delete"
-	SecretFieldAction            = "action"
-	SecretFieldClusterId         = "cluster_id"
+	CmFieldAction                = "action"
+	CmFieldClusterId             = "cluster_id"
 )
 
 const (
