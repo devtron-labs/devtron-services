@@ -113,6 +113,7 @@ type K8sService interface {
 	UpdateConfigMap(namespace string, cm *v1.ConfigMap, client *v12.CoreV1Client) (*v1.ConfigMap, error)
 	CreateConfigMap(namespace string, cm *v1.ConfigMap, client *v12.CoreV1Client) (*v1.ConfigMap, error)
 	CreateConfigMapObject(namespace string, data map[string]string, configMapName string, client *v12.CoreV1Client, labels map[string]string, annotations map[string]string) (*v1.ConfigMap, error)
+	DeleteConfigMap(namespace string, name string, client *v12.CoreV1Client) error
 	GetConfigMap(namespace string, name string, client *v12.CoreV1Client) (*v1.ConfigMap, error)
 	GetConfigMapWithCtx(ctx context.Context, namespace string, name string, client *v12.CoreV1Client) (*v1.ConfigMap, error)
 	GetNsIfExists(namespace string, client *v12.CoreV1Client) (ns *v1.Namespace, exists bool, err error)
@@ -425,6 +426,15 @@ func (impl *K8sServiceImpl) CreateConfigMapObject(namespace string, data map[str
 	}
 
 	return impl.CreateConfigMap(namespace, configMap, client)
+}
+
+func (impl *K8sServiceImpl) DeleteConfigMap(namespace string, name string, client *v12.CoreV1Client) error {
+	err := client.ConfigMaps(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+	if err != nil {
+		impl.logger.Errorw("error in deleting cm", "namespace", namespace, "err", err)
+		return err
+	}
+	return nil
 }
 
 func (impl *K8sServiceImpl) UpdateConfigMap(namespace string, cm *v1.ConfigMap, client *v12.CoreV1Client) (*v1.ConfigMap, error) {
