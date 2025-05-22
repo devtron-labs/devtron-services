@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/Knetic/govaluate"
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/async"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/image-scanner/common"
 	cliUtil "github.com/devtron-labs/image-scanner/internals/step-lib/util/cli-util"
@@ -84,6 +85,7 @@ type ImageScanServiceImpl struct {
 	DockerArtifactStoreRepository             repository.DockerArtifactStoreRepository
 	RegistryIndexMappingRepository            repository.RegistryIndexMappingRepository
 	CliCommandEnv                             []string
+	asyncRunnable                             *async.Runnable
 }
 
 func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository repository.ImageScanHistoryRepository,
@@ -96,7 +98,8 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 	scanToolStepRepository repository.ScanToolStepRepository,
 	scanStepConditionMappingRepository repository.ScanStepConditionMappingRepository,
 	imageScanConfig *ImageScanConfig,
-	dockerArtifactStoreRepository repository.DockerArtifactStoreRepository, registryIndexMappingRepository repository.RegistryIndexMappingRepository) *ImageScanServiceImpl {
+	dockerArtifactStoreRepository repository.DockerArtifactStoreRepository, registryIndexMappingRepository repository.RegistryIndexMappingRepository,
+	asyncRunnable *async.Runnable) *ImageScanServiceImpl {
 	imageScanService := &ImageScanServiceImpl{Logger: logger, ScanHistoryRepository: scanHistoryRepository, ScanResultRepository: scanResultRepository,
 		ScanObjectMetaRepository: scanObjectMetaRepository, CveStoreRepository: cveStoreRepository,
 		ImageScanDeployInfoRepository:             imageScanDeployInfoRepository,
@@ -110,8 +113,15 @@ func NewImageScanServiceImpl(logger *zap.SugaredLogger, scanHistoryRepository re
 		DockerArtifactStoreRepository:             dockerArtifactStoreRepository,
 		RegistryIndexMappingRepository:            registryIndexMappingRepository,
 		CliCommandEnv:                             os.Environ(),
+		asyncRunnable:                             asyncRunnable,
 	}
-	imageScanService.HandleProgressingScans()
+	// Only check for progressing scans if the flag is enabled
+	if imageScanConfig.EnableProgressingScanCheck {
+		logger.Infow("checking for progressing scans at startup")
+		asyncRunnable.Execute(imageScanService.HandleProgressingScans)
+	} else {
+		logger.Infow("skipping progressing scans check at startup as it is disabled")
+	}
 	return imageScanService
 }
 
@@ -125,10 +135,11 @@ func GetImageScannerConfig() (*ImageScanConfig, error) {
 }
 
 type ImageScanConfig struct {
-	ScannerType           string `env:"SCANNER_TYPE" envDefault:""`
-	ScanTryCount          int    `env:"IMAGE_SCAN_TRY_COUNT" envDefault:"1"`
-	ScanImageTimeout      int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`      // Time is considered in minutes
-	ScanImageAsyncTimeout int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"` // Time is considered in minutes
+	ScannerType                string `env:"SCANNER_TYPE" envDefault:""`
+	ScanTryCount               int    `env:"IMAGE_SCAN_TRY_COUNT" envDefault:"1"`
+	ScanImageTimeout           int    `env:"IMAGE_SCAN_TIMEOUT" envDefault:"10"`              // Time is considered in minutes
+	ScanImageAsyncTimeout      int    `env:"IMAGE_SCAN_ASYNC_TIMEOUT" envDefault:"3"`         // Time is considered in minutes
+	EnableProgressingScanCheck bool   `env:"ENABLE_PROGRESSING_SCAN_CHECK" envDefault:"true"` // Flag to enable/disable checking for progressing scans at startup
 }
 
 func (impl *ImageScanServiceImpl) GetImageToBeScannedAndFetchCliEnv(scanEvent *bean2.ImageScanEvent) (string, error) {
@@ -954,63 +965,63 @@ func (impl *ImageScanServiceImpl) HandleProgressingScans() {
 		impl.Logger.Errorw("error in getting all scans by running state", "err", err)
 		return
 	}
-
-	var executionHistoryDirPath string
-	flagForDeleting := false
-	// Create Folder for output data for execution history only if any pending scans are there due to pod died
 	if len(scanHistories) > 0 {
-		flagForDeleting = true
+		var executionHistoryDirPath string
+		// Create Folder for output data for execution history only if any pending scans are there due to pod died
 		executionHistoryDirPath = impl.CreateFolderForOutputData(scanHistories[0].ImageScanExecutionHistoryId)
-	}
-	wg := &sync.WaitGroup{}
-	wg.Add(len(scanHistories))
-	imagescanExecutionHistories, err := impl.ScanHistoryRepository.FindAll()
-	if err != nil {
-		impl.Logger.Errorw("error in getting scan histories on start up", "err", err)
-		return
-	}
-	imageScanToolMetadatas, err := impl.ScanToolMetadataRepository.FindAllActiveTools()
-	if err != nil {
-		impl.Logger.Errorw("error in getting all active tools", "err", err)
-	}
-	imageScanExecutionHistoryMap := make(map[int]*repository.ImageScanExecutionHistory)
-	imageScanToolsMap := make(map[int]*repository.ScanToolMetadata)
-
-	for _, imageScanExecutionHistory := range imagescanExecutionHistories {
-		imageScanExecutionHistoryMap[imageScanExecutionHistory.Id] = imageScanExecutionHistory
-	}
-	for _, imageScanToolMetaData := range imageScanToolMetadatas {
-		imageScanToolsMap[imageScanToolMetaData.Id] = imageScanToolMetaData
-	}
-
-	//System doing image scanning for all pending scans
-	for _, scanHistory := range scanHistories {
-		scanEvent := bean2.ImageScanEvent{}
-		scanEventJson := imageScanExecutionHistoryMap[scanHistory.ImageScanExecutionHistoryId].SourceMetadataJson
-		if len(scanEventJson) == 0 {
-			return
+		imageScanExecutionHistoryIds := make([]int, 0, len(scanHistories))
+		for _, scanHistory := range scanHistories {
+			imageScanExecutionHistoryIds = append(imageScanExecutionHistoryIds, scanHistory.ImageScanExecutionHistoryId)
 		}
-		scanTool := imageScanToolsMap[scanHistory.ScanToolId]
-		err = json.Unmarshal([]byte(scanEventJson), &scanEvent)
+		wg := &sync.WaitGroup{}
+		wg.Add(len(scanHistories))
+		imagescanExecutionHistories, err := impl.ScanHistoryRepository.FindByIds(imageScanExecutionHistoryIds)
 		if err != nil {
-			impl.Logger.Errorw("error in un-marshaling", "err", err)
+			impl.Logger.Errorw("error in getting scan histories on start up", "err", err)
 			return
 		}
-		imageScanRenderDto, err := impl.GetImageScanRenderDto(scanEvent.DockerRegistryId, &scanEvent)
+		imageScanToolMetadatas, err := impl.ScanToolMetadataRepository.FindAllActiveTools()
 		if err != nil {
-			impl.Logger.Errorw("service error, GetImageScanRenderDto", "dockerRegistryId", scanEvent.DockerRegistryId, "err", err)
+			impl.Logger.Errorw("error in getting all active tools", "err", err)
 			return
 		}
-		_, _, err = impl.ScanImageForTool(scanTool, scanHistory.ImageScanExecutionHistoryId, executionHistoryDirPath, wg, 1, context.Background(), imageScanRenderDto)
-		if err != nil {
-			impl.Logger.Errorw("error in scanning image", "err", err)
-			return
-		}
-	}
-	wg.Wait()
+		imageScanExecutionHistoryMap := make(map[int]*repository.ImageScanExecutionHistory)
+		imageScanToolsMap := make(map[int]*repository.ScanToolMetadata)
 
-	//deleting executionDirectoryPath
-	if flagForDeleting {
+		for _, imageScanExecutionHistory := range imagescanExecutionHistories {
+			imageScanExecutionHistoryMap[imageScanExecutionHistory.Id] = imageScanExecutionHistory
+		}
+		for _, imageScanToolMetaData := range imageScanToolMetadatas {
+			imageScanToolsMap[imageScanToolMetaData.Id] = imageScanToolMetaData
+		}
+
+		//System doing image scanning for all pending scans
+		for _, scanHistory := range scanHistories {
+			scanEvent := bean2.ImageScanEvent{}
+			scanEventJson := imageScanExecutionHistoryMap[scanHistory.ImageScanExecutionHistoryId].SourceMetadataJson
+			if len(scanEventJson) == 0 {
+				return
+			}
+			scanTool := imageScanToolsMap[scanHistory.ScanToolId]
+			err = json.Unmarshal([]byte(scanEventJson), &scanEvent)
+			if err != nil {
+				impl.Logger.Errorw("error in un-marshaling", "err", err)
+				return
+			}
+			imageScanRenderDto, err := impl.GetImageScanRenderDto(scanEvent.DockerRegistryId, &scanEvent)
+			if err != nil {
+				impl.Logger.Errorw("service error, GetImageScanRenderDto", "dockerRegistryId", scanEvent.DockerRegistryId, "err", err)
+				return
+			}
+			_, _, err = impl.ScanImageForTool(scanTool, scanHistory.ImageScanExecutionHistoryId, executionHistoryDirPath, wg, 1, context.Background(), imageScanRenderDto)
+			if err != nil {
+				impl.Logger.Errorw("error in scanning image", "err", err)
+				return
+			}
+		}
+		wg.Wait()
+
+		//deleting executionDirectoryPath
 		err = os.Remove(executionHistoryDirPath)
 		if err != nil {
 			impl.Logger.Errorw("error in deleting executionHistoryDirectory", "executionHistoryDirPath", executionHistoryDirPath, "err", err)

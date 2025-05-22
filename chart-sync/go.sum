@@ -54,8 +54,8 @@ github.com/creack/pty v1.1.18/go.mod h1:MOBLtS5ELjhRRrroQr9kyvTxUAFNvYEK993ew/Vr
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250425083942-5092ec30954c h1:lIIGAMWM4UwSwrd5Ljm1x4vtNRm1s0q2mTqdQWX8L6Q=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250425083942-5092ec30954c/go.mod h1:zkNShlkcHxsmnL0gKNbs0uyRL8lZonGKr5Km63uTLI0=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250519113737-b060cea3a495 h1:aEJw3HPicUqpwBIZos5lsiNIuL1c4w5bqadkHyj+dAA=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250519113737-b060cea3a495/go.mod h1:CXQGEo+kZc7JPX5hn4jJf1msal9q/ExSdAYGkHNPnQw=
 github.com/devtron-labs/helm/v3 v3.14.1-0.20240401080259-90238cf69e42 h1:pJmK44QaSztOiZe0iQHNf0sdy5KwkAeceydyhOG4RaY=
 github.com/devtron-labs/helm/v3 v3.14.1-0.20240401080259-90238cf69e42/go.mod h1:v6myVbyseSBJTzhmeE39UcPLNv6cQK6qss3dvgAySaE=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
