@@ -53,35 +53,30 @@ const GIT_AKS_PASS = "/git-ask-pass.sh"
 const DefaultRemoteName = "origin"
 
 func (impl *GitCliManagerImpl) Fetch(gitContext GitContext, rootDir string) (response, errMsg string, err error) {
-
 	log.Println(util.DEVTRON, "git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
-
-	tlsPathInfo, err := git_manager.CreateFilesForTlsData(git_manager.BuildTlsData(gitContext.TLSKey, gitContext.TLSCertificate, gitContext.CACert, gitContext.TLSVerificationEnabled), git_manager.TLS_FILES_DIR)
-	if err != nil {
-		//making it non-blocking
-		log.Println("error encountered in createFilesForTlsData", "err", err)
-	}
-	defer git_manager.DeleteTlsFiles(tlsPathInfo)
-
-	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
-	log.Println(util.DEVTRON, "fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
-	return output, errMsg, err
+	return impl.handleTLSDataAndExecuteCommand(cmd, gitContext)
 }
 
 func (impl *GitCliManagerImpl) Checkout(gitContext GitContext, rootDir string, checkout string) (response, errMsg string, err error) {
 	log.Println(util.DEVTRON, "git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout, "--force")
+	return impl.handleTLSDataAndExecuteCommand(cmd, gitContext)
+}
 
+func (impl *GitCliManagerImpl) handleTLSDataAndExecuteCommand(cmd *exec.Cmd, gitContext GitContext) (response, errMsg string, err error) {
 	tlsPathInfo, err := git_manager.CreateFilesForTlsData(git_manager.BuildTlsData(gitContext.TLSKey, gitContext.TLSCertificate, gitContext.CACert, gitContext.TLSVerificationEnabled), git_manager.TLS_FILES_DIR)
 	if err != nil {
 		//making it non-blocking
 		log.Println("error encountered in createFilesForTlsData", "err", err)
 	}
-	defer git_manager.DeleteTlsFiles(tlsPathInfo)
 
 	output, errMsg, err := impl.RunCommandWithCred(cmd, gitContext.Auth.Username, gitContext.Auth.Password, tlsPathInfo)
-	log.Println(util.DEVTRON, "checkout output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	log.Println(util.DEVTRON, "checkout output", "opt", output, "errMsg", errMsg, "error", err)
+
+	//deleting tls files
+	git_manager.DeleteTlsFiles(tlsPathInfo)
+
 	return output, errMsg, err
 }
 
