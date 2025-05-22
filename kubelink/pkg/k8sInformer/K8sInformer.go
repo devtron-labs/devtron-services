@@ -202,7 +202,9 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 				startTime := time.Now()
 				impl.logger.Debugw("CLUSTER_ADD_INFORMER: cluster cm add event received", "obj", obj, "time", time.Now())
 				if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
-					// todo check if an extra check is req or not for checking label of cm , if equals
+					if labelValue, exists := cmObject.Labels["type"]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+						return
+					}
 					data := cmObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
@@ -233,6 +235,9 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 				startTime := time.Now()
 				impl.logger.Debugw("CLUSTER_UPDATE_INFORMER: cluster cm update event received", "oldObj", oldObj, "newObj", newObj, "time", time.Now())
 				if cmObject, ok := newObj.(*coreV1.ConfigMap); ok {
+					if labelValue, exists := cmObject.Labels["type"]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+						return
+					}
 					data := cmObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
@@ -260,6 +265,9 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 				startTime := time.Now()
 				impl.logger.Debugw("CLUSTER_DELETE_INFORMER: cm delete event received", "obj", obj, "time", time.Now())
 				if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
+					if labelValue, exists := cmObject.Labels["type"]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+						return
+					}
 					data := cmObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
