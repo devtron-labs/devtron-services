@@ -27,6 +27,7 @@ type ClusterInfo struct {
 
 const (
 	ClusterModifyEventFieldSelector = "type==cluster.request/modify"
+	ClusterModifyEventLabelSelector = "type=cluster.request/modify"
 	InformerAlreadyExistMessage     = "INFORMER_ALREADY_EXIST"
 
 	ExitCode143Error   = "Error (exit code 143)"

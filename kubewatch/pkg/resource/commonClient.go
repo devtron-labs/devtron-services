@@ -27,7 +27,7 @@ import (
 
 type InformerClient interface {
 	GetSharedInformerClient(sharedInformerType bean.SharedInformerType) SharedInformer
-	GetSecretInformerFactory() InformerFactory[coreV1.Secret]
+	GetConfigMapInformerFactory() InformerFactory[coreV1.ConfigMap]
 	GetPodInformerFactory() InformerFactory[coreV1.Pod]
 }
 
