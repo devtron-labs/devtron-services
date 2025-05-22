@@ -192,7 +192,7 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 	if clusterInfo.ClusterName == commonBean.DEFAULT_CLUSTER {
 		impl.logger.Debugw("starting informer, reading new cluster request for default cluster")
 		labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			opts.LabelSelector = "type==cluster.request/modify"
+			opts.LabelSelector = "type=cluster.request/modify"
 		})
 		informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, labelOptions)
 		stopper := make(chan struct{})
