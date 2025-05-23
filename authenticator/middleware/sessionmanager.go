@@ -190,7 +190,7 @@ func (mgr *SessionManager) Parse(tokenString string) (jwt.Claims, error) {
 }
 
 // ParseApiToken tries to parse the provided string and returns the token claims for api-token user.
-func (mgr *SessionManager) ParseApiToken(tokenString string, expectedIssuer string) (jwt.Claims, error) {
+func (mgr *SessionManager) ParseApiToken(tokenString string) (jwt.Claims, error) {
 	var claims jwt.MapClaims
 
 	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
@@ -202,10 +202,6 @@ func (mgr *SessionManager) ParseApiToken(tokenString string, expectedIssuer stri
 	}
 	if !token.Valid {
 		return nil, errors.New("token is invalid")
-	}
-	// Validate that the issuer matches the expected one
-	if claims["iss"] != expectedIssuer {
-		return nil, fmt.Errorf("invalid issuer: expected %s, got %s", expectedIssuer, claims["iss"])
 	}
 	return token.Claims, nil
 }
@@ -226,9 +222,9 @@ func (mgr *SessionManager) VerifyToken(tokenString string) (jwt.Claims, error) {
 		// Argo CD signed token
 		return mgr.Parse(tokenString)
 	case ApiTokenClaimIssuer:
-		return mgr.ParseApiToken(tokenString, ApiTokenClaimIssuer)
+		return mgr.ParseApiToken(tokenString)
 	case LicenseManagerClaimIssuer:
-		return mgr.ParseApiToken(tokenString, LicenseManagerClaimIssuer)
+		return mgr.ParseApiToken(tokenString)
 	default:
 		// IDP signed token
 		prov, err := mgr.provider()
