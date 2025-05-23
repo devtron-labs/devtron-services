@@ -121,6 +121,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 		AddFuncHandler(addFunc).
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
+
 	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
 	cmFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
