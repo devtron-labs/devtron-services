@@ -18,6 +18,7 @@ package cluster
 
 import (
 	"errors"
+	"github.com/devtron-labs/common-lib/informer"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
@@ -95,7 +96,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	}
 	impl.logger.Debug("starting informer, reading new cluster request for default cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.LabelSelector = informerBean.ClusterModifyEventLabelSelector
+		opts.LabelSelector = informer.ClusterModifyEventCmLabelValue
 	})
 	// addFunc is called when a new cm is created
 	addFunc := func(cmObject *coreV1.ConfigMap) {
