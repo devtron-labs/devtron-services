@@ -96,7 +96,7 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	}
 	impl.logger.Debug("starting informer, reading new cluster request for default cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.LabelSelector = informer.ClusterModifyEventCmLabelValue
+		opts.LabelSelector = informer.ClusterModifyEventCmLabelKeyValue
 	})
 	// addFunc is called when a new cm is created
 	addFunc := func(cmObject *coreV1.ConfigMap) {
