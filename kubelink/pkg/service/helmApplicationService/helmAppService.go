@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package helmApplicationService
 
 import (
@@ -22,16 +23,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	registry2 "github.com/devtron-labs/common-lib/helmLib/registry"
+	"github.com/devtron-labs/common-lib/helmLib/registry"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/kubelink/converter"
-	error2 "github.com/devtron-labs/kubelink/error"
+	customErr "github.com/devtron-labs/kubelink/error"
 	repository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/commonHelmService"
 	"github.com/devtron-labs/kubelink/pkg/service/helmApplicationService/adapter"
 	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/registry"
+	helmRegistry "helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	"net/url"
 	"path"
@@ -57,7 +58,7 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/repo"
 	"io/ioutil"
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -120,7 +121,7 @@ type HelmAppServiceImpl struct {
 	pubsubClient        *pubsub_lib.PubSubClientServiceImpl
 	clusterRepository   repository.ClusterRepository
 	converter           converter.ClusterBeanConverter
-	registrySettings    registry2.SettingsFactory
+	registrySettings    registry.SettingsFactory
 	common              commonHelmService.CommonHelmService
 	resourceTreeService commonHelmService.ResourceTreeService
 }
@@ -128,7 +129,7 @@ type HelmAppServiceImpl struct {
 func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService commonHelmService.K8sService,
 	k8sInformer k8sInformer.K8sInformer, helmReleaseConfig *globalConfig.HelmReleaseConfig,
 	k8sUtil k8sUtils.K8sService, converter converter.ClusterBeanConverter,
-	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry2.SettingsFactory,
+	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry.SettingsFactory,
 	resourceTreeService commonHelmService.ResourceTreeService) (*HelmAppServiceImpl, error) {
 
 	var pubsubClient *pubsub_lib.PubSubClientServiceImpl
@@ -177,7 +178,7 @@ func (impl *HelmAppServiceImpl) GetRandomString() string {
 
 func (impl *HelmAppServiceImpl) getDeployedAppDetails(config *client.ClusterConfig) (deployedApps []*client.DeployedAppDetail, err error) {
 	if impl.helmReleaseConfig.IsHelmReleaseCachingEnabled() {
-		impl.logger.Infow("Fetching helm release using Cache")
+		impl.logger.Infow("fetching helm release using Cache")
 		return impl.K8sInformer.GetAllReleaseByClusterId(int(config.GetClusterId())), nil
 	}
 
@@ -199,14 +200,14 @@ func (impl *HelmAppServiceImpl) getDeployedAppDetails(config *client.ClusterConf
 	}
 
 	impl.logger.Debug("fetching all release list from helm")
-	releases, err := helmAppClient.ListAllReleases()
+	helmReleases, err := helmAppClient.ListAllReleases()
 	if err != nil {
 		impl.logger.Errorw("error in getting releases list ", "clusterId", config.ClusterId, "err", err)
 		return deployedApps, err
 	}
 
-	for _, item := range releases {
-		deployedApps = append(deployedApps, adapter.NewDeployedAppDetail(config, item))
+	for _, helmRelease := range helmReleases {
+		deployedApps = append(deployedApps, adapter.NewDeployedAppDetail(config, adapter.NewRelease(helmRelease)))
 	}
 	return deployedApps, nil
 }
@@ -225,18 +226,18 @@ func (impl *HelmAppServiceImpl) GetApplicationListForCluster(config *client.Clus
 	return deployedApp
 }
 
-func (impl HelmAppServiceImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
+func (impl *HelmAppServiceImpl) GetResourceTreeForExternalResources(ctx context.Context, req *client.ExternalResourceTreeRequest) (*bean.ResourceTreeResponse, error) {
 	return impl.common.GetResourceTreeForExternalResources(ctx, req)
 }
 
-func (impl HelmAppServiceImpl) BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error) {
+func (impl *HelmAppServiceImpl) BuildAppDetail(ctx context.Context, req *client.AppDetailRequest) (*bean.AppDetail, error) {
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
 		if errors.Is(err, driver.ErrReleaseNotFound) {
 			return &bean.AppDetail{ReleaseExists: false}, err
 		}
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -301,7 +302,7 @@ func (impl *HelmAppServiceImpl) FetchApplicationStatus(req *client.AppDetailRequ
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -325,12 +326,12 @@ func (impl *HelmAppServiceImpl) FetchApplicationStatus(req *client.AppDetailRequ
 
 // FetchApplicationStatusV2 gets the application status of helm release using cache if preferred which can be used anywhere as it gives unfiltered status
 // unlike its counterpart FetchApplicationStatus which filters down status into healthy or non-healthy since it is only used for deployment status calculation.
-func (impl HelmAppServiceImpl) FetchApplicationStatusV2(ctx context.Context, req *client.AppDetailRequest) (*client.AppStatus, error) {
+func (impl *HelmAppServiceImpl) FetchApplicationStatusV2(ctx context.Context, req *client.AppDetailRequest) (*client.AppStatus, error) {
 	helmAppStatus := &client.AppStatus{}
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -350,7 +351,7 @@ func (impl *HelmAppServiceImpl) GetHelmAppValues(req *client.AppDetailRequest) (
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.Namespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -368,7 +369,7 @@ func (impl *HelmAppServiceImpl) GetHelmAppValues(req *client.AppDetailRequest) (
 		return nil, err
 	}
 
-	appDetail := adapter.ParseDeployedAppDetail(req.ClusterConfig.ClusterId, req.ClusterConfig.ClusterName, helmRelease)
+	appDetail := adapter.ParseDeployedAppDetail(req.ClusterConfig.ClusterId, req.ClusterConfig.ClusterName, adapter.NewRelease(helmRelease))
 	releaseInfo.DeployedAppDetail = appDetail
 	return releaseInfo, nil
 
@@ -469,7 +470,7 @@ func (impl *HelmAppServiceImpl) GetDeploymentHistory(req *client.AppDetailReques
 	helmReleases, err := impl.getHelmReleaseHistory(req.ClusterConfig, req.Namespace, req.ReleaseName, impl.helmReleaseConfig.MaxCountForHelmRelease)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release history ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -516,7 +517,7 @@ func (impl *HelmAppServiceImpl) GetDesiredManifest(req *client.ObjectRequest) (*
 	helmRelease, err := impl.common.GetHelmRelease(req.ClusterConfig, req.ReleaseNamespace, req.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -557,7 +558,7 @@ func (impl *HelmAppServiceImpl) UninstallRelease(releaseIdentifier *client.Relea
 	err = helmClient.UninstallReleaseByName(releaseIdentifier.ReleaseName)
 	if err != nil {
 		impl.logger.Errorw("Error in uninstall release ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -575,14 +576,14 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 	upgradeReleaseResponse := &client.UpgradeReleaseResponse{
 		Success: true,
 	}
-	if request.ChartContent == nil {
+	if isExternalHelmApp(request.ChartContent) {
 		// external helm app upgrade flow
 		releaseIdentifier := request.ReleaseIdentifier
 		helmClientObj, err := impl.getHelmClient(releaseIdentifier.ClusterConfig, releaseIdentifier.ReleaseNamespace)
 		if err != nil {
 			return nil, err
 		}
-		registryClient, err := registry.NewClient()
+		registryClient, err := helmRegistry.NewClient()
 		if err != nil {
 			impl.logger.Errorw(HELM_CLIENT_ERROR, "err", err)
 			return nil, err
@@ -591,7 +592,7 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 		helmRelease, err := impl.common.GetHelmRelease(releaseIdentifier.ClusterConfig, releaseIdentifier.ReleaseNamespace, releaseIdentifier.ReleaseName)
 		if err != nil {
 			impl.logger.Errorw("Error in getting helm release ", "err", err)
-			internalErr := error2.ConvertHelmErrorToInternalError(err)
+			internalErr := customErr.ConvertHelmErrorToInternalError(err)
 			if internalErr != nil {
 				err = internalErr
 			}
@@ -610,7 +611,7 @@ func (impl *HelmAppServiceImpl) UpgradeRelease(ctx context.Context, request *cli
 		_, err = helmClientObj.UpgradeRelease(context.Background(), helmRelease.Chart, updateChartSpec)
 		if err != nil {
 			impl.logger.Errorw("Error in upgrade release ", "err", err)
-			internalErr := error2.ConvertHelmErrorToInternalError(err)
+			internalErr := customErr.ConvertHelmErrorToInternalError(err)
 			if internalErr != nil {
 				err = internalErr
 			}
@@ -644,7 +645,7 @@ func (impl *HelmAppServiceImpl) GetDeploymentDetail(request *client.DeploymentDe
 	helmReleases, err := impl.getHelmReleaseHistory(releaseIdentifier.ClusterConfig, releaseIdentifier.ReleaseNamespace, releaseIdentifier.ReleaseName, impl.helmReleaseConfig.MaxCountForHelmRelease)
 	if err != nil {
 		impl.logger.Errorw("Error in getting helm release history ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -683,6 +684,13 @@ func (impl *HelmAppServiceImpl) InstallRelease(ctx context.Context, request *cli
 
 }
 
+func isExternalHelmApp(chartContent *client.ChartContent) bool {
+	if chartContent == nil {
+		return true
+	}
+	return false
+}
+
 func parseOCIChartName(registryUrl, repoName string) (string, error) {
 	// helm package expects chart name to be in this format
 	if !strings.Contains(strings.ToLower(registryUrl), "https") && !strings.Contains(strings.ToLower(registryUrl), "http") {
@@ -712,102 +720,36 @@ func (impl *HelmAppServiceImpl) installRelease(ctx context.Context, request *cli
 		return nil, err
 	}
 
-	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
-	defer func() {
-		if registryConfig != nil {
-			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
-			if err != nil {
-				impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
-			}
-		}
-	}()
+	registryClient, cleanup, err := impl.setupRegistryClient(request)
 	if err != nil {
-		impl.logger.Errorw("error in getting registry config from registry proto", "registryName", request.RegistryCredential.RegistryName, "err", err)
 		return nil, err
 	}
-	// oci registry client
-	var registryClient *registry.Client
-	if registryConfig != nil {
-		settingsGetter, err := impl.registrySettings.GetSettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw("error in getting registry settings", "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return nil, err
-		}
-		settings, err := settingsGetter.GetRegistrySettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw(HELM_CLIENT_ERROR, "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return nil, err
-		}
-		registryClient = settings.RegistryClient
-		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
-	}
+	defer cleanup()
 
-	var chartName string
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return nil, err
-		}
-
-	case false:
-		chartRepoRequest := request.ChartRepository
-		chartRepoName := chartRepoRequest.Name
-		// Add or update chart repo starts
-		chartRepo := repo.Entry{
-			Name:     chartRepoName,
-			URL:      chartRepoRequest.Url,
-			Username: chartRepoRequest.Username,
-			Password: chartRepoRequest.Password,
-			// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
-			PassCredentialsAll:    true,
-			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
-		}
-		impl.logger.Debug("Adding/Updating Chart repo")
-		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
-		if err != nil {
-			impl.logger.Errorw("Error in add/update chart repo ", "err", err)
-			internalErr := error2.ConvertHelmErrorToInternalError(err)
-			if internalErr != nil {
-				err = internalErr
-			}
-			return nil, err
-		}
-		chartName = fmt.Sprintf("%s/%s", chartRepoName, request.ChartName)
-		// Add or update chart repo ends
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return nil, err
 	}
-
-	// Install release starts
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:      releaseIdentifier.ReleaseName,
-		Namespace:        releaseIdentifier.ReleaseNamespace,
-		ValuesYaml:       request.ValuesYaml,
-		ChartName:        chartName,
-		Version:          request.ChartVersion,
-		DependencyUpdate: true,
-		UpgradeCRDs:      true,
-		CreateNamespace:  false,
-		DryRun:           dryRun,
-		RegistryClient:   registryClient,
-	}
+	chartSpec.DryRun = dryRun
+	chartSpec.DependencyUpdate = true
+	chartSpec.UpgradeCRDs = true
+	chartSpec.CreateNamespace = false
 
 	impl.logger.Debugw("Installing release", "name", releaseIdentifier.ReleaseName, "namespace", releaseIdentifier.ReleaseNamespace, "dry-run", dryRun)
-	switch impl.helmReleaseConfig.RunHelmInstallInAsyncMode {
-	case false:
+	if !runInstallInAsyncMode(request.InstallAppVersionHistoryId, impl.helmReleaseConfig.RunHelmInstallInAsyncMode) {
 		impl.logger.Debugw("Installing release", "name", releaseIdentifier.ReleaseName, "namespace", releaseIdentifier.ReleaseNamespace, "dry-run", dryRun)
 		rel, err := helmClientObj.InstallChart(context.Background(), chartSpec)
 		if err != nil {
 			impl.logger.Errorw("Error in install release ", "err", err)
-			internalErr := error2.ConvertHelmErrorToInternalError(err)
+			internalErr := customErr.ConvertHelmErrorToInternalError(err)
 			if internalErr != nil {
 				err = internalErr
 			}
 			return nil, err
 		}
-
 		return rel, nil
-	case true:
+	} else {
 		go func() {
 			helmInstallMessage := commonHelmService.HelmReleaseStatusConfig{
 				InstallAppVersionHistoryId: int(request.InstallAppVersionHistoryId),
@@ -857,77 +799,22 @@ func (impl *HelmAppServiceImpl) GetNotes(ctx context.Context, request *client.In
 	releaseIdentifier := request.ReleaseIdentifier
 	helmClientObj, err := impl.getHelmClient(releaseIdentifier.ClusterConfig, releaseIdentifier.ReleaseNamespace)
 
-	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
-	defer func() {
-		if registryConfig != nil {
-			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
-			if err != nil {
-				impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
-			}
-		}
-	}()
+	registryClient, cleanup, err := impl.setupRegistryClient(request)
 	if err != nil {
-		impl.logger.Errorw("error in getting registry config from registry proto", "registryName", request.RegistryCredential.RegistryName, "err", err)
 		return "", err
 	}
+	defer cleanup()
 
-	var registryClient *registry.Client
-	if registryConfig != nil {
-		settingsGetter, err := impl.registrySettings.GetSettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw("error in getting registry settings", "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return "", err
-		}
-		settings, err := settingsGetter.GetRegistrySettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw(HELM_CLIENT_ERROR, "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return "", err
-		}
-		registryClient = settings.RegistryClient
-		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return "", err
 	}
-
-	var chartName, repoURL, username, password string
-	var allowInsecureConnection bool
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return "", err
-		}
-	case false:
-		chartName = request.ChartName
-		repoURL = request.ChartRepository.Url
-		username = request.ChartRepository.Username
-		password = request.ChartRepository.Password
-		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
-	}
-
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:             releaseIdentifier.ReleaseName,
-		Namespace:               releaseIdentifier.ReleaseNamespace,
-		ChartName:               chartName,
-		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
-		Version:                 request.ChartVersion,
-		ValuesYaml:              request.ValuesYaml,
-		Username:                username,
-		Password:                password,
-		AllowInsecureConnection: allowInsecureConnection,
-		RegistryClient:          registryClient,
-	}
-	HelmTemplateOptions := &helmClient.HelmTemplateOptions{}
-	if request.K8SVersion != "" {
-		HelmTemplateOptions.KubeVersion = &chartutil.KubeVersion{
-			Version: request.K8SVersion,
-		}
-	}
-	release, err := helmClientObj.GetNotes(chartSpec, HelmTemplateOptions)
+	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
+	release, err := helmClientObj.GetNotes(chartSpec, helmTemplateOptions)
 	if err != nil {
 		impl.logger.Errorw("Error in fetching Notes ", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -949,81 +836,21 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 		return nil, err
 	}
 
-	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
-	defer func() {
-		if registryConfig != nil {
-			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
-			if err != nil {
-				impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
-			}
-		}
-	}()
+	registryClient, cleanup, err := impl.setupRegistryClient(request)
 	if err != nil {
-		impl.logger.Errorw("error in getting registry config from registry proto", "registryName", request.RegistryCredential.RegistryName, "err", err)
 		return nil, err
 	}
-	var registryClient *registry.Client
-	if registryConfig != nil {
-		settingsGetter, err := impl.registrySettings.GetSettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw("error in getting registry settings", "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return nil, err
-		}
-		settings, err := settingsGetter.GetRegistrySettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw(HELM_CLIENT_ERROR, "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return nil, err
-		}
-		registryClient = settings.RegistryClient
-		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
-	}
+	defer cleanup()
 
-	var chartName string
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return nil, err
-		}
-	case false:
-		chartRepoRequest := request.ChartRepository
-		chartRepoName := chartRepoRequest.Name
-		// Add or update chart repo starts
-		chartRepo := repo.Entry{
-			Name:     chartRepoName,
-			URL:      chartRepoRequest.Url,
-			Username: chartRepoRequest.Username,
-			Password: chartRepoRequest.Password,
-			// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
-			PassCredentialsAll:    true,
-			InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
-		}
-		impl.logger.Debug("Adding/Updating Chart repo")
-		err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
-		if err != nil {
-			impl.logger.Errorw("Error in add/update chart repo ", "err", err)
-			return nil, err
-		}
-		chartName = fmt.Sprintf("%s/%s", chartRepoName, request.ChartName)
-		// Add or update chart repo ends
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
+		return nil, err
 	}
+	chartSpec.DependencyUpdate = true
+	chartSpec.UpgradeCRDs = true
 
-	// Update release starts
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:      releaseIdentifier.ReleaseName,
-		Namespace:        releaseIdentifier.ReleaseNamespace,
-		ValuesYaml:       request.ValuesYaml,
-		ChartName:        chartName,
-		Version:          request.ChartVersion,
-		DependencyUpdate: true,
-		UpgradeCRDs:      true,
-		MaxHistory:       int(request.HistoryMax),
-		RegistryClient:   registryClient,
-	}
-
-	switch impl.helmReleaseConfig.RunHelmInstallInAsyncMode {
-	case false:
+	if !runInstallInAsyncMode(request.InstallAppVersionHistoryId, impl.helmReleaseConfig.RunHelmInstallInAsyncMode) {
 		impl.logger.Debug("Upgrading release with chart info")
 		_, err = helmClientObj.UpgradeReleaseWithChartInfo(context.Background(), chartSpec)
 		if UpgradeErr, ok := err.(*driver.StorageDriverError); ok {
@@ -1042,7 +869,7 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithChartInfo(ctx context.Context,
 				}
 			}
 		}
-	case true:
+	} else {
 		go func() {
 			impl.logger.Debug("Upgrading release with chart info")
 			_, err = helmClientObj.UpgradeReleaseWithChartInfo(context.Background(), chartSpec)
@@ -1153,79 +980,24 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		return "", nil, err
 	}
 
-	registryConfig, err := adapter.NewRegistryConfig(request.RegistryCredential)
-	defer func() {
-		if registryConfig != nil {
-			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
-			if err != nil {
-				impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
-			}
-		}
-	}()
+	registryClient, cleanup, err := impl.setupRegistryClient(request)
 	if err != nil {
-		impl.logger.Errorw("error in getting registry config from registry proto", "registryName", request.RegistryCredential.RegistryName, "err", err)
+		return "", nil, err
+	}
+	defer cleanup()
+
+	chartSpec, err := impl.getChartSpec(helmClientObj, request, releaseIdentifier, registryClient)
+	if err != nil {
+		impl.logger.Errorw("error in getting chart spec", "err", err)
 		return "", nil, err
 	}
 
-	var registryClient *registry.Client
-	if registryConfig != nil {
-		settingsGetter, err := impl.registrySettings.GetSettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw("error in getting registry settings", "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return "", nil, err
-		}
-		settings, err := settingsGetter.GetRegistrySettings(registryConfig)
-		if err != nil {
-			impl.logger.Errorw(HELM_CLIENT_ERROR, "registryName", request.RegistryCredential.RegistryName, "err", err)
-			return "", nil, err
-		}
-		registryClient = settings.RegistryClient
-		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
-	}
-
-	var chartName, repoURL, username, password string
-	var allowInsecureConnection bool
-	switch request.IsOCIRepo {
-	case true:
-		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
-		if err != nil {
-			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
-			return "", nil, err
-		}
-	case false:
-		chartName = request.ChartName
-		repoURL = request.ChartRepository.Url
-		username = request.ChartRepository.Username
-		password = request.ChartRepository.Password
-		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
-	}
-
-	chartSpec := &helmClient.ChartSpec{
-		ReleaseName:             releaseIdentifier.ReleaseName,
-		Namespace:               releaseIdentifier.ReleaseNamespace,
-		ChartName:               chartName,
-		CleanupOnFail:           true, // allow deletion of new resources created in this rollback when rollback fails
-		MaxHistory:              0,    // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
-		RepoURL:                 repoURL,
-		Version:                 request.ChartVersion,
-		ValuesYaml:              request.ValuesYaml,
-		RegistryClient:          registryClient,
-		Username:                username,
-		Password:                password,
-		AllowInsecureConnection: allowInsecureConnection,
-	}
-
-	HelmTemplateOptions := &helmClient.HelmTemplateOptions{}
-	if request.K8SVersion != "" {
-		HelmTemplateOptions.KubeVersion = &chartutil.KubeVersion{
-			Version: request.K8SVersion,
-		}
-	}
+	helmTemplateOptions := impl.getHelmTemplateOptions(request.K8SVersion)
 	var content []byte
 	if request.ChartContent != nil {
 		content = request.ChartContent.Content
 	}
-	rel, chartBytes, err := helmClientObj.TemplateChart(chartSpec, HelmTemplateOptions, content, getChart)
+	rel, chartBytes, err := helmClientObj.TemplateChart(chartSpec, helmTemplateOptions, content, getChart)
 	if err != nil {
 		impl.logger.Errorw("error occured while generating manifest in helm app service", "err:", err)
 		return "", nil, err
@@ -1235,6 +1007,17 @@ func (impl *HelmAppServiceImpl) TemplateChart(ctx context.Context, request *clie
 		return "", nil, errors.New("release is found nil")
 	}
 	return string(rel), chartBytes, nil
+}
+
+// getHelmTemplateOptions creates and returns HelmTemplateOptions with KubeVersion set if provided
+func (impl *HelmAppServiceImpl) getHelmTemplateOptions(k8sVersion string) *helmClient.HelmTemplateOptions {
+	helmTemplateOptions := &helmClient.HelmTemplateOptions{}
+	if k8sVersion != "" {
+		helmTemplateOptions.KubeVersion = &chartutil.KubeVersion{
+			Version: k8sVersion,
+		}
+	}
+	return helmTemplateOptions
 }
 
 func (impl *HelmAppServiceImpl) getHelmReleaseHistory(clusterConfig *client.ClusterConfig, releaseNamespace string, releaseName string, countOfHelmReleaseHistory int) ([]*release.Release, error) {
@@ -1413,7 +1196,7 @@ func (impl *HelmAppServiceImpl) getManifestData(restConfig *rest.Config, release
 
 	if err != nil {
 		impl.logger.Errorw("Error in getting live manifest ", "err", err)
-		statusError, _ := err.(*errors2.StatusError)
+		statusError, _ := err.(*k8sErrors.StatusError)
 		desiredOrLiveManifest = &bean.DesiredOrLiveManifest{
 			// using deep copy as it replaces item in manifest in loop
 			Manifest:                 desiredManifest.DeepCopy(),
@@ -1530,7 +1313,7 @@ func (impl *HelmAppServiceImpl) InstallReleaseWithCustomChart(ctx context.Contex
 	_, err = helmClientObj.InstallChart(ctx, chartSpec)
 	if err != nil {
 		impl.logger.Errorw("Error in install chart", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -1600,7 +1383,7 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithCustomChart(ctx context.Contex
 				_, err := helmClientObj.InstallChart(ctx, installChartSpec)
 				if err != nil {
 					impl.logger.Errorw("Error in install release ", "err", err)
-					internalErr := error2.ConvertHelmErrorToInternalError(err)
+					internalErr := customErr.ConvertHelmErrorToInternalError(err)
 					if internalErr != nil {
 						err = internalErr
 					}
@@ -1615,7 +1398,7 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithCustomChart(ctx context.Contex
 		}
 	} else if err != nil {
 		impl.logger.Errorw("Error in upgrade release with chart info", "err", err)
-		internalErr := error2.ConvertHelmErrorToInternalError(err)
+		internalErr := customErr.ConvertHelmErrorToInternalError(err)
 		if internalErr != nil {
 			err = internalErr
 		}
@@ -1626,14 +1409,14 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithCustomChart(ctx context.Contex
 }
 
 func (impl *HelmAppServiceImpl) ValidateOCIRegistryLogin(ctx context.Context, OCIRegistryRequest *client.RegistryCredential) (*client.OCIRegistryResponse, error) {
-	registryClient, err := registry.NewClient()
+	registryClient, err := helmRegistry.NewClient()
 	if err != nil {
 		impl.logger.Errorw(HELM_CLIENT_ERROR, "err", err)
 		return nil, err
 	}
 	var caFilePath string
-	if OCIRegistryRequest.Connection == registry2.SECURE_WITH_CERT {
-		caFilePath, err = registry2.CreateCertificateFile(OCIRegistryRequest.RegistryName, OCIRegistryRequest.RegistryCertificate)
+	if OCIRegistryRequest.Connection == registry.SECURE_WITH_CERT {
+		caFilePath, err = registry.CreateCertificateFile(OCIRegistryRequest.RegistryName, OCIRegistryRequest.RegistryCertificate)
 		if err != nil {
 			impl.logger.Errorw("error in creating certificate file path", "registryName", OCIRegistryRequest.RegistryName, "err", err)
 			return nil, err
@@ -1642,7 +1425,7 @@ func (impl *HelmAppServiceImpl) ValidateOCIRegistryLogin(ctx context.Context, OC
 	registryConfig, err := adapter.NewRegistryConfig(OCIRegistryRequest)
 	defer func() {
 		if registryConfig != nil {
-			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
+			err := registry.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
 			if err != nil {
 				impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
 			}
@@ -1653,7 +1436,7 @@ func (impl *HelmAppServiceImpl) ValidateOCIRegistryLogin(ctx context.Context, OC
 		return nil, err
 	}
 	registryConfig.RegistryCAFilePath = caFilePath
-	registryClient, err = registry2.GetLoggedInClient(registryClient, registryConfig)
+	registryClient, err = registry.GetLoggedInClient(registryClient, registryConfig)
 	if err != nil {
 		impl.logger.Errorw("error in registry login", "registryName", OCIRegistryRequest.RegistryName, "err", err)
 		return nil, err
@@ -1664,13 +1447,11 @@ func (impl *HelmAppServiceImpl) ValidateOCIRegistryLogin(ctx context.Context, OC
 }
 
 func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Context, OCIRegistryRequest *client.OCIRegistryRequest) (*client.OCIRegistryResponse, error) {
-
 	registryPushResponse := &client.OCIRegistryResponse{}
-
 	registryConfig, err := adapter.NewRegistryConfig(OCIRegistryRequest.RegistryCredential)
 	defer func() {
 		if registryConfig != nil {
-			err := registry2.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
+			err := registry.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
 			if err != nil {
 				impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
 			}
@@ -1680,7 +1461,6 @@ func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Conte
 		impl.logger.Errorw("error in getting registry config from registry proto", "registryName", OCIRegistryRequest.RegistryCredential.RegistryName, "err", err)
 		return nil, err
 	}
-
 	settingsGetter, err := impl.registrySettings.GetSettings(registryConfig)
 	if err != nil {
 		impl.logger.Errorw("error in getting registry settings", "err", err)
@@ -1696,7 +1476,7 @@ func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Conte
 
 	registryPushResponse.IsLoggedIn = true
 
-	var pushOpts []registry.PushOption
+	var pushOpts []helmRegistry.PushOption
 	provRef := fmt.Sprintf("%s.prov", OCIRegistryRequest.Chart)
 	if _, err := os.Stat(provRef); err == nil {
 		provBytes, err := ioutil.ReadFile(provRef)
@@ -1704,11 +1484,11 @@ func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Conte
 			impl.logger.Errorw("Error in extracting prov bytes", "err", err)
 			return registryPushResponse, err
 		}
-		pushOpts = append(pushOpts, registry.PushOptProvData(provBytes))
+		pushOpts = append(pushOpts, helmRegistry.PushOptProvData(provBytes))
 	}
 
 	var ref string
-	withStrictMode := registry.PushOptStrictMode(true)
+	withStrictMode := helmRegistry.PushOptStrictMode(true)
 	repoURL := path.Join(OCIRegistryRequest.RegistryCredential.RegistryUrl, OCIRegistryRequest.RegistryCredential.RepoName)
 
 	if OCIRegistryRequest.ChartName == "" || OCIRegistryRequest.ChartVersion == "" {
@@ -1729,7 +1509,7 @@ func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Conte
 			meta.Metadata.Version)
 	} else {
 		// disable strict mode for configuring chartName in repo
-		withStrictMode = registry.PushOptStrictMode(false)
+		withStrictMode = helmRegistry.PushOptStrictMode(false)
 		trimmedURL := TrimSchemeFromURL(repoURL)
 		if err != nil {
 			impl.logger.Errorw("err in getting repo url without scheme", "repoURL", repoURL, "err", err)
@@ -1752,6 +1532,7 @@ func (impl *HelmAppServiceImpl) PushHelmChartToOCIRegistryRepo(ctx context.Conte
 	}
 	return registryPushResponse, err
 }
+
 func TrimSchemeFromURL(registryUrl string) string {
 	if !strings.Contains(strings.ToLower(registryUrl), "https") && !strings.Contains(strings.ToLower(registryUrl), "http") {
 		registryUrl = fmt.Sprintf("//%s", registryUrl)
@@ -1764,6 +1545,7 @@ func TrimSchemeFromURL(registryUrl string) string {
 	urlWithoutScheme = strings.TrimPrefix(urlWithoutScheme, "/")
 	return urlWithoutScheme
 }
+
 func (impl *HelmAppServiceImpl) GetNatsMessageForHelmInstallError(ctx context.Context, helmInstallMessage commonHelmService.HelmReleaseStatusConfig, releaseIdentifier *client.ReleaseIdentifier, installationErr error) (string, error) {
 	helmInstallMessage.Message = installationErr.Error()
 	isReleaseInstalled, err := impl.IsReleaseInstalled(ctx, releaseIdentifier)
@@ -1805,7 +1587,7 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 			helmRelease, err := impl.common.GetHelmRelease(releaseIdentifier.ClusterConfig, releaseIdentifier.ReleaseNamespace, releaseIdentifier.ReleaseName)
 			if err != nil {
 				impl.logger.Errorw("Error in getting helm release ", "err", err)
-				internalErr := error2.ConvertHelmErrorToInternalError(err)
+				internalErr := customErr.ConvertHelmErrorToInternalError(err)
 				if internalErr != nil {
 					err = internalErr
 				}
@@ -1815,7 +1597,7 @@ func (impl *HelmAppServiceImpl) GetReleaseDetails(ctx context.Context, releaseId
 				impl.logger.Errorw("requested helm release does not exist")
 				return nil, commonHelmService.ErrorReleaseNotFoundOnCluster
 			}
-			return adapter.ParseDeployedAppDetail(releaseIdentifier.ClusterConfig.ClusterId, releaseIdentifier.ClusterConfig.ClusterName, helmRelease), nil
+			return adapter.ParseDeployedAppDetail(releaseIdentifier.ClusterConfig.ClusterId, releaseIdentifier.ClusterConfig.ClusterName, adapter.NewRelease(helmRelease)), nil
 		}
 		impl.logger.Errorw("error in fetching release details by id", "releaseIdentifier", releaseIdentifier, "err", err)
 		return nil, err
@@ -1847,6 +1629,7 @@ func (impl *HelmAppServiceImpl) BuildResourceTreeUsingParentObjects(ctx context.
 	}
 	return resourceTreeResponse, nil
 }
+
 func (impl *HelmAppServiceImpl) resourceNodeAdapter(nodes []*commonBean.ResourceNode) []*client.ResourceNode {
 	var resourceNodes []*client.ResourceNode
 	for _, node := range nodes {
@@ -1943,4 +1726,111 @@ func podMetadataAdapter(podmetadatas []*commonBean.PodMetadata) []*client.PodMet
 		podMetadatas = append(podMetadatas, podMetadata)
 	}
 	return podMetadatas
+}
+
+func (impl *HelmAppServiceImpl) setupRegistryClient(request *client.InstallReleaseRequest) (*helmRegistry.Client, func(), error) {
+	var settings *registry.Settings
+	cleanup := func() {}
+	registryCredential := request.RegistryCredential
+	var registryClient *helmRegistry.Client
+	if request.RegistryCredential != nil {
+		registryConfig, err := adapter.NewRegistryConfig(registryCredential)
+
+		if err != nil {
+			impl.logger.Errorw("error in getting registry config from registry proto", "registryName", registryCredential.RegistryName, "err", err)
+			return nil, cleanup, err
+		}
+
+		cleanup = func() {
+			if registryConfig != nil {
+				err := registry.DeleteCertificateFolder(registryConfig.RegistryCAFilePath)
+				if err != nil {
+					impl.logger.Errorw("error in deleting certificate folder", "registryName", registryConfig.RegistryId, "err", err)
+				}
+			}
+		}
+
+		settingsGetter, err := impl.registrySettings.GetSettings(registryConfig)
+		if err != nil {
+			cleanup()
+			impl.logger.Errorw("error in getting registry settings", "registryName", registryCredential.RegistryName, "err", err)
+			return nil, cleanup, err
+		}
+
+		settings, err = settingsGetter.GetRegistrySettings(registryConfig)
+		if err != nil {
+			cleanup()
+			impl.logger.Errorw(HELM_CLIENT_ERROR, "registryName", registryCredential.RegistryName, "err", err)
+			return nil, cleanup, err
+		}
+		registryClient = settings.RegistryClient
+		request.RegistryCredential.RegistryUrl = settings.RegistryHostURL
+	}
+	return registryClient, cleanup, nil
+}
+
+func (impl *HelmAppServiceImpl) getChartSpec(helmClientObj helmClient.Client, request *client.InstallReleaseRequest, releaseIdentifier *client.ReleaseIdentifier, registryClient *helmRegistry.Client) (*helmClient.ChartSpec, error) {
+	var chartName, username, password string
+	var allowInsecureConnection bool
+	var err error
+	if request.IsOCIRepo {
+		chartName, err = parseOCIChartName(request.RegistryCredential.RegistryUrl, request.RegistryCredential.RepoName)
+		if err != nil {
+			impl.logger.Errorw("error in parsing oci chart name", "registryUrl", request.RegistryCredential.RegistryUrl, "repoName", request.RegistryCredential.RepoName, "err", err)
+			return nil, err
+		}
+
+	} else {
+		chartName = fmt.Sprintf("%s/%s", request.ChartRepository.Name, request.ChartName)
+		chartRepoRequest := request.ChartRepository
+		chartRepoName := chartRepoRequest.Name
+		username = request.ChartRepository.Username
+		password = request.ChartRepository.Password
+		allowInsecureConnection = request.ChartRepository.AllowInsecureConnection
+		// request.ChartContent is nil for helm apps but not for devtron charts
+		// AddOrUpdateChartRepo function is needed for helm apps for updating index.yaml
+		// in Devtron apps ChartContent is already present so no need to update index.yaml
+
+		if isExternalHelmApp(request.ChartContent) {
+			// Add or update chart repo starts
+			chartRepo := repo.Entry{
+				Name:     chartRepoName,
+				URL:      chartRepoRequest.Url,
+				Username: request.ChartRepository.Username,
+				Password: request.ChartRepository.Password,
+				// Since helm 3.6.1 it is necessary to pass 'PassCredentialsAll = true'.
+				PassCredentialsAll:    true,
+				InsecureSkipTLSverify: chartRepoRequest.GetAllowInsecureConnection(),
+			}
+
+			impl.logger.Debug("Adding/Updating Chart repo", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest)
+			err = helmClientObj.AddOrUpdateChartRepo(chartRepo)
+			if err != nil {
+				impl.logger.Errorw("Error in add/update chart repo ", "chartName", chartName, "chartRepoName", chartRepoName, "requestRepository", chartRepoRequest, "err", err)
+				return nil, err
+			}
+			// Add or update chart repo ends
+		}
+	}
+
+	chartSpec := &helmClient.ChartSpec{
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ChartName:     chartName,
+		CleanupOnFail: true,                    // allow deletion of new resources created in this rollback when rollback fails
+		MaxHistory:    int(request.HistoryMax), // limit the maximum number of revisions saved per release. Use 0 for no limit (default 10)
+		//RepoURL:                 repoURL, // RepoURL is not required, ChartName is sufficient
+
+		// WHen RepoURL != "", below function will be called, it will fetch the chart from the invalid repoURL(for some bitnami charts)
+		//chartURL, err := repo.FindChartInAuthAndTLSAndPassRepoURL(c.RepoURL, c.Username, c.Password, name, version,
+		//			c.CertFile, c.KeyFile, c.CaFile, c.InsecureSkipTLSverify, c.PassCredentialsAll, getter.All(settings))
+
+		Version:                 request.ChartVersion,
+		ValuesYaml:              request.ValuesYaml,
+		RegistryClient:          registryClient,
+		Username:                username,
+		Password:                password,
+		AllowInsecureConnection: allowInsecureConnection,
+	}
+	return chartSpec, nil
 }

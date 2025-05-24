@@ -72,8 +72,9 @@ github.com/cespare/xxhash/v2
 github.com/coreos/clair/api/v3/clairpb
 github.com/coreos/clair/database
 github.com/coreos/clair/ext/versionfmt
-# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250408035741-f0f81df75ad9
+# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250521133250-228c55be30a2
 ## explicit; go 1.21
+github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
 github.com/devtron-labs/common-lib/git-manager
@@ -89,6 +90,7 @@ github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
+github.com/devtron-labs/common-lib/utils/runTime
 # github.com/docker/cli v24.0.6+incompatible
 ## explicit
 github.com/docker/cli/cli/config
@@ -167,8 +169,8 @@ github.com/jinzhu/inflection
 # github.com/jmespath/go-jmespath v0.4.0
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
-# github.com/juju/errors v0.0.0-20210818161939-5560c4c073ff
-## explicit; go 1.15
+# github.com/juju/errors v1.0.0
+## explicit; go 1.18
 github.com/juju/errors
 # github.com/klauspost/compress v1.16.7
 ## explicit; go 1.18
@@ -440,4 +442,4 @@ google.golang.org/protobuf/types/known/wrapperspb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250408035741-f0f81df75ad9
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250521133250-228c55be30a2

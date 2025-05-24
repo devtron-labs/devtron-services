@@ -49,6 +49,11 @@ const (
 	BUILDPACK_BUILD_TYPE          CiBuildType = "buildpack-build"
 )
 
+// IsSkipBuildType checks if the CiBuildType is of skip build type
+func (c CiBuildType) IsSkipBuildType() bool {
+	return c == BUILD_SKIP_BUILD_TYPE
+}
+
 const CI_JOB string = "CI_JOB"
 
 type CiBuildConfigBean struct {
@@ -97,6 +102,7 @@ type CommonWorkflowRequest struct {
 	DockerImageTag                 string                           `json:"dockerImageTag"`
 	DockerRegistryId               string                           `json:"dockerRegistryId"`
 	DockerRegistryType             string                           `json:"dockerRegistryType"`
+	CredentialsType                string                           `json:"credentialsType"`
 	DockerRegistryURL              string                           `json:"dockerRegistryURL"`
 	DockerRegistryConnectionConfig *bean.RemoteConnectionConfigBean `json:"dockerRegistryConnectionConfig"`
 	DockerConnection               string                           `json:"dockerConnection"`
@@ -194,6 +200,8 @@ type CommonWorkflowRequest struct {
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
 	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
 	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
+	PartSize                      int64                          `json:"partSize,omitempty"`
+	ConcurrencyMultiplier         int                            `json:"concurrencyMultiplier,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {

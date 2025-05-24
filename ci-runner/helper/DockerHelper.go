@@ -31,6 +31,7 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
+	"github.com/devtron-labs/common-lib/constants"
 
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/devtron-labs/common-lib/utils"
@@ -64,8 +65,7 @@ const (
 )
 
 type DockerHelper interface {
-	StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest)
-	DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error
+	StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest, isSubStep bool) error
 	BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error)
 	StopDocker(ciContext cicxt.CiContext) error
 	PushArtifact(ciContext cicxt.CiContext, dest string) error
@@ -93,7 +93,7 @@ func (impl *DockerHelperImpl) GetDestForNatsEvent(commonWorkflowRequest *CommonW
 	return dest, nil
 }
 
-func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWorkflowRequest) {
+func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequest *CommonWorkflowRequest, isSubStep bool) error {
 	startDockerDaemon := func() error {
 		connection := commonWorkflowRequest.DockerConnection
 		dockerRegistryUrl := commonWorkflowRequest.IntermediateDockerRegistryUrl
@@ -167,13 +167,36 @@ func (impl *DockerHelperImpl) StartDockerDaemon(commonWorkflowRequest *CommonWor
 			util.PrintFileContent(DOCKERD_OUTPUT_FILE_PATH)
 			return err
 		}
+		shouldDockerLogin := len(commonWorkflowRequest.IntermediateDockerRegistryUrl) != 0
+		if shouldDockerLogin {
+			ciContext := cicxt.BuildCiContext(context.Background(), commonWorkflowRequest.EnableSecretMasking)
+			err = impl.DockerLogin(ciContext, &DockerCredentials{
+				DockerUsername:     commonWorkflowRequest.DockerUsername,
+				DockerPassword:     commonWorkflowRequest.DockerPassword,
+				AwsRegion:          commonWorkflowRequest.AwsRegion,
+				AccessKey:          commonWorkflowRequest.AccessKey,
+				SecretKey:          commonWorkflowRequest.SecretKey,
+				DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
+				DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
+				CredentialsType:    commonWorkflowRequest.CredentialsType,
+			})
+		}
+		if err != nil {
+			return err
+		}
+
 		return nil
 	}
 
-	if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
-		log.Fatal(err)
+	if isSubStep {
+		return startDockerDaemon()
+	} else {
+		if err := util.ExecuteWithStageInfoLog(util.DOCKER_DAEMON, startDockerDaemon); err != nil {
+			return err
+		}
+		return nil
 	}
-	return
+
 }
 
 const CertDir = "/etc/docker/certs.d"
@@ -190,7 +213,7 @@ const CacheModeMax = "max"
 const CacheModeMin = "min"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType, CredentialsType string
 }
 
 type EnvironmentVariables struct {
@@ -204,6 +227,9 @@ func (impl *DockerHelperImpl) GetCommandToExecute(cmd string) *exec.Cmd {
 }
 
 func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCredentials *DockerCredentials) error {
+	if dockerCredentials.CredentialsType == string(constants.CredentialsTypeAnonymous) {
+		return nil
+	}
 	performDockerLogin := func() error {
 		username := dockerCredentials.DockerUsername
 		pwd := dockerCredentials.DockerPassword
@@ -274,25 +300,13 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 		return nil
 	}
 
-	return util.ExecuteWithStageInfoLog(util.DOCKER_LOGIN_STAGE, performDockerLogin)
+	return performDockerLogin()
 }
 
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	err := impl.DockerLogin(ciContext, &DockerCredentials{
-		DockerUsername:     ciRequest.DockerUsername,
-		DockerPassword:     ciRequest.DockerPassword,
-		AwsRegion:          ciRequest.AwsRegion,
-		AccessKey:          ciRequest.AccessKey,
-		SecretKey:          ciRequest.SecretKey,
-		DockerRegistryURL:  ciRequest.IntermediateDockerRegistryUrl,
-		DockerRegistryType: ciRequest.DockerRegistryType,
-	})
-	if err != nil {
-		return "", err
-	}
 	envVars := &EnvironmentVariables{}
-	err = env.Parse(envVars)
+	err := env.Parse(envVars)
 	if err != nil {
 		log.Println("Error while parsing environment variables", err)
 	}

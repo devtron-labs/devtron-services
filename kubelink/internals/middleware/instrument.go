@@ -27,9 +27,10 @@ import (
 
 // metrics name constant
 const (
-	KUBELINK_HTTP_DURATION_SECONDS = "kubelink_http_duration_seconds"
-	KUBELINK_HTTP_REQUESTS_TOTAL   = "kubelink_http_requests_total"
-	KUBELINK_HTTP_REQUESTS_CURRENT = "kubelink_http_requests_current"
+	KUBELINK_HTTP_DURATION_SECONDS                    = "kubelink_http_duration_seconds"
+	KUBELINK_HTTP_REQUESTS_TOTAL                      = "kubelink_http_requests_total"
+	KUBELINK_HTTP_REQUESTS_CURRENT                    = "kubelink_http_requests_current"
+	KUBELINK_INFORMER_DATA_TRANSFORM_DURATION_SECONDS = "kubelink_informer_data_transform_duration_seconds"
 )
 
 // metrics labels constants
@@ -56,6 +57,17 @@ var currentRequestGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 	Name: KUBELINK_HTTP_REQUESTS_CURRENT,
 	Help: "no of request being served currently",
 }, []string{PATH, METHOD})
+
+var InformerDataTransformDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Name: KUBELINK_INFORMER_DATA_TRANSFORM_DURATION_SECONDS,
+	Help: "Duration of informer data transform request",
+}, []string{CLUSTER_NAME, NAMESPACE, RELEASE_NAME})
+
+const (
+	CLUSTER_NAME  = "clusterName"
+	NAMESPACE     = "namespace"
+	RELEASE_NAME  = "releaseName"
+)
 
 // prometheusMiddleware implements mux.MiddlewareFunc.
 func PrometheusMiddleware(next http.Handler) http.Handler {

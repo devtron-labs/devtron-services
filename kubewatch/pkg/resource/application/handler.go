@@ -22,6 +22,7 @@ import (
 	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	applicationInformer "github.com/argoproj/argo-cd/v2/pkg/client/informers/externalversions/application/v1alpha1"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"go.uber.org/zap"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -42,7 +43,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	}
 }
 
-func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
+func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error) {
 	startTime := time.Now()
 	defer func() {
 		impl.logger.Debugw("registered application informer", "namespace", namespace, "time", time.Since(startTime))
@@ -52,53 +53,37 @@ func (impl *InformerImpl) GetSharedInformer(clusterId int, namespace string, k8s
 
 	_, err := acdInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			impl.logger.Debug("app added")
-
-			if app, ok := obj.(*applicationBean.Application); ok {
-				impl.logger.Debugf("new app detected: %s, status: %s", app.Name, app.Status.Health.Status)
-			}
+			impl.logger.Debugw("ARGO_CD_APPLICATION: new application object found")
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			impl.logger.Debug("app update detected")
+			impl.logger.Debugw("ARGO_CD_APPLICATION: application object update detected")
 			statusTime := time.Now()
 			if oldApp, ok := old.(*applicationBean.Application); ok {
 				if newApp, ok := new.(*applicationBean.Application); ok {
-					if newApp.Status.History != nil && len(newApp.Status.History) > 0 {
-						if oldApp.Status.History == nil || len(oldApp.Status.History) == 0 {
-							impl.logger.Debug("new deployment detected")
-							impl.sendAppUpdate(clusterId, newApp, statusTime)
+					// Check if the application has a new deployment history
+					if isNewDeploymentHistoryFound(oldApp, newApp) {
+						impl.logger.Debugw("ARGO_CD_APPLICATION: new deployment detected", "appName", newApp.Name, "status", newApp.Status.Health.Status)
+						impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
+					} else {
+						if IsApplicationObjectUpdated(impl.logger, oldApp, newApp) {
+							impl.sendAppUpdate(clusterLabels.ClusterId, newApp, statusTime)
+							impl.logger.Debugw("ARGO_CD_APPLICATION: send update event for application object", "appName", oldApp.Name)
 						} else {
-							impl.logger.Debugf("old deployment detected for update: %s, status:%s", oldApp.Name, oldApp.Status.Health.Status)
-							oldRevision := oldApp.Status.Sync.Revision
-							newRevision := newApp.Status.Sync.Revision
-							oldStatus := string(oldApp.Status.Health.Status)
-							newStatus := string(newApp.Status.Health.Status)
-							newSyncStatus := string(newApp.Status.Sync.Status)
-							oldSyncStatus := string(oldApp.Status.Sync.Status)
-							if (oldRevision != newRevision) || (oldStatus != newStatus) || (newSyncStatus != oldSyncStatus) {
-								impl.sendAppUpdate(clusterId, newApp, statusTime)
-								impl.logger.Debug("send update app:" + oldApp.Name + ", oldRevision: " + oldRevision + ", newRevision:" +
-									newRevision + ", oldStatus: " + oldStatus + ", newStatus: " + newStatus +
-									", newSyncStatus: " + newSyncStatus + ", oldSyncStatus: " + oldSyncStatus)
-							} else {
-								impl.logger.Debug("skip updating app:" + oldApp.Name + ", oldRevision: " + oldRevision + ", newRevision:" +
-									newRevision + ", oldStatus: " + oldStatus + ", newStatus: " + newStatus +
-									", newSyncStatus: " + newSyncStatus + ", oldSyncStatus: " + oldSyncStatus)
-							}
+							impl.logger.Debugw("ARGO_CD_APPLICATION: skip updating event for application object", "appName", oldApp.Name)
 						}
 					}
 				} else {
-					log.Println("app update detected, but skip updating, there is no new app")
+					impl.logger.Errorw("ARGO_CD_APPLICATION: application object update detected, but could not cast to application object", "oldObj", old, "newObj", new)
 				}
 			} else {
-				log.Println("app update detected, but skip updating, there is no old app")
+				impl.logger.Errorw("ARGO_CD_APPLICATION: application object update detected, but could not cast to application object", "oldObj", old)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			if app, ok := obj.(*applicationBean.Application); ok {
 				statusTime := time.Now()
-				impl.logger.Debugf("app delete detected: %s, status:%s", app.Name, app.Status.Health.Status)
-				impl.sendAppDelete(clusterId, app, statusTime)
+				impl.logger.Debugw("ARGO_CD_APPLICATION: application object delete detected", "appName", app.Name, "status", app.Status.Health.Status)
+				impl.sendAppDelete(clusterLabels.ClusterId, app, statusTime)
 			}
 		},
 	})

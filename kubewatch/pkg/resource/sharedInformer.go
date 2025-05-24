@@ -17,6 +17,7 @@
 package resource
 
 import (
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/application"
 	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/workflow"
@@ -25,7 +26,7 @@ import (
 )
 
 type SharedInformer interface {
-	GetSharedInformer(clusterId int, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error)
+	GetSharedInformer(clusterLabels *informerBean.ClusterLabels, namespace string, k8sConfig *rest.Config) (cache.SharedIndexInformer, error)
 }
 
 func (impl *InformerClientImpl) GetSharedInformerClient(sharedInformerType bean.SharedInformerType) SharedInformer {
