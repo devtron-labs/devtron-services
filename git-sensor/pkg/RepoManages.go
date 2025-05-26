@@ -288,6 +288,14 @@ func (impl RepoManagerImpl) backupGitMaterialBeforeUpdate(existingMaterial *sql.
 
 func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitMaterial) (*sql.GitMaterial, error) {
 	updateInitiatedTime := time.Now()
+
+	repoLock := impl.locker.LeaseLocker(material.Id)
+	repoLock.Mutex.Lock()
+	defer func() {
+		repoLock.Mutex.Unlock()
+		impl.locker.ReturnLocker(material.Id)
+	}()
+
 	existingMaterial, err := impl.materialRepository.FindById(material.Id)
 	if err != nil {
 		impl.logger.Errorw("error in fetching material", "material", material, "timeTaken", time.Since(updateInitiatedTime), "err", err)
@@ -313,13 +321,6 @@ func (impl RepoManagerImpl) UpdateRepo(gitCtx git.GitContext, material *sql.GitM
 		impl.logger.Errorw("error in updating material ", "material", material, "timeTaken", time.Since(updateInitiatedTime), "err", err)
 		return nil, err
 	}
-
-	repoLock := impl.locker.LeaseLocker(material.Id)
-	repoLock.Mutex.Lock()
-	defer func() {
-		repoLock.Mutex.Unlock()
-		impl.locker.ReturnLocker(material.Id)
-	}()
 
 	err = impl.repositoryManager.Clean(existingMaterial.CheckoutLocation)
 	if err != nil {
