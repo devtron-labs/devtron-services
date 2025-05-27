@@ -114,7 +114,7 @@ func (impl *InformerImpl) startInformerForCluster(clusterInfo *repository.Cluste
 }
 
 func (impl *InformerImpl) handleClusterChangeEvent(cmObject *coreV1.ConfigMap) error {
-	if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+	if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
 		impl.logger.Infow("label value not found in cm, hence ignoring cluster change event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 		return nil
 	}
@@ -141,7 +141,7 @@ func (impl *InformerImpl) handleClusterChangeEvent(cmObject *coreV1.ConfigMap) e
 }
 
 func (impl *InformerImpl) handleClusterDeleteEvent(cmObject *coreV1.ConfigMap) error {
-	if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+	if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
 		impl.logger.Infow("label value not found in cm, hence ignoring cluster delete event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 		return nil
 	}
