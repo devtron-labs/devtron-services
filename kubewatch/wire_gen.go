@@ -44,7 +44,7 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	customK8sHttpTransportConfig := k8s.NewCustomK8sHttpTransportConfig()
+	customK8sHttpTransportConfig := k8s.NewCustomK8sHttpTransportConfig(sugaredLogger)
 	restConfig, err := utils.GetDefaultK8sConfig()
 	if err != nil {
 		return nil, err
