@@ -202,7 +202,8 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 				startTime := time.Now()
 				impl.logger.Debugw("CLUSTER_ADD_INFORMER: cluster cm add event received", "obj", obj, "time", time.Now())
 				if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
-					if labelValue, exists := cmObject.Labels["type"]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+					if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+						impl.logger.Infow("label value not found in cm, hence ignoring cluster add event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 						return
 					}
 					data := cmObject.Data
@@ -235,7 +236,8 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 				startTime := time.Now()
 				impl.logger.Debugw("CLUSTER_UPDATE_INFORMER: cluster cm update event received", "oldObj", oldObj, "newObj", newObj, "time", time.Now())
 				if cmObject, ok := newObj.(*coreV1.ConfigMap); ok {
-					if labelValue, exists := cmObject.Labels["type"]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+					if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+						impl.logger.Infow("label value not found in cm, hence ignoring cluster update event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 						return
 					}
 					data := cmObject.Data
@@ -265,7 +267,8 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 				startTime := time.Now()
 				impl.logger.Debugw("CLUSTER_DELETE_INFORMER: cm delete event received", "obj", obj, "time", time.Now())
 				if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
-					if labelValue, exists := cmObject.Labels["type"]; !exists || labelValue != informerBean.ClusterModifyEventSecretType {
+					if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+						impl.logger.Infow("label value not found in cm, hence ignoring cluster delete event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 						return
 					}
 					data := cmObject.Data
