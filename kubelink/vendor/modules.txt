@@ -127,7 +127,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250523142649-1205ee28e220
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250527080653-ddb036d5ca0a
 ## explicit; go 1.21
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -148,6 +148,7 @@ github.com/devtron-labs/common-lib/utils/grpc
 github.com/devtron-labs/common-lib/utils/http
 github.com/devtron-labs/common-lib/utils/k8s
 github.com/devtron-labs/common-lib/utils/k8s/commonBean
+github.com/devtron-labs/common-lib/utils/k8s/configMap
 github.com/devtron-labs/common-lib/utils/k8s/health
 github.com/devtron-labs/common-lib/utils/k8sObjectsUtil
 github.com/devtron-labs/common-lib/utils/reflectUtils
@@ -1361,7 +1362,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250523142649-1205ee28e220
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250527080653-ddb036d5ca0a
 # go.opentelemetry.io/otel/metric => go.opentelemetry.io/otel/metric v1.18.0
 # k8s.io/api => k8s.io/api v0.29.0
 # k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.0
