@@ -548,14 +548,14 @@ func (impl *DockerHelperImpl) getBuildxExportCacheFunc(ciContext cicxt.CiContext
 			wg.Add(len(exportCacheCmds))
 			for platform, exportCacheCmd := range exportCacheCmds {
 				go func(platform, exportCacheCmd string) {
-					defer wg.Done()
 					log.Println("exporting build cache, platform : ", platform)
 					log.Println(exportCacheCmd)
 					err := impl.executeCmd(ciContext, exportCacheCmd)
 					if err != nil {
-						log.Println("error in exporting ", "err : ", err)
-						return
+						log.Println("error in exporting", "err:", err)
+						//not returning as need to mark waitGroup done
 					}
+					wg.Done()
 				}(platform, exportCacheCmd)
 			}
 			wg.Wait()
@@ -1006,14 +1006,6 @@ func (impl *DockerHelperImpl) CleanBuildxK8sDriver(ciContext cicxt.CiContext, no
 
 func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(ciContext cicxt.CiContext, nodeNames []string) error {
 	var err error
-	defer func() {
-		removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
-		fmt.Println(util.DEVTRON, " cmd : ", removeCmd)
-		execRemoveCmd := impl.GetCommandToExecute(removeCmd)
-		_ = impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
-
-	}()
-
 	for _, node := range nodeNames {
 		createCmd := fmt.Sprintf("docker buildx create --name=%s --node=%s --leave", BUILDX_K8S_DRIVER_NAME, node)
 		fmt.Println(util.DEVTRON, " cmd : ", createCmd)
@@ -1021,10 +1013,22 @@ func (impl *DockerHelperImpl) leaveNodesFromBuildxK8sDriver(ciContext cicxt.CiCo
 		err = impl.cmdExecutor.RunCommand(ciContext, execCreateCmd)
 		if err != nil {
 			log.Println(util.DEVTRON, "error in leaving node : ", err)
-			return err
+			break
 		}
 	}
+	impl.removeBuildxDriver(ciContext) //driver cleanup
 	return err
+}
+
+func (impl *DockerHelperImpl) removeBuildxDriver(ciContext cicxt.CiContext) {
+	removeCmd := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
+	fmt.Println(util.DEVTRON, " cmd : ", removeCmd)
+	execRemoveCmd := impl.GetCommandToExecute(removeCmd)
+	err := impl.cmdExecutor.RunCommand(ciContext, execRemoveCmd)
+	if err != nil {
+		log.Println("error in executing docker buildx remove command", "err", err)
+		//not returning error here as this is just a cleanup job, not making it blocking
+	}
 }
 
 // this function is deprecated, use cmdExecutor.RunCommand instead
