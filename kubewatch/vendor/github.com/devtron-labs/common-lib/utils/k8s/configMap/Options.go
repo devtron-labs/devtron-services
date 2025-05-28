@@ -4,19 +4,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-type Option func(*v1.ConfigMap)
-
-// WithCmName adds config map name to a ConfigMap
-func WithCmName(name string) Option {
-	return func(cm *v1.ConfigMap) {
-		if len(name) > 0 {
-			cm.ObjectMeta.Name = name
-		}
-	}
-}
+type ConfigMapOption func(*v1.ConfigMap)
 
 // WithLabels adds labels to a ConfigMap
-func WithLabels(labels map[string]string) Option {
+func WithLabels(labels map[string]string) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
 		if labels != nil && len(labels) > 0 {
 			cm.ObjectMeta.Labels = labels
@@ -25,7 +16,7 @@ func WithLabels(labels map[string]string) Option {
 }
 
 // WithAnnotations adds annotations to a ConfigMap
-func WithAnnotations(annotations map[string]string) Option {
+func WithAnnotations(annotations map[string]string) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
 		if annotations != nil && len(annotations) > 0 {
 			cm.ObjectMeta.Annotations = annotations
@@ -34,7 +25,7 @@ func WithAnnotations(annotations map[string]string) Option {
 }
 
 // WithData adds string data to a ConfigMap
-func WithData(data map[string]string) Option {
+func WithData(data map[string]string) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
 		if data != nil && len(data) > 0 {
 			cm.Data = data
@@ -43,7 +34,7 @@ func WithData(data map[string]string) Option {
 }
 
 // WithBinaryData adds binary data to a ConfigMap
-func WithBinaryData(binaryData map[string][]byte) Option {
+func WithBinaryData(binaryData map[string][]byte) ConfigMapOption {
 	return func(cm *v1.ConfigMap) {
 		if binaryData != nil && len(binaryData) > 0 {
 			cm.BinaryData = binaryData
