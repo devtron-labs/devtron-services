@@ -31,6 +31,7 @@ import (
 	v1beta12 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
@@ -151,6 +152,8 @@ type K8sService interface {
 	GetResourceByGVR(ctx context.Context, config *rest.Config, GVR schema.GroupVersionResource, resourceName, namespace string) (*unstructured.Unstructured, error)
 	PatchResourceByGVR(ctx context.Context, config *rest.Config, GVR schema.GroupVersionResource, resourceName, namespace string, patchType types.PatchType, patchData []byte) (*unstructured.Unstructured, error)
 	DeleteResourceByGVR(ctx context.Context, config *rest.Config, GVR schema.GroupVersionResource, resourceName, namespace string, forceDelete bool) error
+	GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error)
+	PatchResourceByRestClient(restClient *rest.RESTClient, resource, name, namespace string, pt types.PatchType, data []byte, subresources ...string) rest.Result
 }
 
 func NewK8sUtil(logger *zap.SugaredLogger, runTimeConfig *RuntimeConfig) (*K8sServiceImpl, error) {
@@ -1911,31 +1914,6 @@ func (impl *K8sServiceImpl) CreateOrUpdateSecretByName(client *v12.CoreV1Client,
 	return nil
 }
 
-func (impl *K8sServiceImpl) GetGVRForCRD(config *rest.Config, CRDName string) (schema.GroupVersionResource, error) {
-	apiExtClient, err := apiextensionsclient.NewForConfig(config)
-	if err != nil {
-		impl.logger.Error("error in getting api extension client", "err", err)
-		return schema.GroupVersionResource{}, err
-	}
-	crd, err := apiExtClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.TODO(), CRDName, metav1.GetOptions{})
-	if err != nil {
-		impl.logger.Error("error in getting terraform crd", "err", err)
-		return schema.GroupVersionResource{}, err
-	}
-	var servedVersion string
-	for _, v := range crd.Spec.Versions {
-		if v.Served {
-			servedVersion = v.Name
-			break
-		}
-	}
-	return schema.GroupVersionResource{
-		Group:    crd.Spec.Group,
-		Version:  servedVersion,
-		Resource: crd.Spec.Names.Plural,
-	}, nil
-}
-
 func (impl *K8sServiceImpl) GetResourceByGVR(ctx context.Context, config *rest.Config, GVR schema.GroupVersionResource, resourceName, namespace string) (*unstructured.Unstructured, error) {
 	dynClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -1980,4 +1958,62 @@ func (impl *K8sServiceImpl) DeleteResourceByGVR(ctx context.Context, config *res
 		return err
 	}
 	return nil
+}
+
+func (impl *K8sServiceImpl) GetGVRForCRD(config *rest.Config, CRDName string) (schema.GroupVersionResource, error) {
+	apiExtClient, err := apiextensionsclient.NewForConfig(config)
+	if err != nil {
+		impl.logger.Error("error in getting api extension client", "err", err)
+		return schema.GroupVersionResource{}, err
+	}
+	crd, err := apiExtClient.ApiextensionsV1().CustomResourceDefinitions().Get(context.TODO(), CRDName, metav1.GetOptions{})
+	if err != nil {
+		impl.logger.Error("error in getting terraform crd", "err", err)
+		return schema.GroupVersionResource{}, err
+	}
+	var servedVersion string
+	for _, v := range crd.Spec.Versions {
+		if v.Served {
+			servedVersion = v.Name
+			break
+		}
+	}
+	return schema.GroupVersionResource{
+		Group:    crd.Spec.Group,
+		Version:  servedVersion,
+		Resource: crd.Spec.Names.Plural,
+	}, nil
+}
+
+func (impl *K8sServiceImpl) GetRestClientForCRD(config *ClusterConfig, groupVersion *schema.GroupVersion) (*rest.RESTClient, error) {
+
+	restConfig, err := impl.GetRestConfigByCluster(config)
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig.ContentConfig = rest.ContentConfig{
+		GroupVersion:         groupVersion,
+		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
+	}
+	restConfig.APIPath = "/apis"
+
+	restClient, err := rest.RESTClientFor(restConfig)
+	if err != nil {
+		impl.logger.Errorw("error in getting rest client", "gvr", groupVersion.String(), "err", err)
+		return nil, err
+	}
+
+	return restClient, nil
+}
+
+func (impl *K8sServiceImpl) PatchResourceByRestClient(restClient *rest.RESTClient, resource, name, namespace string, pt types.PatchType, data []byte, subresources ...string) rest.Result {
+	result := restClient.Patch(pt).
+		Namespace(namespace).
+		Resource(resource).
+		Name(name).
+		SubResource(subresources...).
+		Body(data).
+		Do(context.Background())
+	return result
 }
