@@ -218,4 +218,4 @@ require (
 	upper.io/db.v3 v3.8.0+incompatible // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib dependa-fix
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529110935-71d7d0abc666
