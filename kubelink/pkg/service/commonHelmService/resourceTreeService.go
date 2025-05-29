@@ -45,7 +45,7 @@ func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingParentObjects(ctx con
 	if appDetailRequest.PreferCache && appDetailRequest.CacheConfig != nil {
 		impl.logger.Infow("Cache is not supported in oss", "releaseName", appDetailRequest.ReleaseName)
 		if !appDetailRequest.UseFallBack {
-			impl.logger.Infow("Use fallback is false, hence returning with error", "appDetailRequest", appDetailRequest)
+			impl.logger.Infow("Use fallback is false, hence returning with error", "releaseName", appDetailRequest.ReleaseName)
 			return nil, errors.New("Cache is not supported in oss and use_fallback flag is false")
 		}
 
@@ -244,7 +244,13 @@ func (impl *ResourceTreeServiceImpl) getNodeFromDesiredOrLiveManifest(request *G
 	resourceRef := k8sObjectsUtil.BuildResourceRef(gvk, *manifest, _namespace)
 
 	if impl.k8sService.CanHaveChild(gvk) {
-		children, err := impl.k8sService.GetChildObjects(request.RestConfig, _namespace, gvk, manifest.GetName(), manifest.GetAPIVersion())
+		var children []*unstructured.Unstructured
+		var err error
+		if impl.helmReleaseConfig.FeatChildChildObjectListingPaginationEnable {
+			children, err = impl.k8sService.GetChildObjectsV2(request.RestConfig, _namespace, gvk, manifest.GetName())
+		} else {
+			children, err = impl.k8sService.GetChildObjectsV1(request.RestConfig, _namespace, gvk, manifest.GetName(), manifest.GetAPIVersion())
+		}
 		if err != nil {
 			return response, err
 		}

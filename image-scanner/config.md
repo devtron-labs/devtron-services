@@ -1,9 +1,10 @@
-# IMAGESCANER CONFIGMAP 
+# IMAGESCANER CONFIGMAP
 
 
 | Variable Name       | Value                                  | Description                   |
 |---------------------|----------------------------------------|-------------------------------|
 | CLAIR_ADDR          | clair-dcd.devtroncd:6060               | For connecting to Clair if it's enabled |
+| ENABLE_PROGRESSING_SCAN_CHECK | "true"                                | Flag to enable/disable checking for progressing scans at startup (set to "false" to improve startup performance) |
 | CLIENT_ID           | client-2                               | Client ID                        |
 | NATS_SERVER_HOST    | nats://devtron-nats.devtroncd:4222    | For connecting to NATS         |
 | PG_LOG_QUERY        | "false"                                | PostgreSQL Query Logging (false to disable) |
