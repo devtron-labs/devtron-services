@@ -63,11 +63,11 @@ github.com/cloudflare/circl/sign/ed448
 # github.com/cyphar/filepath-securejoin v0.4.1
 ## explicit; go 1.18
 github.com/cyphar/filepath-securejoin
-# github.com/davecgh/go-spew v1.1.1
+# github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250521214453-c735fc26a0fe
-## explicit; go 1.21
+# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250528073637-07ed523ae026
+## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
 github.com/devtron-labs/common-lib/git-manager
@@ -84,7 +84,7 @@ github.com/devtron-labs/common-lib/utils/bean
 # github.com/devtron-labs/protos v0.0.3-0.20250323220609-ecf8a0f7305e
 ## explicit; go 1.17
 github.com/devtron-labs/protos/gitSensor
-# github.com/docker/cli v24.0.6+incompatible
+# github.com/docker/cli v28.1.1+incompatible
 ## explicit
 github.com/docker/cli/cli/config/types
 # github.com/emirpasic/gods v1.18.1
@@ -198,8 +198,8 @@ github.com/gorilla/mux
 # github.com/gorilla/schema v1.4.1
 ## explicit; go 1.20
 github.com/gorilla/schema
-# github.com/gorilla/websocket v1.5.0
-## explicit; go 1.12
+# github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
+## explicit; go 1.20
 github.com/gorilla/websocket
 # github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 ## explicit; go 1.23.0
@@ -220,21 +220,17 @@ github.com/kevinburke/ssh_config
 ## explicit; go 1.22
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/internal/le
-# github.com/minio/highwayhash v1.0.2
-## explicit; go 1.15
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/nats-io/jwt/v2 v2.3.0
-## explicit; go 1.16
-# github.com/nats-io/nats.go v1.28.0
-## explicit; go 1.19
+# github.com/nats-io/nats.go v1.42.0
+## explicit; go 1.23.0
 github.com/nats-io/nats.go
 github.com/nats-io/nats.go/encoders/builtin
 github.com/nats-io/nats.go/internal/parser
 github.com/nats-io/nats.go/util
-# github.com/nats-io/nkeys v0.4.6
-## explicit; go 1.19
+# github.com/nats-io/nkeys v0.4.11
+## explicit; go 1.23.0
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
 ## explicit
@@ -246,7 +242,7 @@ github.com/nats-io/nuid
 github.com/pjbgf/sha1cd
 github.com/pjbgf/sha1cd/internal
 github.com/pjbgf/sha1cd/ubc
-# github.com/pmezard/go-difflib v1.0.0
+# github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 ## explicit
 github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v1.22.0
@@ -326,7 +322,6 @@ golang.org/x/crypto/chacha20
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
-golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
@@ -480,4 +475,4 @@ gopkg.in/yaml.v3
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250521214453-c735fc26a0fe
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250528073637-07ed523ae026
