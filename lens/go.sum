@@ -11,8 +11,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529111042-b80fd7f9e1b8 h1:Pb3W+54Ul4YRJIWkU4bIRQ/rJVjvSgSBxi5N5xfExkQ=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529111042-b80fd7f9e1b8/go.mod h1:Dkj2nRCtLrKgAHGJA+nGZrRAZo/Gfm2bkyvW3k6+wGg=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529114355-d91484a1d90e h1:BoxUcgdnwiuhG7C1P6YPxlteHsxAouO5lstT0BglU0g=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529114355-d91484a1d90e/go.mod h1:Dkj2nRCtLrKgAHGJA+nGZrRAZo/Gfm2bkyvW3k6+wGg=
 github.com/devtron-labs/protos v0.0.3-0.20240912111807-605886d90b8d h1:IV6FWU6eWSfKq67Fs2DBx3LjkX/wtjMj9QB3ufZgga4=
 github.com/devtron-labs/protos v0.0.3-0.20240912111807-605886d90b8d/go.mod h1:1TqULGlTey+VNhAu/ag7NJuUvByJemkqodsc9L5PHJk=
 github.com/docker/cli v28.1.1+incompatible h1:eyUemzeI45DY7eDPuwUcmDyDj1pM98oD5MdSpiItp8k=

@@ -12,7 +12,7 @@ require (
 	github.com/devtron-labs/protos v0.0.3-0.20250323220609-ecf8a0f7305e
 	github.com/gammazero/workerpool v1.1.3
 	github.com/go-git/go-git/v5 v5.16.0
-	github.com/go-pg/pg v8.0.7+incompatible
+	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/handlers v1.5.2
