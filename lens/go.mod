@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/protos v0.0.3-0.20240912111807-605886d90b8d
-	github.com/go-pg/pg/v10 v10.14.0
+	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/google/wire v0.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.22.0

@@ -9,7 +9,7 @@ require (
 	github.com/argoproj/argo-workflows/v3 v3.4.7
 	github.com/argoproj/gitops-engine v0.7.1-0.20240718175351-6b2984ebc470
 	github.com/caarlos0/env v3.5.0+incompatible
-	github.com/go-pg/pg v8.0.7+incompatible
+	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/nlopes/slack v0.1.0

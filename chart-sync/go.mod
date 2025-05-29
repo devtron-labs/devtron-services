@@ -13,7 +13,7 @@ require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/common-lib v0.19.1
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-pg/pg v8.0.7+incompatible
+	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/google/wire v0.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0

@@ -8,7 +8,7 @@ require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/common-lib v0.0.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
-	github.com/go-pg/pg v8.0.7+incompatible
+	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/golang/protobuf v1.5.4
 	github.com/google/wire v0.6.0
 	github.com/gorilla/mux v1.8.1
