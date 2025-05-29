@@ -56,9 +56,14 @@ func (impl *CdStage) HandleCDEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	return
 }
 
-func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (*helper.HandleCdEventResponse, error) {
+func (impl *CdStage) handleCDEvent(ciCdRequest *helper.CiCdTriggerEvent) (resp *helper.HandleCdEventResponse, err error) {
+	defer func() { //recover in this function allows us to send event even if the code crashes
+		if r := recover(); r != nil {
+			log.Println("recovered from panic in handleCDEvent:", r)
+			err = fmt.Errorf("panic occurred during CD event handling")
+		}
+	}()
 	var artifactUploaded bool
-	var err error
 	var allPluginArtifacts *helper.PluginArtifacts
 
 	allPluginArtifacts, err = impl.runCDStages(ciCdRequest)

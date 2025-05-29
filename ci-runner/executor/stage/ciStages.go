@@ -74,8 +74,8 @@ func NewCiStage(gitManager helper.GitManager, dockerHelper helper.DockerHelper, 
 	}
 }
 
-func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
-	log.Println(util.DEVTRON, "defer CI stage data.", "err: ", err, "artifactUploaded: ", artifactUploaded)
+func sendCIEventResult(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool, err error) (exitCode int) {
+	log.Println(util.DEVTRON, "sendCIEventResult CI stage data.", "err: ", err, "artifactUploaded: ", artifactUploaded)
 	if err != nil {
 		var stageError *helper.CiStageError
 		if errors.As(err, &stageError) {
@@ -99,13 +99,23 @@ func deferCIEvent(ciRequest *helper.CommonWorkflowRequest, artifactUploaded bool
 }
 
 func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCode *int) {
-	var artifactUploaded bool
-	var err error
+	artifactUploaded, err := impl.handleCIEvent(ciCdRequest)
+	if err != nil {
+		//log error and send event result
+		log.Println("ci stage error: ", err)
+	}
+	*exitCode = sendCIEventResult(ciCdRequest.CommonWorkflowRequest, artifactUploaded, err)
+}
+
+func (impl *CiStage) handleCIEvent(ciCdRequest *helper.CiCdTriggerEvent) (artifactUploaded bool, err error) {
+	defer func() { //recover in this function allows us to send event even if the code crashes
+		if r := recover(); r != nil {
+			log.Println("recovered from panic in handleCIEvent:", r)
+			err = fmt.Errorf("panic occurred during CI event handling")
+		}
+	}()
 	ciRequest := ciCdRequest.CommonWorkflowRequest
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
-	defer func() {
-		*exitCode = deferCIEvent(ciRequest, artifactUploaded, err)
-	}()
 	artifactUploaded, err = impl.runCIStages(ciContext, ciCdRequest)
 	log.Println(util.DEVTRON, artifactUploaded, err)
 	var artifactUploadErr error
@@ -116,16 +126,16 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 
 	if err != nil {
 		log.Println(util.DEVTRON, err)
-		return
+		return artifactUploaded, err
 	}
 
 	if artifactUploadErr != nil {
 		log.Println(util.DEVTRON, "error in artifact upload: ", artifactUploadErr)
 		if ciCdRequest.CommonWorkflowRequest.IsExtRun {
 			log.Println(util.DEVTRON, "Ignoring artifactUploadErr")
-			return
+			return artifactUploaded, err
 		}
-		return
+		return artifactUploaded, err
 	}
 
 	// sync cache
@@ -148,7 +158,7 @@ func (impl *CiStage) HandleCIEvent(ciCdRequest *helper.CiCdTriggerEvent, exitCod
 	if err != nil {
 		log.Println("error in cache push", err)
 	}
-	return
+	return artifactUploaded, err
 }
 
 // TODO: take as tech debt and break this function into parts for better code readability
@@ -672,17 +682,10 @@ func pullCache(metrics *helper.CIMetrics, ciCdRequest *helper.CiCdTriggerEvent) 
 	log.Println(util.DEVTRON, " cache-pull")
 	start := time.Now()
 	metrics.CacheDownStartTime = start
-
-	defer func() {
-		log.Println(util.DEVTRON, " /cache-pull")
-		metrics.CacheDownDuration = time.Since(start).Seconds()
-	}()
-
 	err := helper.GetCache(ciCdRequest.CommonWorkflowRequest)
-	if err != nil {
-		return err
-	}
-	return nil
+	log.Println(util.DEVTRON, " /cache-pull")
+	metrics.CacheDownDuration = time.Since(start).Seconds()
+	return err
 }
 
 func (impl *CiStage) prepareStep(ciCdRequest *helper.CiCdTriggerEvent, metrics *helper.CIMetrics, skipCheckout bool) error {
