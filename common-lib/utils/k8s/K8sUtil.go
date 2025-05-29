@@ -2000,7 +2000,7 @@ func (impl *K8sServiceImpl) GetRestClientForCRD(config *ClusterConfig, groupVers
 
 	restClient, err := rest.RESTClientFor(restConfig)
 	if err != nil {
-		log.Println(err)
+		impl.logger.Errorw("error in getting rest client", "gvr", groupVersion.String(), "err", err)
 		return nil, err
 	}
 
