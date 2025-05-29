@@ -194,3 +194,5 @@ require (
 	golang.org/x/crypto v0.38.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
+
+replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1

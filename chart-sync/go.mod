@@ -4,10 +4,7 @@ go 1.24.0
 
 toolchain go1.24.3
 
-replace (
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529114355-d91484a1d90e
-	helm.sh/helm/v3 v3.14.3 => github.com/devtron-labs/helm/v3 v3.14.1-0.20240401080259-90238cf69e42
-)
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250601142730-5f74a616a6e1
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -19,7 +16,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
-	helm.sh/helm/v3 v3.18.0
+	helm.sh/helm/v3 v3.18.1
 )
 
 require (

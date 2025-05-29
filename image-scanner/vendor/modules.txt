@@ -74,7 +74,7 @@ github.com/cespare/xxhash/v2
 github.com/coreos/clair/api/v3/clairpb
 github.com/coreos/clair/database
 github.com/coreos/clair/ext/versionfmt
-# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529114355-d91484a1d90e
+# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250601142730-5f74a616a6e1
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -106,15 +106,12 @@ github.com/docker/distribution/registry/client/auth/challenge
 ## explicit; go 1.18
 github.com/docker/docker-credential-helpers/client
 github.com/docker/docker-credential-helpers/credentials
-# github.com/go-pg/pg v8.0.7+incompatible
+# github.com/go-pg/pg v6.15.1+incompatible
 ## explicit
 github.com/go-pg/pg
 github.com/go-pg/pg/internal
-github.com/go-pg/pg/internal/iszero
 github.com/go-pg/pg/internal/parser
 github.com/go-pg/pg/internal/pool
-github.com/go-pg/pg/internal/struct_filter
-github.com/go-pg/pg/internal/tag
 github.com/go-pg/pg/orm
 github.com/go-pg/pg/types
 # github.com/golang/mock v1.6.0
@@ -459,4 +456,4 @@ google.golang.org/protobuf/types/known/wrapperspb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529114355-d91484a1d90e
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250601142730-5f74a616a6e1

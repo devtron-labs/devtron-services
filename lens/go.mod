@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/protos v0.0.3-0.20240912111807-605886d90b8d
-	github.com/go-pg/pg v6.15.1+incompatible
+	github.com/go-pg/pg/v10 v10.14.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.22.0
@@ -58,4 +58,7 @@ require (
 	github.com/onsi/gomega v1.18.1 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250529114355-d91484a1d90e
+replace (
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250601142730-5f74a616a6e1
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 => go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.1
+)

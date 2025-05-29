@@ -1,4 +1,4 @@
-FROM golang:1.22 AS build-env
+FROM golang:1.24.0 AS build-env
 
 RUN apt update && \
 	apt install git gcc musl-dev make -y && \
