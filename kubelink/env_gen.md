@@ -12,8 +12,6 @@
  | K8s_TCP_KEEPALIVE | int |30 |  |  | false |
  | K8s_TCP_TIMEOUT | int |30 |  |  | false |
  | K8s_TLS_HANDSHAKE_TIMEOUT | int |10 |  |  | false |
- | KUBELINK_GRPC_MAX_RECEIVE_MSG_SIZE | int |20 |  |  | false |
- | KUBELINK_GRPC_MAX_SEND_MSG_SIZE | int |4 |  |  | false |
  | LOG_LEVEL | int |-1 |  |  | false |
  | NATS_MSG_ACK_WAIT_IN_SECS | int |120 |  |  | false |
  | NATS_MSG_BUFFER_SIZE | int |-1 |  |  | false |
@@ -48,4 +46,12 @@
  | MAX_COUNT_FOR_HELM_RELEASE | int |20 | Max count for helm release history list | 20 | false |
  | PARENT_CHILD_GVK_MAPPING | string | | Parent child GVK mapping for resource tree |  | false |
  | RUN_HELM_INSTALL_IN_ASYNC_MODE | bool |false | Run helm install/ upgrade in async mode | false | false |
+
+
+## INFRA_SETUP Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | KUBELINK_GRPC_MAX_RECEIVE_MSG_SIZE | int |20 |  |  | false |
+ | KUBELINK_GRPC_MAX_SEND_MSG_SIZE | int |4 |  |  | false |
+ | KUBELINK_GRPC_SERVICE_CONFIG | string |{"loadBalancingPolicy":"round_robin"} | kubelink grpc service config |  | false |
 

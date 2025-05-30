@@ -43,38 +43,38 @@ func NewInformerFactoryImpl(logger *zap.SugaredLogger,
 }
 
 func (impl *InformerFactoryImpl) GetSharedInformerFactory(config *rest.Config, clusterLabels *bean2.ClusterLabels,
-	eventHandlers *bean.EventHandlers[coreV1.Secret], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error) {
+	eventHandlers *bean.EventHandlers[coreV1.ConfigMap], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error) {
 	clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 	if k8sErr != nil {
 		middleware.IncUnreachableCluster(clusterLabels)
 		return nil, k8sErr
 	}
 	informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, options...)
-	secretInformer := informerFactory.Core().V1().Secrets()
-	_, eventErr := secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	cmInformer := informerFactory.Core().V1().ConfigMaps()
+	_, eventErr := cmInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(newObj interface{}) {
-			impl.logger.Debugw("event received in cluster secret add informer", "time", time.Now())
-			if secretObject, ok := newObj.(*coreV1.Secret); ok {
-				eventHandlers.AddFunc(secretObject)
+			impl.logger.Debugw("event received in cluster cm add informer", "time", time.Now())
+			if cmObject, ok := newObj.(*coreV1.ConfigMap); ok {
+				eventHandlers.AddFunc(cmObject)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			impl.logger.Debugw("event received in cluster secret update informer", "time", time.Now())
-			oldSecretObject, validOld := oldObj.(*coreV1.Secret)
-			newSecretObject, validNew := newObj.(*coreV1.Secret)
+			impl.logger.Debugw("event received in cluster cm update informer", "time", time.Now())
+			oldCmObject, validOld := oldObj.(*coreV1.ConfigMap)
+			newCmObject, validNew := newObj.(*coreV1.ConfigMap)
 			if validOld && validNew {
-				eventHandlers.UpdateFunc(oldSecretObject, newSecretObject)
+				eventHandlers.UpdateFunc(oldCmObject, newCmObject)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			impl.logger.Debugw("event received in secret delete informer", "time", time.Now())
-			if secretObject, ok := obj.(*coreV1.Secret); ok {
-				eventHandlers.DeleteFunc(secretObject)
+			impl.logger.Debugw("event received in cm delete informer", "time", time.Now())
+			if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
+				eventHandlers.DeleteFunc(cmObject)
 			}
 		},
 	})
 	if eventErr != nil {
-		impl.logger.Errorw("error in adding event handler for cluster secret informer", "err", eventErr)
+		impl.logger.Errorw("error in adding event handler for cluster cm informer", "err", eventErr)
 		return informerFactory, eventErr
 	}
 	return informerFactory, nil
