@@ -125,15 +125,11 @@ func (impl *CdStage) runCDStages(ciCdRequest *helper.CiCdTriggerEvent) (*helper.
 		return nil, err
 	}
 	// git handling
-	// we are skipping clone and checkout in case of ci job type poll cr images plugin does not require it.(ci-job)
-	skipCheckout := ciCdRequest.CommonWorkflowRequest.CiPipelineType == helper.CI_JOB
-	if !skipCheckout {
-		log.Println(util.DEVTRON, " git")
-		err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
-		if err != nil {
-			log.Println(util.DEVTRON, "clone err: ", err)
-			return nil, err
-		}
+	log.Println(util.DEVTRON, " git")
+	err = impl.gitManager.CloneAndCheckout(ciCdRequest.CommonWorkflowRequest.CiProjectDetails)
+	if err != nil {
+		log.Println(util.DEVTRON, "clone err: ", err)
+		return nil, err
 	}
 	log.Println(util.DEVTRON, " /git")
 	// Start docker daemon
