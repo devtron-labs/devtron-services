@@ -1,5 +1,5 @@
 
-TARGET_BRANCH?=main
+TARGET_BRANCH?=develop-main-sync-2jun-1
 # TARGET_BRANCH=feature-branch make dep-update-oss
 
 all: dep-update-oss build
