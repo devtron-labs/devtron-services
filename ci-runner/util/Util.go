@@ -235,15 +235,13 @@ func ExecuteWithStageInfoLog(stageName string, stageExecutor func() error) (err 
 func ExecuteWithStageInfoLogWithMetadata(stageName string, metadata interface{}, stageExecutor func() error) (err error) {
 	startDockerStageInfo := newStageInfo(stageName).withCurrentStartTime().withMetadata(metadata)
 	startDockerStageInfo.log()
-	defer func() {
-		status := success
-		if err != nil {
-			status = failure
-		}
-		startDockerStageInfo.withStatus(status).withCurrentEndTime().log()
-	}()
-
-	return stageExecutor()
+	err = stageExecutor()
+	status := success
+	if err != nil {
+		status = failure
+	}
+	startDockerStageInfo.withStatus(status).withCurrentEndTime().log()
+	return
 }
 
 func GenerateBuildkitdContent(host string) string {
