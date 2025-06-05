@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/remotecommand"
 
 	"github.com/argoproj/argo-workflows/v3/errors"
@@ -98,10 +98,10 @@ func ExecPodContainer(restConfig *rest.Config, namespace string, pod string, con
 }
 
 // GetExecutorOutput returns the output of an remotecommand.Executor
-func GetExecutorOutput(exec remotecommand.Executor) (*bytes.Buffer, *bytes.Buffer, error) {
+func GetExecutorOutput(ctx context.Context, exec remotecommand.Executor) (*bytes.Buffer, *bytes.Buffer, error) {
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
-	err := exec.Stream(remotecommand.StreamOptions{
+	err := exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdout: &stdOut,
 		Stderr: &stdErr,
 		Tty:    false,
@@ -112,61 +112,87 @@ func GetExecutorOutput(exec remotecommand.Executor) (*bytes.Buffer, *bytes.Buffe
 	return &stdOut, &stdErr, nil
 }
 
+func overwriteWithDefaultParams(inParam *wfv1.Parameter) {
+	if inParam.Value == nil && inParam.Default != nil {
+		inParam.Value = inParam.Default
+	}
+}
+
+func overwriteWithArguments(argParam, inParam *wfv1.Parameter) {
+	if argParam != nil {
+		if argParam.Value != nil {
+			inParam.Value = argParam.Value
+			inParam.ValueFrom = nil
+		} else {
+			inParam.ValueFrom = argParam.ValueFrom
+			inParam.Value = nil
+		}
+	}
+}
+
+func substituteAndGetConfigMapValue(inParam *wfv1.Parameter, globalParams Parameters, namespace string, configMapStore ConfigMapStore) error {
+	if inParam.ValueFrom != nil && inParam.ValueFrom.ConfigMapKeyRef != nil {
+		if configMapStore != nil {
+			replaceMap := make(map[string]interface{})
+			for k, v := range globalParams {
+				replaceMap[k] = v
+			}
+
+			// SubstituteParams is called only at the end of this method. To support parametrization of the configmap
+			// we need to perform a substitution here over the name and the key of the ConfigMapKeyRef.
+			cmName, err := substituteConfigMapKeyRefParam(inParam.ValueFrom.ConfigMapKeyRef.Name, replaceMap)
+			if err != nil {
+				log.WithError(err).Error("unable to substitute name for ConfigMapKeyRef")
+				return err
+			}
+			cmKey, err := substituteConfigMapKeyRefParam(inParam.ValueFrom.ConfigMapKeyRef.Key, replaceMap)
+			if err != nil {
+				log.WithError(err).Error("unable to substitute key for ConfigMapKeyRef")
+				return err
+			}
+
+			cmValue, err := GetConfigMapValue(configMapStore, namespace, cmName, cmKey)
+			if err != nil {
+				if inParam.ValueFrom.Default != nil && errors.IsCode(errors.CodeNotFound, err) {
+					inParam.Value = inParam.ValueFrom.Default
+				} else {
+					return errors.Errorf(errors.CodeBadRequest, "unable to retrieve inputs.parameters.%s from ConfigMap: %s", inParam.Name, err)
+				}
+			} else {
+				inParam.Value = wfv1.AnyStringPtr(cmValue)
+			}
+		}
+	} else {
+		if inParam.Value == nil {
+			return errors.Errorf(errors.CodeBadRequest, "inputs.parameters.%s was not supplied", inParam.Name)
+		}
+	}
+	return nil
+}
+
 // ProcessArgs sets in the inputs, the values either passed via arguments, or the hardwired values
 // It substitutes:
 // * parameters in the template from the arguments
 // * global parameters (e.g. {{workflow.parameters.XX}}, {{workflow.name}}, {{workflow.status}})
 // * local parameters (e.g. {{pod.name}})
-func ProcessArgs(tmpl *wfv1.Template, args wfv1.ArgumentsProvider, globalParams, localParams Parameters, validateOnly bool, namespace string, configMapInformer cache.SharedIndexInformer) (*wfv1.Template, error) {
+func ProcessArgs(tmpl *wfv1.Template, args wfv1.ArgumentsProvider, globalParams, localParams Parameters, validateOnly bool, namespace string, configMapStore ConfigMapStore) (*wfv1.Template, error) {
 	// For each input parameter:
 	// 1) check if was supplied as argument. if so use the supplied value from arg
 	// 2) if not, use default value.
 	// 3) if no default value, it is an error
 	newTmpl := tmpl.DeepCopy()
 	for i, inParam := range newTmpl.Inputs.Parameters {
-		if inParam.Value == nil && inParam.Default != nil {
-			// first set to default value
-			inParam.Value = inParam.Default
-		}
+		// first set to default value
+		overwriteWithDefaultParams(&inParam)
+
 		// overwrite value from argument (if supplied)
 		argParam := args.GetParameterByName(inParam.Name)
-		if argParam != nil {
-			if argParam.Value != nil {
-				inParam.Value = argParam.Value
-			} else {
-				inParam.ValueFrom = argParam.ValueFrom
-			}
-		}
-		if inParam.ValueFrom != nil && inParam.ValueFrom.ConfigMapKeyRef != nil {
-			if configMapInformer != nil {
-				// SubstituteParams is called only at the end of this method. To support parametrization of the configmap
-				// we need to perform a substitution here over the name and the key of the ConfigMapKeyRef.
-				cmName, err := substituteConfigMapKeyRefParam(inParam.ValueFrom.ConfigMapKeyRef.Name, globalParams)
-				if err != nil {
-					log.WithError(err).Error("unable to substitute name for ConfigMapKeyRef")
-					return nil, err
-				}
-				cmKey, err := substituteConfigMapKeyRefParam(inParam.ValueFrom.ConfigMapKeyRef.Key, globalParams)
-				if err != nil {
-					log.WithError(err).Error("unable to substitute key for ConfigMapKeyRef")
-					return nil, err
-				}
+		overwriteWithArguments(argParam, &inParam)
 
-				cmValue, err := GetConfigMapValue(configMapInformer, namespace, cmName, cmKey)
-				if err != nil {
-					if inParam.ValueFrom.Default != nil && errors.IsCode(errors.CodeNotFound, err) {
-						inParam.Value = inParam.ValueFrom.Default
-					} else {
-						return nil, errors.Errorf(errors.CodeBadRequest, "unable to retrieve inputs.parameters.%s from ConfigMap: %s", inParam.Name, err)
-					}
-				} else {
-					inParam.Value = wfv1.AnyStringPtr(cmValue)
-				}
-			}
-		} else {
-			if inParam.Value == nil {
-				return nil, errors.Errorf(errors.CodeBadRequest, "inputs.parameters.%s was not supplied", inParam.Name)
-			}
+		// substitute configmap string and get value from store
+		err := substituteAndGetConfigMapValue(&inParam, globalParams, namespace, configMapStore)
+		if err != nil {
+			return nil, err
 		}
 
 		newTmpl.Inputs.Parameters[i] = inParam
@@ -198,21 +224,17 @@ func ProcessArgs(tmpl *wfv1.Template, args wfv1.ArgumentsProvider, globalParams,
 	return SubstituteParams(newTmpl, globalParams, localParams)
 }
 
-// substituteConfigMapKeyRefParams check if ConfigMapKeyRef's key is a param and perform the substitution.
-func substituteConfigMapKeyRefParam(in string, globalParams Parameters) (string, error) {
-	if strings.HasPrefix(in, "{{") && strings.HasSuffix(in, "}}") {
-		k := strings.TrimSuffix(strings.TrimPrefix(in, "{{"), "}}")
-		k = strings.Trim(k, " ")
-
-		v, ok := globalParams[k]
-		if !ok {
-			err := errors.InternalError(fmt.Sprintf("parameter %s not found", k))
-			log.WithError(err).Error()
-			return "", err
-		}
-		return v, nil
+// substituteConfigMapKeyRefParam performs template substitution for ConfigMapKeyRef
+func substituteConfigMapKeyRefParam(in string, replaceMap map[string]interface{}) (string, error) {
+	tmpl, err := template.NewTemplate(in)
+	if err != nil {
+		return "", err
 	}
-	return in, nil
+	replacedString, err := tmpl.Replace(replaceMap, false)
+	if err != nil {
+		return "", fmt.Errorf("failed to substitute configMapKeyRef: %w", err)
+	}
+	return replacedString, nil
 }
 
 // SubstituteParams returns a new copy of the template with global, pod, and input parameters substituted
@@ -289,7 +311,7 @@ func GetTemplateHolderString(tmplHolder wfv1.TemplateReferenceHolder) string {
 	} else if x := tmplHolder.GetTemplateRef(); x != nil {
 		return fmt.Sprintf("%T (%s/%s#%v)", tmplHolder, x.Name, x.Template, x.ClusterScope)
 	} else {
-		return fmt.Sprintf("%T invalid (https://argoproj.github.io/argo-workflows/templates/)", tmplHolder)
+		return fmt.Sprintf("%T invalid (https://argo-workflows.readthedocs.io/en/latest/templates/)", tmplHolder)
 	}
 }
 
@@ -301,4 +323,19 @@ func IsDone(un *unstructured.Unstructured) bool {
 	return un.GetDeletionTimestamp() == nil &&
 		un.GetLabels()[LabelKeyCompleted] == "true" &&
 		un.GetLabels()[LabelKeyWorkflowArchivingStatus] != "Pending"
+}
+
+// Check whether child hooked nodes Fulfilled
+func CheckAllHooksFullfilled(node *wfv1.NodeStatus, nodes wfv1.Nodes) bool {
+	childs := node.Children
+	for _, id := range childs {
+		n, ok := nodes[id]
+		if !ok {
+			continue
+		}
+		if n.NodeFlag != nil && n.NodeFlag.Hooked && !n.Fulfilled() {
+			return false
+		}
+	}
+	return true
 }
