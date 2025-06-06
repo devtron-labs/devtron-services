@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package commonHelmService
+package k8sResource
 
 import (
 	"context"

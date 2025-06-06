@@ -21,6 +21,7 @@ package main
 
 import (
 	"github.com/devtron-labs/common-lib/helmLib/registry"
+	k8sResource "github.com/devtron-labs/common-lib/k8sResource"
 	"github.com/devtron-labs/common-lib/monitoring"
 	"github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/common-lib/utils/k8s"
@@ -49,8 +50,7 @@ func InitializeApp() (*App, error) {
 		k8s.NewK8sUtil,
 		wire.Bind(new(k8s.K8sService), new(*k8s.K8sServiceImpl)),
 		lock.NewChartRepositoryLocker,
-		commonHelmService.NewK8sServiceImpl,
-		wire.Bind(new(commonHelmService.K8sService), new(*commonHelmService.K8sServiceImpl)),
+		k8sResource.WireSet,
 		commonHelmService.NewCommonHelmServiceImpl,
 		wire.Bind(new(commonHelmService.CommonHelmService), new(*commonHelmService.CommonHelmServiceImpl)),
 		commonHelmService.NewResourceTreeServiceImpl,

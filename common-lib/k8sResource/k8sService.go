@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package commonHelmService
+package k8sResource
 
 import (
 	"context"
@@ -22,19 +22,15 @@ import (
 	"errors"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
-	"github.com/devtron-labs/kubelink/bean"
-	globalConfig "github.com/devtron-labs/kubelink/config"
-	error2 "github.com/devtron-labs/kubelink/error"
 	"go.uber.org/zap"
 	coreV1 "k8s.io/api/core/v1"
-	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	runtimeresource "k8s.io/cli-runtime/pkg/resource"
+	runtimeResource "k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	dynamicClient "k8s.io/client-go/dynamic"
@@ -66,24 +62,26 @@ type K8sService interface {
 	// But as it fetches all the data in multiple calls, it will cost multiple round trips.
 	// This is the recommended way to get child resources.
 	GetChildObjectsV2(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]*unstructured.Unstructured, error)
-	PatchResource(ctx context.Context, restConfig *rest.Config, r *bean.KubernetesResourcePatchRequest) error
+	PatchResource(ctx context.Context, restConfig *rest.Config, r *PatchRequest) error
 }
 
 type K8sServiceImpl struct {
 	logger                *zap.SugaredLogger
-	helmReleaseConfig     *globalConfig.HelmReleaseConfig
+	k8sResourceConfig     *ServiceConfig
 	gvkVsChildGvrAndScope map[schema.GroupVersionKind][]*k8sCommonBean.GvrAndScope
 }
 
-func NewK8sServiceImpl(logger *zap.SugaredLogger, helmReleaseConfig *globalConfig.HelmReleaseConfig) (*K8sServiceImpl, error) {
-
+func NewK8sServiceImpl(
+	logger *zap.SugaredLogger,
+	k8sResourceConfig *ServiceConfig,
+) (*K8sServiceImpl, error) {
 	gvkVsChildGvrAndScope := make(map[schema.GroupVersionKind][]*k8sCommonBean.GvrAndScope)
 	k8sServiceImpl := &K8sServiceImpl{
 		logger:                logger,
-		helmReleaseConfig:     helmReleaseConfig,
+		k8sResourceConfig:     k8sResourceConfig,
 		gvkVsChildGvrAndScope: gvkVsChildGvrAndScope,
 	}
-	if len(helmReleaseConfig.ParentChildGvkMapping) > 0 {
+	if len(k8sResourceConfig.ParentChildGvkMapping) > 0 {
 		k8sServiceImpl.logger.Infow("caching parent gvk to child gvr and scope mapping")
 		_, err := k8sServiceImpl.cacheParentChildGvkMapping(gvkVsChildGvrAndScope)
 		if err != nil {
@@ -94,9 +92,9 @@ func NewK8sServiceImpl(logger *zap.SugaredLogger, helmReleaseConfig *globalConfi
 	return k8sServiceImpl, nil
 }
 
-func (impl K8sServiceImpl) cacheParentChildGvkMapping(gvkVsChildGvrAndScope map[schema.GroupVersionKind][]*k8sCommonBean.GvrAndScope) (map[schema.GroupVersionKind][]*k8sCommonBean.GvrAndScope, error) {
+func (impl *K8sServiceImpl) cacheParentChildGvkMapping(gvkVsChildGvrAndScope map[schema.GroupVersionKind][]*k8sCommonBean.GvrAndScope) (map[schema.GroupVersionKind][]*k8sCommonBean.GvrAndScope, error) {
 	var gvkChildMappings []ParentChildGvkMapping
-	parentChildGvkMapping := impl.helmReleaseConfig.ParentChildGvkMapping
+	parentChildGvkMapping := impl.k8sResourceConfig.ParentChildGvkMapping
 	err := json.Unmarshal([]byte(parentChildGvkMapping), &gvkChildMappings)
 	if err != nil {
 		impl.logger.Errorw("error in unmarshalling ParentChildGvkMapping", "parentChildGvkMapping", parentChildGvkMapping, "err", err)
@@ -112,11 +110,11 @@ func (impl K8sServiceImpl) cacheParentChildGvkMapping(gvkVsChildGvrAndScope map[
 	return gvkVsChildGvrAndScope, nil
 }
 
-func (impl K8sServiceImpl) GetChildGvrFromParentGvk(parentGvk schema.GroupVersionKind) ([]*k8sCommonBean.GvrAndScope, bool) {
+func (impl *K8sServiceImpl) GetChildGvrFromParentGvk(parentGvk schema.GroupVersionKind) ([]*k8sCommonBean.GvrAndScope, bool) {
 	var gvrAndScopes []*k8sCommonBean.GvrAndScope
 	var ok bool
 	//if parent child gvk mapping found from CM override it over local hardcoded gvk mapping
-	if len(impl.helmReleaseConfig.ParentChildGvkMapping) > 0 && len(impl.gvkVsChildGvrAndScope) > 0 {
+	if len(impl.k8sResourceConfig.ParentChildGvkMapping) > 0 && len(impl.gvkVsChildGvrAndScope) > 0 {
 		gvrAndScopes, ok = impl.gvkVsChildGvrAndScope[parentGvk]
 	} else {
 		gvrAndScopes, ok = k8sCommonBean.GetGvkVsChildGvrAndScope()[parentGvk]
@@ -124,12 +122,12 @@ func (impl K8sServiceImpl) GetChildGvrFromParentGvk(parentGvk schema.GroupVersio
 	return gvrAndScopes, ok
 }
 
-func (impl K8sServiceImpl) CanHaveChild(gvk schema.GroupVersionKind) bool {
+func (impl *K8sServiceImpl) CanHaveChild(gvk schema.GroupVersionKind) bool {
 	_, ok := impl.GetChildGvrFromParentGvk(gvk)
 	return ok
 }
 
-func (impl K8sServiceImpl) GetLiveManifest(restConfig *rest.Config, namespace string, gvk *schema.GroupVersionKind, name string) (*unstructured.Unstructured, *schema.GroupVersionResource, error) {
+func (impl *K8sServiceImpl) GetLiveManifest(restConfig *rest.Config, namespace string, gvk *schema.GroupVersionKind, name string) (*unstructured.Unstructured, *schema.GroupVersionResource, error) {
 	impl.logger.Debugw("Getting live manifest ", "namespace", namespace, "gvk", gvk, "name", name)
 
 	gvr, scope, err := impl.getGvrAndScopeFromGvk(gvk, restConfig)
@@ -142,16 +140,16 @@ func (impl K8sServiceImpl) GetLiveManifest(restConfig *rest.Config, namespace st
 		return nil, nil, err
 	}
 	if scope.Name() != meta.RESTScopeNameNamespace {
-		manifest, err := dynamicClient.Resource(*gvr).Get(context.Background(), name, metav1.GetOptions{})
+		manifest, err := dynamicClient.Resource(*gvr).Get(context.Background(), name, metaV1.GetOptions{})
 		return manifest, gvr, err
 	} else {
-		manifest, err := dynamicClient.Resource(*gvr).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		manifest, err := dynamicClient.Resource(*gvr).Namespace(namespace).Get(context.Background(), name, metaV1.GetOptions{})
 		return manifest, gvr, err
 	}
 }
 
-func (impl K8sServiceImpl) filterChildrenFromListObjects(request *filterChildrenObjectsRequest) (*filterChildrenObjectsResponse, error) {
-	response := newFilterChildrenObjectsResponse()
+func (impl *K8sServiceImpl) filterChildrenFromListObjects(request *FilterChildrenObjectsRequest) (*FilterChildrenObjectsResponse, error) {
+	response := NewFilterChildrenObjectsResponse()
 	if request.GetListObjects() == nil {
 		impl.logger.Debugw("filter children objects is empty. skipping...", request.GetLoggerMetadata()...)
 		return response, nil
@@ -197,44 +195,37 @@ func (impl K8sServiceImpl) filterChildrenFromListObjects(request *filterChildren
 	}
 }
 
-func (impl K8sServiceImpl) getK8sResourceClient(k8sResource dynamicClient.NamespaceableResourceInterface, scope meta.RESTScopeName, namespace string) dynamicClient.ResourceInterface {
+func (impl *K8sServiceImpl) getK8sResourceClient(k8sResource dynamicClient.NamespaceableResourceInterface, scope meta.RESTScopeName, namespace string) dynamicClient.ResourceInterface {
 	if scope != meta.RESTScopeNameNamespace {
 		return k8sResource
 	}
 	return k8sResource.Namespace(namespace)
 }
 
-func (impl K8sServiceImpl) getChildObject(client *dynamicClient.DynamicClient, pvcs []unstructured.Unstructured,
+func (impl *K8sServiceImpl) getChildObject(client *dynamicClient.DynamicClient, pvcs []unstructured.Unstructured,
 	gvrAndScope *k8sCommonBean.GvrAndScope, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]unstructured.Unstructured, []*unstructured.Unstructured, error) {
 	startTime := time.Now()
 	var manifests []*unstructured.Unstructured
 	childGvk := gvrAndScope.Gvr
 	childScope := gvrAndScope.Scope
 	childResourceClient := impl.getK8sResourceClient(client.Resource(childGvk), childScope, namespace)
-	listOptions := metav1.ListOptions{
-		Limit: impl.helmReleaseConfig.ChildObjectListingPageSize,
+	listOptions := metaV1.ListOptions{
+		Limit: impl.k8sResourceConfig.ChildObjectListingPageSize,
 	}
-	filterObjRequest := newFilterChildrenObjectsRequest().
+	filterObjRequest := NewFilterChildrenObjectsRequest().
 		WithChildGvk(childGvk).
 		WithNamespace(namespace).
 		WithParentGvk(parentGvk).
 		WithParentName(parentName).
 		WithPvcs(pvcs)
 	counter := 1
-	err := runtimeresource.FollowContinue(&listOptions,
-		func(options metav1.ListOptions) (runtime.Object, error) {
+	err := runtimeResource.FollowContinue(&listOptions,
+		func(options metaV1.ListOptions) (runtime.Object, error) {
 			filterListStartTime := time.Now()
 			childrenObjectsList, k8sErr := childResourceClient.List(context.Background(), options)
 			if k8sErr != nil {
-				statusError, matched := k8sErr.(*errors2.StatusError)
-				if !matched || statusError.ErrStatus.Reason != metav1.StatusReasonNotFound {
-					internalErr := error2.ConvertHelmErrorToInternalError(k8sErr)
-					if internalErr != nil {
-						k8sErr = internalErr
-					}
-					impl.logger.Errorw("error in getting child listObjects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds(), "err", k8sErr)...)
-					return nil, k8sErr
-				}
+				impl.logger.Errorw("error in getting child listObjects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds(), "err", k8sErr)...)
+				return nil, k8sErr
 			}
 			impl.logger.Debugw("listing child objects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds())...)
 			filterObjRequest = filterObjRequest.WithListObjects(childrenObjectsList)
@@ -257,7 +248,7 @@ func (impl K8sServiceImpl) getChildObject(client *dynamicClient.DynamicClient, p
 	return pvcs, manifests, nil
 }
 
-func (impl K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error) {
+func (impl *K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error) {
 	impl.logger.Debugw("Getting child objects ", "namespace", namespace, "parentGvk", parentGvk, "parentName", parentName, "parentApiVersion", parentApiVersion)
 
 	gvrAndScopes, ok := impl.GetChildGvrFromParentGvk(parentGvk)
@@ -278,21 +269,14 @@ func (impl K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace 
 
 		var objects *unstructured.UnstructuredList
 		if scope != meta.RESTScopeNameNamespace {
-			objects, err = client.Resource(gvr).List(context.Background(), metav1.ListOptions{})
+			objects, err = client.Resource(gvr).List(context.Background(), metaV1.ListOptions{})
 		} else {
-			objects, err = client.Resource(gvr).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+			objects, err = client.Resource(gvr).Namespace(namespace).List(context.Background(), metaV1.ListOptions{})
 		}
 
 		if err != nil {
-			statusError, ok := err.(*errors2.StatusError)
-			if !ok || statusError.ErrStatus.Reason != metav1.StatusReasonNotFound {
-				internalErr := error2.ConvertHelmErrorToInternalError(err)
-				if internalErr != nil {
-					err = internalErr
-				}
-				impl.logger.Errorw("error in getting child objects", "namespace", namespace, "gvr", gvr, "parentGvk", parentGvk, "err", err)
-				return nil, err
-			}
+			impl.logger.Errorw("error in getting child objects", "namespace", namespace, "gvr", gvr, "parentGvk", parentGvk, "err", err)
+			return nil, err
 		}
 
 		if objects != nil {
@@ -337,7 +321,7 @@ func (impl K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace 
 	return manifests, nil
 }
 
-func (impl K8sServiceImpl) GetChildObjectsV2(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]*unstructured.Unstructured, error) {
+func (impl *K8sServiceImpl) GetChildObjectsV2(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string) ([]*unstructured.Unstructured, error) {
 	startTime := time.Now()
 	impl.logger.Debugw("Getting child listObjects", "namespace", namespace, "parentGvk", parentGvk, "parentName", parentName, "startTime", startTime)
 	gvrAndScopes, ok := impl.GetChildGvrFromParentGvk(parentGvk)
@@ -364,10 +348,10 @@ func (impl K8sServiceImpl) GetChildObjectsV2(restConfig *rest.Config, namespace 
 	return manifests, nil
 }
 
-func (impl K8sServiceImpl) PatchResource(ctx context.Context, restConfig *rest.Config, r *bean.KubernetesResourcePatchRequest) error {
+func (impl *K8sServiceImpl) PatchResource(ctx context.Context, restConfig *rest.Config, r *PatchRequest) error {
 	impl.logger.Debugw("Patching resource ", "namespace", r.Namespace, "name", r.Name)
 
-	dynamicClient, err := dynamicClient.NewForConfig(restConfig)
+	client, err := dynamicClient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -378,9 +362,9 @@ func (impl K8sServiceImpl) PatchResource(ctx context.Context, restConfig *rest.C
 	}
 
 	if scope.Name() != meta.RESTScopeNameNamespace {
-		_, err = dynamicClient.Resource(*gvr).Patch(ctx, r.Name, types.PatchType(r.PatchType), []byte(r.Patch), metav1.PatchOptions{})
+		_, err = client.Resource(*gvr).Patch(ctx, r.Name, types.PatchType(r.PatchType), []byte(r.Patch), metaV1.PatchOptions{})
 	} else {
-		_, err = dynamicClient.Resource(*gvr).Namespace(r.Namespace).Patch(ctx, r.Name, types.PatchType(r.PatchType), []byte(r.Patch), metav1.PatchOptions{})
+		_, err = client.Resource(*gvr).Namespace(r.Namespace).Patch(ctx, r.Name, types.PatchType(r.PatchType), []byte(r.Patch), metaV1.PatchOptions{})
 	}
 
 	if err != nil {
@@ -390,7 +374,7 @@ func (impl K8sServiceImpl) PatchResource(ctx context.Context, restConfig *rest.C
 	return nil
 }
 
-func (impl K8sServiceImpl) getGvrAndScopeFromGvk(gvk *schema.GroupVersionKind, restConfig *rest.Config) (*schema.GroupVersionResource, meta.RESTScope, error) {
+func (impl *K8sServiceImpl) getGvrAndScopeFromGvk(gvk *schema.GroupVersionKind, restConfig *rest.Config) (*schema.GroupVersionResource, meta.RESTScope, error) {
 	descoClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
 	if err != nil {
 		return nil, nil, err

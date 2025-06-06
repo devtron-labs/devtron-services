@@ -3,16 +3,19 @@ package commonHelmService
 import (
 	"context"
 	"errors"
+	"github.com/devtron-labs/common-lib/k8sResource"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/common-lib/workerPool"
 	"github.com/devtron-labs/kubelink/bean"
 	globalConfig "github.com/devtron-labs/kubelink/config"
+	error2 "github.com/devtron-labs/kubelink/error"
 	client "github.com/devtron-labs/kubelink/grpc"
 	"github.com/devtron-labs/kubelink/pkg/util"
 	"go.uber.org/zap"
 	"k8s.io/api/extensions/v1beta1"
 	errors2 "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
@@ -20,7 +23,7 @@ import (
 )
 
 type ResourceTreeServiceImpl struct {
-	k8sService        K8sService
+	k8sService        k8sResource.K8sService
 	logger            *zap.SugaredLogger
 	helmReleaseConfig *globalConfig.HelmReleaseConfig
 }
@@ -31,7 +34,7 @@ type ResourceTreeService interface {
 	BuildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error)
 }
 
-func NewResourceTreeServiceImpl(k8sService K8sService,
+func NewResourceTreeServiceImpl(k8sService k8sResource.K8sService,
 	logger *zap.SugaredLogger,
 	helmReleaseConfig *globalConfig.HelmReleaseConfig) *ResourceTreeServiceImpl {
 	return &ResourceTreeServiceImpl{
@@ -245,14 +248,23 @@ func (impl *ResourceTreeServiceImpl) getNodeFromDesiredOrLiveManifest(request *G
 
 	if impl.k8sService.CanHaveChild(gvk) {
 		var children []*unstructured.Unstructured
-		var err error
+		var k8sErr error
 		if impl.helmReleaseConfig.FeatChildChildObjectListingPaginationEnable {
-			children, err = impl.k8sService.GetChildObjectsV2(request.RestConfig, _namespace, gvk, manifest.GetName())
+			children, k8sErr = impl.k8sService.GetChildObjectsV2(request.RestConfig, _namespace, gvk, manifest.GetName())
 		} else {
-			children, err = impl.k8sService.GetChildObjectsV1(request.RestConfig, _namespace, gvk, manifest.GetName(), manifest.GetAPIVersion())
+			children, k8sErr = impl.k8sService.GetChildObjectsV1(request.RestConfig, _namespace, gvk, manifest.GetName(), manifest.GetAPIVersion())
 		}
-		if err != nil {
-			return response, err
+		if k8sErr != nil {
+			statusError, matched := k8sErr.(*errors2.StatusError)
+			if !matched || statusError.ErrStatus.Reason != metav1.StatusReasonNotFound {
+				internalErr := error2.ConvertHelmErrorToInternalError(k8sErr)
+				if internalErr != nil {
+					k8sErr = internalErr
+				}
+				impl.logger.Errorw("error in getting child objects", "err", k8sErr, "namespace", _namespace, "gvk", gvk, "name", manifest.GetName())
+				return nil, k8sErr
+			}
+			return response, k8sErr
 		}
 		desiredOrLiveManifestsChildren := make([]*bean.DesiredOrLiveManifest, 0, len(children))
 		for _, child := range children {
