@@ -8,7 +8,7 @@ package main
 
 import (
 	"github.com/devtron-labs/common-lib/helmLib/registry"
-	k8sResource "github.com/devtron-labs/common-lib/k8sResource"
+	"github.com/devtron-labs/common-lib/k8sResource"
 	"github.com/devtron-labs/common-lib/monitoring"
 	"github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/common-lib/utils/k8s"
