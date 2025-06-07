@@ -174,6 +174,8 @@ const (
 
 // constants starts
 
+var RolloutsGvrAndScope = &GvrAndScope{Gvr: schema.GroupVersionResource{Group: "argoproj.io", Version: "v1alpha1", Resource: "rollouts"}, Scope: meta.RESTScopeNameNamespace}
+var CronJobsGvrAndScope = &GvrAndScope{Gvr: schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "cronjobs"}, Scope: meta.RESTScopeNameNamespace}
 var PodsGvrAndScope = &GvrAndScope{Gvr: schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}, Scope: meta.RESTScopeNameNamespace}
 var ReplicaSetGvrAndScope = &GvrAndScope{Gvr: schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "replicasets"}, Scope: meta.RESTScopeNameNamespace}
 var JobGvrAndScope = &GvrAndScope{Gvr: schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}, Scope: meta.RESTScopeNameNamespace}
