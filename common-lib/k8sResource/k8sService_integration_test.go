@@ -84,7 +84,7 @@ func testGetChildObjects(t *testing.T, tt integrationTestCase, k8sService K8sSer
 	t.Run(fmt.Sprintf("GVK-%q", tt.parentGvk.String()), func(t *testing.T) {
 		parentApiVersion, _ := tt.parentGvk.ToAPIVersionAndKind()
 		resultV1, errV1 := k8sService.GetChildObjectsV1(restConfig, tt.namespace, tt.parentGvk, tt.parentName, parentApiVersion)
-		resultV2, errV2 := k8sService.GetChildObjectsV2(restConfig, tt.namespace, tt.parentGvk, tt.parentName)
+		resultV2, errV2 := k8sService.GetChildObjectsV2(restConfig, nil)
 		assert.Truef(t, compareValidResourceTree(resultV1, resultV2), "Resource trees do not match for %s", tt.name)
 		if errV1 != nil {
 			assert.EqualError(t, errV1, errV2.Error(), "Errors do not match for %s", tt.name)

@@ -145,11 +145,7 @@ func benchmarkGetChildObjectsV2(b *testing.B, resourceCount int, pageLimit int64
 	b.ResetTimer()
 	for range b.N {
 		startTime := time.Now()
-		_, err = k8sService.GetChildObjectsV2(restConfig, "ent-8-env-1", schema.GroupVersionKind{
-			Kind:    "Deployment",
-			Group:   "apps",
-			Version: "v1",
-		}, fmt.Sprintf("%s-memcached", releaseName))
+		_, err = k8sService.GetChildObjectsV2(restConfig, nil)
 		highlightedLog("==========================================================================")
 		highlightedLog(fmt.Sprintf("=== Time taken to get child objects: %v", time.Since(startTime).Seconds()))
 		highlightedLog("==========================================================================")
