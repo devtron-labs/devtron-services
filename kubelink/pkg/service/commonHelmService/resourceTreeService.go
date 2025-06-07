@@ -250,7 +250,7 @@ func (impl *ResourceTreeServiceImpl) getNodeFromDesiredOrLiveManifest(request *G
 		var children []*unstructured.Unstructured
 		var k8sErr error
 		if impl.helmReleaseConfig.FeatChildChildObjectListingPaginationEnable {
-			children, k8sErr = impl.k8sService.GetChildObjectsV2(request.RestConfig, _namespace, gvk, manifest.GetName())
+			children, k8sErr = impl.k8sService.GetChildObjectsV2(request.RestConfig, k8sResource.NewIdentifier(manifest.GetName(), _namespace, gvk))
 		} else {
 			children, k8sErr = impl.k8sService.GetChildObjectsV1(request.RestConfig, _namespace, gvk, manifest.GetName(), manifest.GetAPIVersion())
 		}

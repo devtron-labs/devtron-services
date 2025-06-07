@@ -7,7 +7,43 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type Identifier struct {
+	gvk       schema.GroupVersionKind
+	name      string
+	namespace string
+}
+
+func NewIdentifier(name, namespace string, gvk schema.GroupVersionKind) *Identifier {
+	return &Identifier{
+		gvk:       gvk,
+		name:      name,
+		namespace: namespace,
+	}
+}
+
+func (identifier *Identifier) GetGvk() schema.GroupVersionKind {
+	if identifier == nil {
+		return schema.GroupVersionKind{}
+	}
+	return identifier.gvk
+}
+
+func (identifier *Identifier) GetName() string {
+	if identifier == nil {
+		return ""
+	}
+	return identifier.name
+}
+
+func (identifier *Identifier) GetNamespace() string {
+	if identifier == nil {
+		return ""
+	}
+	return identifier.namespace
+}
+
 type PatchRequest struct {
+	// TODO: Use Identifier instead of Name, Namespace, Gvk
 	Name      string
 	Namespace string
 	Gvk       *schema.GroupVersionKind
@@ -82,9 +118,10 @@ type FilterChildrenObjectsRequest struct {
 	childGvk    schema.GroupVersionResource
 	pvcs        []unstructured.Unstructured
 	listObjects *unstructured.UnstructuredList
-	namespace   string
-	parentGvk   schema.GroupVersionKind
-	parentName  string
+	// TODO: Use Identifier instead of Name, Namespace, Gvk
+	namespace  string
+	parentGvk  schema.GroupVersionKind
+	parentName string
 }
 
 func (req *FilterChildrenObjectsRequest) IsChildResourceTypePVC() bool {

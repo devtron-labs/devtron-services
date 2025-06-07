@@ -12,6 +12,7 @@ import (
 	"github.com/devtron-labs/common-lib/monitoring"
 	"github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/common-lib/utils/k8s"
+	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/kubelink/api/router"
 	"github.com/devtron-labs/kubelink/config"
 	"github.com/devtron-labs/kubelink/converter"
@@ -36,7 +37,8 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	k8sServiceImpl, err := k8sResource.NewK8sServiceImpl(sugaredLogger, serviceConfig)
+	v := commonBean.GetGvkVsChildGvrAndScope()
+	k8sServiceImpl, err := k8sResource.NewK8sServiceImpl(sugaredLogger, serviceConfig, v)
 	if err != nil {
 		return nil, err
 	}
