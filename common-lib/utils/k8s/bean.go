@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/utils/k8s"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	v1 "k8s.io/api/core/v1"
@@ -114,7 +115,8 @@ type ApplyResourcesResponse struct {
 }
 
 type ManifestResponse struct {
-	Manifest unstructured.Unstructured `json:"manifest,omitempty"`
+	Manifest            unstructured.Unstructured `json:"manifest,omitempty"`
+	RecommendedManifest unstructured.Unstructured `json:"recommendedManifest"` // imp: this is used to show recommended resources for the resource browser
 	// EphemeralContainers are set for Pod kind manifest response only.
 	// will only contain ephemeral containers which are in running state
 	// +optional
