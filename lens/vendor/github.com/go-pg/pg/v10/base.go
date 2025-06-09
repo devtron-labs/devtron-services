@@ -123,7 +123,13 @@ func (db *baseDB) initConn(ctx context.Context, cn *pool.Conn) error {
 }
 
 func (db *baseDB) releaseConn(ctx context.Context, cn *pool.Conn, err error) {
-	if isBadConn(err, false) {
+	if bad, code := isBadConn(err, false); bad {
+		if code != "25P02" { // canceling statement if it is a bad conn expect 25P02 (current transaction is aborted)
+			err := db.cancelRequest(cn.ProcessID, cn.SecretKey)
+			if err != nil {
+				internal.Logger.Printf(ctx, "cancelRequest failed: %s", err)
+			}
+		}
 		db.pool.Remove(ctx, cn, err)
 	} else {
 		db.pool.Put(ctx, cn)
@@ -221,8 +227,8 @@ func (db *baseDB) ExecContext(c context.Context, query interface{}, params ...in
 }
 
 func (db *baseDB) exec(ctx context.Context, query interface{}, params ...interface{}) (Result, error) {
-	wb := pool.GetWriteBuffer()
-	defer pool.PutWriteBuffer(wb)
+	wb := db.pool.GetWriteBuffer()
+	defer db.pool.PutWriteBuffer(wb)
 
 	if err := writeQueryMsg(wb, db.fmter, query, params...); err != nil {
 		return nil, err
@@ -291,8 +297,8 @@ func (db *baseDB) QueryContext(c context.Context, model, query interface{}, para
 }
 
 func (db *baseDB) query(ctx context.Context, model, query interface{}, params ...interface{}) (Result, error) {
-	wb := pool.GetWriteBuffer()
-	defer pool.PutWriteBuffer(wb)
+	wb := db.pool.GetWriteBuffer()
+	defer db.pool.PutWriteBuffer(wb)
 
 	if err := writeQueryMsg(wb, db.fmter, query, params...); err != nil {
 		return nil, err
@@ -368,8 +374,8 @@ func (db *baseDB) copyFrom(
 ) (res Result, err error) {
 	var evt *QueryEvent
 
-	wb := pool.GetWriteBuffer()
-	defer pool.PutWriteBuffer(wb)
+	wb := db.pool.GetWriteBuffer()
+	defer db.pool.PutWriteBuffer(wb)
 
 	if err := writeQueryMsg(wb, db.fmter, query, params...); err != nil {
 		return nil, err
@@ -450,8 +456,8 @@ func (db *baseDB) copyTo(
 ) (res Result, err error) {
 	var evt *QueryEvent
 
-	wb := pool.GetWriteBuffer()
-	defer pool.PutWriteBuffer(wb)
+	wb := db.pool.GetWriteBuffer()
+	defer db.pool.PutWriteBuffer(wb)
 
 	if err := writeQueryMsg(wb, db.fmter, query, params...); err != nil {
 		return nil, err
