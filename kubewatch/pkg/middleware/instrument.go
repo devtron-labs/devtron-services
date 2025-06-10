@@ -63,7 +63,7 @@ const (
 	CI_STAGE_ARGO_WORKFLOW_INFORMER InformerMetrics = "CIStageArgoWorkflow"
 	CD_STAGE_ARGO_WORLFLOW_INFORMER InformerMetrics = "CDStageArgoWorkflow"
 	ARGO_CD_INFORMER                InformerMetrics = "ArgoCD"
-	DEFAULT_CLUSTER_SECRET_INFORMER InformerMetrics = "DefaultClusterSecret"
+	DEFAULT_CLUSTER_CM_INFORMER     InformerMetrics = "DefaultClusterCm"
 	SYSTEM_EXECUTOR_INFORMER        InformerMetrics = "SystemExecutor"
 )
 
