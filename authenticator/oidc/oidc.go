@@ -44,7 +44,8 @@ const (
 	GrantTypeAuthorizationCode = "authorization_code"
 	GrantTypeImplicit          = "implicit"
 	ResponseTypeCode           = "code"
-	NoUserLocation             = "/dashboard/login?err=NO_USER"
+	// This is being used for both orchestrator and license-manager and gatekeeper to silently handle toast message.
+	NoUserLocation = "/dashboard/login?err=NO_USER"
 )
 
 // OIDCConfiguration holds a subset of interested fields from the OIDC configuration spec
