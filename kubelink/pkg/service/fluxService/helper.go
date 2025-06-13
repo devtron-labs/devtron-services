@@ -127,7 +127,7 @@ func getFluxAppStatusAndObservedHash(obj map[string]interface{}, gvk schema.Grou
 		if err != nil {
 			return nil, "", err
 		}
-		observedHashObj := statusObj["observedSourceArtifactRevision"]
+		observedHashObj := statusObj["lastAttemptedRevision"]
 		observedHash, _ = observedHashObj.(string)
 		/* In case of HelmRelease, Conditions are having negative polarity (means only available when the status is true)
 		   In HelmRelease, conditions field exhibits the negative polarity, So it has been handled here by default values as Missing Status and customReason with custom message.
