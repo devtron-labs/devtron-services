@@ -683,7 +683,8 @@ func (impl *ApplicationServiceServerImpl) FluxAppDetailAdapter(req *fluxService.
 			Message: req.AppStatusDto.Message,
 			Reason:  req.AppStatusDto.Reason,
 		},
-		ResourceTreeResponse: treeResponse,
+		ResourceTreeResponse:   treeResponse,
+		LastObservedGeneration: req.LastObservedGeneration,
 	}
 }
 
