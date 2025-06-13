@@ -76,6 +76,7 @@ func (impl *FluxApplicationServiceImpl) BuildFluxAppDetail(ctx context.Context, 
 	var fluxAppTreeResponse []*bean.ResourceTreeResponse
 	var err error
 	var appStatus *FluxAppStatusDetail
+	var observedRevision string
 	var deploymentType FluxAppType
 	req := &FluxAppDetailRequest{
 		Name:        request.Name,
@@ -88,10 +89,10 @@ func (impl *FluxApplicationServiceImpl) BuildFluxAppDetail(ctx context.Context, 
 	}
 	if request.IsKustomizeApp {
 		deploymentType = FluxAppKustomizationKind
-		fluxAppTreeResponse, appStatus, err = impl.buildFluxAppDetailForKustomizationApp(ctx, req)
+		fluxAppTreeResponse, appStatus, observedRevision, err = impl.buildFluxAppDetailForKustomizationApp(ctx, req)
 	} else {
 		deploymentType = FluxAppHelmreleaseKind
-		fluxAppTreeResponse, appStatus, err = impl.buildFluxAppDetailForHelmReleaseApp(ctx, req)
+		fluxAppTreeResponse, appStatus, observedRevision, err = impl.buildFluxAppDetailForHelmReleaseApp(ctx, req)
 	}
 
 	if err != nil && appStatus == nil {
@@ -115,6 +116,7 @@ func (impl *FluxApplicationServiceImpl) BuildFluxAppDetail(ctx context.Context, 
 	}
 
 	fluxKsAppDetail.TreeResponse = fluxAppTreeResponse
+	fluxKsAppDetail.LastObservedGeneration = observedRevision
 	return fluxKsAppDetail, nil
 }
 
@@ -277,7 +279,7 @@ func (impl *FluxApplicationServiceImpl) getK8sResponseList(restConfig *rest.Conf
 }
 
 // building the flux app detail of HelmRelease type
-func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForHelmReleaseApp(ctx context.Context, request *FluxAppDetailRequest) ([]*bean.ResourceTreeResponse, *FluxAppStatusDetail, error) {
+func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForHelmReleaseApp(ctx context.Context, request *FluxAppDetailRequest) ([]*bean.ResourceTreeResponse, *FluxAppStatusDetail, string, error) {
 
 	var fluxAppTreeResponse []*bean.ResourceTreeResponse
 
@@ -286,30 +288,29 @@ func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForHelmReleaseApp(ctx 
 	resp, err := impl.k8sUtil.GetResource(context.Background(), request.Namespace, request.Name, GvkForHelmreleaseFluxApp, restConfig)
 	if err != nil {
 		impl.logger.Errorw("error in getting resource response of flux app ", "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	var releaseName string
 	var _namespace string
 	var appStatus *FluxAppStatusDetail
-
+	var observedRevision string
 	if resp != nil && resp.Manifest.Object != nil {
 
-		appStatus, err = getFluxAppStatus(resp.Manifest.Object, GvkForHelmreleaseFluxApp)
+		appStatus, observedRevision, err = getFluxAppStatusAndObservedHash(resp.Manifest.Object, GvkForHelmreleaseFluxApp)
 		if err != nil {
 			impl.logger.Errorw("error in getting app status of flux app ", "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
-			return nil, nil, err
+			return nil, nil, "", err
 		}
 		releaseName, _namespace, err = getReleaseNameNamespace(resp.Manifest.Object, request.Name)
 		if err != nil || releaseName == "" || _namespace == "" {
 			impl.logger.Errorw("error in getting the releaseName and namespace of flux app ", "storageNamespace", _namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
-			return nil, appStatus, err
+			return nil, appStatus, "", err
 		}
-
 	}
 	helmRelease, err := impl.common.GetHelmRelease(request.Config, _namespace, releaseName)
 	if err != nil {
 		impl.logger.Errorw("error in getting helm release of flux app ", "releaseName", releaseName, "releaseNamespace", _namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, appStatus, err
+		return nil, appStatus, "", err
 	}
 	appDetailRequest := &client.AppDetailRequest{
 		ReleaseName:   releaseName,
@@ -320,48 +321,48 @@ func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForHelmReleaseApp(ctx 
 	resourceTreeResponse, err := impl.common.BuildResourceTreeForHelmRelease(ctx, appDetailRequest, helmRelease)
 	if err != nil {
 		impl.logger.Errorw("error in building resource tree of flux app ", "helmReleaseName", helmRelease.Name, "helmReleaseNamespace", helmRelease.Namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "helmReleaseName", helmRelease.Name, "helmReleaseNamespace", helmRelease.Namespace, "FluxAppName", request.Name, "appNamespace", request.Namespace, "FluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, appStatus, err
+		return nil, appStatus, "", err
 	}
 	fluxAppTreeResponse = append(fluxAppTreeResponse, resourceTreeResponse)
 
-	return fluxAppTreeResponse, appStatus, nil
+	return fluxAppTreeResponse, appStatus, observedRevision, nil
 }
 
 // building the flux app detail of kustomization appType
-func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForKustomizationApp(ctx context.Context, request *FluxAppDetailRequest) ([]*bean.ResourceTreeResponse, *FluxAppStatusDetail, error) {
+func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForKustomizationApp(ctx context.Context, request *FluxAppDetailRequest) ([]*bean.ResourceTreeResponse, *FluxAppStatusDetail, string, error) {
 	var fluxAppTreeResponse []*bean.ResourceTreeResponse
 
 	k8sClusterConfig := impl.converter.GetClusterConfigFromClientBean(request.Config)
 	restConfig, err := impl.k8sUtil.GetRestConfigByCluster(k8sClusterConfig)
 	if err != nil {
 		impl.logger.Errorw(" error in getting the rest config", "clusterId", request.Config.ClusterId, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	resp, err := impl.k8sUtil.GetResource(context.Background(), request.Namespace, request.Name, GvkForKustomizationFluxApp, restConfig)
 	if err != nil {
 		impl.logger.Errorw("error in getting manifest of kustomization app  ", "clusterId", request.Config.ClusterId, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	if resp == nil || resp.Manifest.Object == nil {
 		impl.logger.Errorw("manifest of response is nil for kustomization app  ", "clusterId", request.Config.ClusterId, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
-	appStatus, err := getFluxAppStatus(resp.Manifest.Object, GvkForKustomizationFluxApp)
+	appStatus, observedRevision, err := getFluxAppStatusAndObservedHash(resp.Manifest.Object, GvkForKustomizationFluxApp)
 	if err != nil {
 		impl.logger.Errorw("error in getting appStatus of kustomization app  ", "clusterId", request.Config.ClusterId, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	inventory, exists := fetchInventoryIfExists(resp.Manifest.Object)
 	if !exists {
 		impl.logger.Errorw("error in getting Inventory of kustomization app  ", "clusterId", request.Config.ClusterId, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, appStatus, err
+		return nil, appStatus, "", err
 	}
 
 	_, isKubeConfigExist, err := unstructured.NestedFieldCopy(resp.Manifest.Object, SpecField, kubeConfigKey)
 	if err != nil {
 		impl.logger.Errorw("error in getting kubeconfig field of kustomization app  ", "clusterId", request.Config.ClusterId, "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-		return nil, appStatus, err
+		return nil, appStatus, "", err
 	}
 
 	fluxK8sResourceList, fluxHrList, err := impl.getKsAppResourceAndFluxHrList(request, inventory, isKubeConfigExist)
@@ -388,14 +389,14 @@ func (impl *FluxApplicationServiceImpl) buildFluxAppDetailForKustomizationApp(ct
 		resourceTreeResponse, err := impl.common.GetResourceTreeForExternalResources(ctx, req)
 		if err != nil {
 			impl.logger.Errorw("Error in getting the tree response for all resources except HelmReleases in Kustomization ", "clusterId", request.Config.ClusterId, "KsAppName", "fluxAppName", request.Name, "appNamespace", request.Namespace, "fluxAppType", FluxAppKustomizationKind, "err", err)
-			return nil, appStatus, err
+			return nil, appStatus, "", err
 		}
 		if len(resourceTreeResponse.Nodes) > 0 {
 			fluxAppTreeResponse = append(fluxAppTreeResponse, resourceTreeResponse)
 		}
 
 	}
-	return fluxAppTreeResponse, appStatus, err
+	return fluxAppTreeResponse, appStatus, observedRevision, err
 }
 
 // fetching response tree array for the FluxHr list found in the Kustomization inventory.
