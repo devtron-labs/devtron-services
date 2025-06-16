@@ -18,6 +18,8 @@ message ClusterConfig {
 
 message AppListRequest {
   repeated ClusterConfig clusters = 1;
+  repeated string labelSelector = 2;
+  repeated string fieldSelector = 3;
 }
 
 

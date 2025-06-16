@@ -10,13 +10,15 @@ import (
 	clusterRepository "github.com/devtron-labs/kubelink/pkg/cluster"
 	"github.com/devtron-labs/kubelink/pkg/service/commonHelmService"
 	"go.uber.org/zap"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
+	"strings"
 )
 
 type FluxApplicationService interface {
-	GetFluxApplicationListForCluster(config *client.ClusterConfig) *client.FluxApplicationList
+	GetFluxApplicationListForCluster(config *client.ClusterConfig, labelSelector []string, fieldSelector []string) *client.FluxApplicationList
 	BuildFluxAppDetail(ctx context.Context, request *client.FluxAppDetailRequest) (*FluxKsAppDetail, error)
 }
 
@@ -43,7 +45,7 @@ func NewFluxApplicationServiceImpl(logger *zap.SugaredLogger,
 }
 
 // GetFluxApplicationListForCluster Getting App list for the cluster
-func (impl *FluxApplicationServiceImpl) GetFluxApplicationListForCluster(config *client.ClusterConfig) *client.FluxApplicationList {
+func (impl *FluxApplicationServiceImpl) GetFluxApplicationListForCluster(config *client.ClusterConfig, labelSelector []string, fieldSelector []string) *client.FluxApplicationList {
 	impl.logger.Debugw("Fetching application list ", "clusterId", config.ClusterId, "clusterName", config.ClusterName)
 	deployedApp := &client.FluxApplicationList{ClusterId: config.GetClusterId()}
 	k8sClusterConfig := impl.converter.GetClusterConfigFromClientBean(config)
@@ -56,7 +58,16 @@ func (impl *FluxApplicationServiceImpl) GetFluxApplicationListForCluster(config 
 	}
 
 	restConf := *restConfig
-	kustomizationListResp, helmReleaseListResp, err := impl.fetchFluxK8sResponseLists(restConf)
+
+	listOptions := metav1.ListOptions{}
+	if len(labelSelector) > 0 {
+		listOptions.LabelSelector = strings.Join(labelSelector, ",")
+	}
+	if len(fieldSelector) > 0 {
+		listOptions.FieldSelector = strings.Join(fieldSelector, ",")
+	}
+
+	kustomizationListResp, helmReleaseListResp, err := impl.fetchFluxK8sResponseLists(restConf, &listOptions)
 	if err != nil {
 		impl.logger.Errorw("Error in fetching flux app k8s listResponse ", "clusterId", config.ClusterId, "err", err)
 		deployedApp.Errored = true
@@ -121,16 +132,16 @@ func (impl *FluxApplicationServiceImpl) BuildFluxAppDetail(ctx context.Context, 
 }
 
 // get the k8sResponseList of the flux apps
-func (impl *FluxApplicationServiceImpl) fetchFluxK8sResponseLists(restConf rest.Config) (*k8sUtils.ResourceListResponse, *k8sUtils.ResourceListResponse, error) {
+func (impl *FluxApplicationServiceImpl) fetchFluxK8sResponseLists(restConf rest.Config, listOptions *metav1.ListOptions) (*k8sUtils.ResourceListResponse, *k8sUtils.ResourceListResponse, error) {
 	var restConf1, restConf2 rest.Config
 	restConf1 = restConf
 	restConf2 = restConf
 	//restConf = *restConfig
-	kustomizationList, err := impl.getK8sResponseList(&restConf1, GvkForKustomizationFluxApp)
+	kustomizationList, err := impl.getK8sResponseList(&restConf1, GvkForKustomizationFluxApp, listOptions)
 	if err != nil {
 		return nil, nil, err
 	}
-	helmReleaseList, err := impl.getK8sResponseList(&restConf2, GvkForHelmreleaseFluxApp)
+	helmReleaseList, err := impl.getK8sResponseList(&restConf2, GvkForHelmreleaseFluxApp, listOptions)
 	if err != nil {
 		return kustomizationList, nil, err
 	}
@@ -269,8 +280,8 @@ func (impl *FluxApplicationServiceImpl) GetApplicationListDtos(resources unstruc
 }
 
 // getK8sResponseList fetch the k8s response List for flux apps according to its gvk types
-func (impl *FluxApplicationServiceImpl) getK8sResponseList(restConfig *rest.Config, gvk schema.GroupVersionKind) (*k8sUtils.ResourceListResponse, error) {
-	resp, _, err := impl.k8sUtil.GetResourceList(context.Background(), restConfig, gvk, AllNamespaces, true, nil)
+func (impl *FluxApplicationServiceImpl) getK8sResponseList(restConfig *rest.Config, gvk schema.GroupVersionKind, listOptions *metav1.ListOptions) (*k8sUtils.ResourceListResponse, error) {
+	resp, _, err := impl.k8sUtil.GetResourceList(context.Background(), restConfig, gvk, AllNamespaces, true, listOptions)
 	if err != nil {
 		impl.logger.Errorw("Error in fetching fluxAppList response ", "fluxAppType", gvk.Kind, "err", err)
 		return nil, err
