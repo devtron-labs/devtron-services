@@ -44,9 +44,13 @@ type ClusterConfig struct {
 }
 
 func (clusterConfig *ClusterConfig) PopulateTlsConfigurationsInto(restConfig *rest.Config) {
-	restConfig.TLSClientConfig = rest.TLSClientConfig{Insecure: clusterConfig.InsecureSkipTLSVerify}
+	serverName, err := GetServerNameFromServerUrl(clusterConfig.Host)
+	if err != nil {
+		// making it non-blocking to avoid blocking the flow
+		fmt.Println("Error parsing server URL:", err, "clusterConfig.Host", clusterConfig.Host)
+	}
+	restConfig.TLSClientConfig = rest.TLSClientConfig{Insecure: clusterConfig.InsecureSkipTLSVerify, ServerName: serverName}
 	if clusterConfig.InsecureSkipTLSVerify == false {
-		restConfig.TLSClientConfig.ServerName = restConfig.ServerName
 		restConfig.TLSClientConfig.KeyData = []byte(clusterConfig.KeyData)
 		restConfig.TLSClientConfig.CertData = []byte(clusterConfig.CertData)
 		restConfig.TLSClientConfig.CAData = []byte(clusterConfig.CAData)
