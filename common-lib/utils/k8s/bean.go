@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	v1 "k8s.io/api/core/v1"
@@ -43,11 +44,13 @@ type ClusterConfig struct {
 	RemoteConnectionConfig          *bean.RemoteConnectionConfigBean
 }
 
+var logger, _ = utils.NewSugardLogger()
+
 func (clusterConfig *ClusterConfig) PopulateTlsConfigurationsInto(restConfig *rest.Config) {
 	serverName, err := GetServerNameFromServerUrl(clusterConfig.Host)
 	if err != nil {
 		// making it non-blocking to avoid blocking the flow
-		fmt.Println("Error parsing server URL:", err, "clusterConfig.Host", clusterConfig.Host)
+		logger.Errorw("Error parsing server URL:", "err", err, "clusterConfig.Host", clusterConfig.Host)
 	}
 	restConfig.TLSClientConfig = rest.TLSClientConfig{Insecure: clusterConfig.InsecureSkipTLSVerify, ServerName: serverName}
 	if clusterConfig.InsecureSkipTLSVerify == false {
