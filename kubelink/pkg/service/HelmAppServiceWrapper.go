@@ -621,7 +621,7 @@ func (impl *ApplicationServiceServerImpl) ListFluxApplications(req *client.AppLi
 	for _, config := range clusterConfigs {
 		clusterConfig := *config
 		eg.Go(func() error {
-			apps := impl.FluxAppService.GetFluxApplicationListForCluster(&clusterConfig, req.LabelSelector, req.FieldSelector)
+			apps := impl.FluxAppService.GetFluxApplicationListForCluster(&clusterConfig)
 			err := res.Send(apps)
 			return err
 		})
