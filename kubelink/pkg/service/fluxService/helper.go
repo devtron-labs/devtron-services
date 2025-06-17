@@ -20,16 +20,17 @@ func fetchFluxAppFields(rowDataMap map[string]interface{}, columnDefinitions map
 	if err != nil || !found {
 		return nil
 	}
-	name, syncStatus, healthStatus := extractValuesFromRowCells(rowCells, columnDefinitions)
+	name, helmReleaseNamespace, syncStatus, healthStatus := extractValuesFromRowCells(rowCells, columnDefinitions)
 
 	namespace, found, err := unstructured.NestedString(rowDataMap, k8sCommonBean.K8sClusterResourceObjectKey, k8sCommonBean.K8sClusterResourceMetadataKey, NamespaceKey)
 	if err != nil || !found {
 		return nil
 	}
 	return &FluxApplicationDto{
-		Name:         name,
-		HealthStatus: healthStatus,
-		SyncStatus:   syncStatus,
+		Name:                 name,
+		HelmReleaseNamespace: helmReleaseNamespace,
+		HealthStatus:         healthStatus,
+		SyncStatus:           syncStatus,
 		EnvironmentDetails: &EnvironmentDetail{
 			ClusterId:   clusterId,
 			ClusterName: clusterName,
