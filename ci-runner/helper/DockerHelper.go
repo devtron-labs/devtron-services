@@ -426,7 +426,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				if groupCtx.Err() != nil {
 					return groupCtx.Err()
 				}
-				return impl.executeCmdWithCtx(groupCtx, dockerBuild)
+				return impl.executeCmdWithCtx(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
 			})
 			if err = errGroup.Wait(); err != nil {
 				return err
@@ -754,7 +754,7 @@ func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, cmd string) 
 	return err
 }
 
-func (impl *DockerHelperImpl) executeCmdWithCtx(ciContext context.Context, cmd string) error {
+func (impl *DockerHelperImpl) executeCmdWithCtx(ciContext cicxt.CiContext, cmd string) error {
 	exeCmd := impl.GetCommandToExecute(cmd)
 	err := impl.cmdExecutor.RunCommandWithCtx(ciContext, exeCmd)
 	if err != nil {
