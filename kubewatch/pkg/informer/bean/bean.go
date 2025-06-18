@@ -26,8 +26,7 @@ type ClusterInfo struct {
 }
 
 const (
-	ClusterModifyEventFieldSelector = "type==cluster.request/modify"
-	InformerAlreadyExistMessage     = "INFORMER_ALREADY_EXIST"
+	InformerAlreadyExistMessage = "INFORMER_ALREADY_EXIST"
 
 	ExitCode143Error   = "Error (exit code 143)"
 	NodeNoLongerExists = "PodGC: node no longer exists"
