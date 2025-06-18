@@ -31,18 +31,14 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
-	"github.com/devtron-labs/common-lib/constants"
-
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
+	"golang.org/x/sync/errgroup"
 	"io"
 	"io/ioutil"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	appsV1 "k8s.io/client-go/kubernetes/typed/apps/v1"
-	"k8s.io/client-go/rest"
 	"log"
 	"os"
 	"os/exec"
@@ -350,7 +346,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 
 		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
 		var buildxExportCacheFunc func() error = nil
-		useBuildxK8sDriver, eligibleK8sDriverNodes := false, make([]map[string]string, 0)
+		useBuildxK8sDriver, eligibleK8sDriverNodes, deploymentNames := false, make([]map[string]string, 0), make([]string, 0)
+		var k8sClient BuildxK8sInterface
 		if useBuildx {
 			setupBuildxBuilder := func() error {
 				err := impl.checkAndCreateDirectory(ciContext, util.LOCAL_BUILDX_LOCATION)
@@ -360,11 +357,17 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					deploymentNames, err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
+					k8sClient, err = newBuildxK8sClient()
+					if err != nil {
+						log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
+						return err
+					}
+					k8sClient.PatchOwnerReferenceInBuilders(deploymentNames)
 				} else {
 					err = impl.createBuildxBuilderForMultiArchBuild(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage)
 					if err != nil {
@@ -412,8 +415,20 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			} else {
 				log.Println("Docker build started..")
 			}
-			err = impl.executeCmd(ciContext, dockerBuild)
-			if err != nil {
+			errGroup, groupCtx := errgroup.WithContext(ciContext)
+			errGroup.Go(func() error {
+				if useBuildxK8sDriver && k8sClient != nil {
+					return k8sClient.BuilderPodLivenessDialer(groupCtx, deploymentNames)
+				}
+				return nil
+			})
+			errGroup.Go(func() error {
+				if groupCtx.Err() != nil {
+					return groupCtx.Err()
+				}
+				return impl.executeCmdWithCtx(groupCtx, dockerBuild)
+			})
+			if err = errGroup.Wait(); err != nil {
 				return err
 			}
 			return nil
@@ -730,9 +745,18 @@ func (impl *DockerHelperImpl) handleLanguageVersion(ciContext cicxt.CiContext, p
 
 }
 
-func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, dockerBuild string) error {
-	dockerBuildCMD := impl.GetCommandToExecute(dockerBuild)
-	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
+func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, cmd string) error {
+	exeCmd := impl.GetCommandToExecute(cmd)
+	err := impl.cmdExecutor.RunCommand(ciContext, exeCmd)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+func (impl *DockerHelperImpl) executeCmdWithCtx(ciContext context.Context, cmd string) error {
+	exeCmd := impl.GetCommandToExecute(cmd)
+	err := impl.cmdExecutor.RunCommandWithCtx(ciContext, exeCmd)
 	if err != nil {
 		log.Println(err)
 	}
@@ -955,16 +979,16 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
-	if len(builderNodes) == 0 {
-		return errors.New("atleast one node is expected for builder with kubernetes driver")
-	}
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) ([]string, error) {
 	deploymentNames := make([]string, 0)
+	if len(builderNodes) == 0 {
+		return deploymentNames, errors.New("atleast one node is expected for builder with kubernetes driver")
+	}
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
 		if err != nil {
-			return err
+			return deploymentNames, err
 		}
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
@@ -980,12 +1004,10 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 		err = impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
 		if err != nil {
 			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
-			return err
+			return deploymentNames, err
 		}
 	}
-
-	patchK8sDriverNodes(deploymentNames)
-	return nil
+	return deploymentNames, nil
 }
 
 func (impl *DockerHelperImpl) CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error {
@@ -1301,59 +1323,4 @@ func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRe
 		}
 	}
 	return dockerAuthConfig
-}
-
-func patchK8sDriverNodes(deploymentNames []string) {
-	for _, deploymentName := range deploymentNames {
-		if err := jsonPatchOwnerReferenceInDeployment(deploymentName); err != nil {
-			fmt.Println(util.DEVTRON, "failed to patch the buildkit deployment's owner reference, ", " deployment: ", deploymentName, " err: ", err)
-		} else {
-			fmt.Println(util.DEVTRON, "successfully patched the buildkit deployment's owner reference, ", " deployment: ", deploymentName)
-		}
-	}
-}
-
-func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
-
-	clientSet, err := GetK8sInClusterClientSet()
-	if err != nil {
-		fmt.Println(util.DEVTRON, "error in getting k8s clientset", "err", err)
-		return err
-	}
-
-	patchStr := fmt.Sprintf(`{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"Pod","name":"%s","uid":"%s"}]}}`, utils.GetSelfK8sPodName(), utils.GetSelfK8sUID())
-
-	// Apply the patch directly
-	// the namespace is hardcoded to devtron-ci as our k8s driver is only supported for ci's running in devtron-ci namespace.
-	_, err = clientSet.Deployments("devtron-ci").Patch(
-		context.TODO(),
-		deploymentName,
-		types.StrategicMergePatchType,
-		[]byte(patchStr),
-		v1.PatchOptions{FieldManager: "patch"},
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetK8sInClusterClientSet() (*appsV1.AppsV1Client, error) {
-	restConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	k8sHttpClient, err := rest.HTTPClientFor(restConfig)
-	if err != nil {
-		fmt.Println("error occurred while overriding k8s client", "reason", err)
-		return nil, err
-	}
-
-	k8sClientSet, err := appsV1.NewForConfigAndClient(restConfig, k8sHttpClient)
-	if err != nil {
-		return nil, err
-	}
-
-	return k8sClientSet, nil
 }

@@ -4,7 +4,7 @@ go 1.24.0
 
 toolchain go1.24.3
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250604122935-118e74f11795
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250616120524-fc7dd34a7903
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -16,6 +16,7 @@ require (
 	github.com/otiai10/copy v1.14.1
 	golang.org/x/sync v0.14.0
 	gopkg.in/yaml.v2 v2.4.0
+	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
 )
@@ -149,7 +150,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
-	k8s.io/api v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
