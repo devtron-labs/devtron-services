@@ -39,12 +39,10 @@
 |-------|----------|-------------------|-------------------|-----------------------|------------------|
  | BUILD_NODES_BATCH_SIZE | int |2 | Resource tree build nodes parallelism batch size (applied only for depth-1 child objects of a parent object) | 2 | false |
  | CHART_WORKING_DIRECTORY | string |/home/devtron/devtroncd/charts/ | Helm charts working directory | /home/devtron/devtroncd/charts/ | false |
- | CHILD_OBJECT_LISTING_PAGE_SIZE | int64 |1000 | Resource tree child object listing page size | 100 | false |
  | ENABLE_HELM_RELEASE_CACHE | bool |true | Enable helm releases list cache | true | false |
  | FEAT_CHILD_OBJECT_LISTING_PAGINATION | bool |true | use pagination in listing all the dependent child objects. use 'CHILD_OBJECT_LISTING_PAGE_SIZE' to set the page size. | true | false |
  | MANIFEST_FETCH_BATCH_SIZE | int |2 | Manifest fetch parallelism batch size (applied only for parent objects) | 2 | false |
  | MAX_COUNT_FOR_HELM_RELEASE | int |20 | Max count for helm release history list | 20 | false |
- | PARENT_CHILD_GVK_MAPPING | string | | Parent child GVK mapping for resource tree |  | false |
  | RUN_HELM_INSTALL_IN_ASYNC_MODE | bool |false | Run helm install/ upgrade in async mode | false | false |
 
 
@@ -54,4 +52,11 @@
  | KUBELINK_GRPC_MAX_RECEIVE_MSG_SIZE | int |20 |  |  | false |
  | KUBELINK_GRPC_MAX_SEND_MSG_SIZE | int |4 |  |  | false |
  | KUBELINK_GRPC_SERVICE_CONFIG | string |{"loadBalancingPolicy":"round_robin"} | kubelink grpc service config |  | false |
+
+
+## K8S_RESOURCE_SERVICE_CONFIG Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CHILD_OBJECT_LISTING_PAGE_SIZE | int64 |1000 | Resource tree child object listing page size | 100 | false |
+ | PARENT_CHILD_GVK_MAPPING | string | | Parent child GVK mapping for resource tree |  | false |
 
