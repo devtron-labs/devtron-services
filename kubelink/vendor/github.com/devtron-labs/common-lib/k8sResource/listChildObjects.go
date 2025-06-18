@@ -17,14 +17,6 @@ import (
 	"time"
 )
 
-type ChildObjectFilterOpt func([]*k8sCommonBean.GvrAndScope) []*k8sCommonBean.GvrAndScope
-
-func WithNoFilter() ChildObjectFilterOpt {
-	return func(gvrAndScopes []*k8sCommonBean.GvrAndScope) []*k8sCommonBean.GvrAndScope {
-		return gvrAndScopes
-	}
-}
-
 func (impl *K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace string, parentGvk schema.GroupVersionKind, parentName string, parentApiVersion string) ([]*unstructured.Unstructured, error) {
 	impl.logger.Debugw("Getting child objects ", "namespace", namespace, "parentGvk", parentGvk, "parentName", parentName, "parentApiVersion", parentApiVersion)
 
@@ -99,17 +91,6 @@ func (impl *K8sServiceImpl) GetChildObjectsV1(restConfig *rest.Config, namespace
 }
 
 func (impl *K8sServiceImpl) GetChildObjectsV2(restConfig *rest.Config, parentIdentifier *Identifier) ([]*unstructured.Unstructured, error) {
-	return impl.getChildObjectsV2WithFilter(restConfig, parentIdentifier, WithNoFilter())
-}
-
-func (impl *K8sServiceImpl) GetChildObjectsV2WithFilter(restConfig *rest.Config, parentIdentifier *Identifier, filterOpt ChildObjectFilterOpt) ([]*unstructured.Unstructured, error) {
-	if filterOpt == nil {
-		filterOpt = WithNoFilter()
-	}
-	return impl.getChildObjectsV2WithFilter(restConfig, parentIdentifier, filterOpt)
-}
-
-func (impl *K8sServiceImpl) getChildObjectsV2WithFilter(restConfig *rest.Config, parentIdentifier *Identifier, filterOpt ChildObjectFilterOpt) ([]*unstructured.Unstructured, error) {
 	parentGvk := parentIdentifier.GetGvk()
 	parentName := parentIdentifier.GetName()
 	namespace := parentIdentifier.GetNamespace()
@@ -119,9 +100,6 @@ func (impl *K8sServiceImpl) getChildObjectsV2WithFilter(restConfig *rest.Config,
 	if !ok {
 		impl.logger.Errorw("gvr not found for given kind", "parentGvk", parentGvk, "timeTaken", time.Since(startTime).Seconds())
 		return nil, errors.New("grv not found for given kind")
-	}
-	if filterOpt != nil {
-		gvrAndScopes = filterOpt(gvrAndScopes)
 	}
 	client, err := dynamicClient.NewForConfig(restConfig)
 	if err != nil {

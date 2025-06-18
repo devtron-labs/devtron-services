@@ -57,7 +57,6 @@ type K8sService interface {
 	// But as it fetches all the data in multiple calls, it will cost multiple round trips.
 	// This is the recommended way to get child resources.
 	GetChildObjectsV2(restConfig *rest.Config, parentIdentifier *Identifier) ([]*unstructured.Unstructured, error)
-	GetChildObjectsV2WithFilter(restConfig *rest.Config, parentIdentifier *Identifier, filterOpt ChildObjectFilterOpt) ([]*unstructured.Unstructured, error)
 	PatchResource(ctx context.Context, restConfig *rest.Config, r *PatchRequest) error
 }
 

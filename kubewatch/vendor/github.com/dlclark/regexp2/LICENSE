@@ -1,10 +1,6 @@
 The MIT License (MIT)
 
-<<<<<<<< HEAD:common-lib/vendor/github.com/monochromegane/go-gitignore/LICENSE
-Copyright (c) [2015] [go-gitignore]
-========
 Copyright (c) Doug Clark
->>>>>>>> origin/develop:kubewatch/vendor/github.com/dlclark/regexp2/LICENSE
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
