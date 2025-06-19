@@ -17,6 +17,7 @@
 package helper
 
 import (
+	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/utils/workFlow"
 )
@@ -125,3 +126,5 @@ func (err *CdStageError) ErrorMessage() string {
 func (err *CdStageError) Unwrap() error {
 	return err.stageErr
 }
+
+var BuilderPodDeletedError = errors.New("buildx pod was terminated in response to imminent node shutdown")

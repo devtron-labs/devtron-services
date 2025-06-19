@@ -431,8 +431,34 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return nil
 		}
 
-		if err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage); err != nil {
+		err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage)
+		if err != nil && !errors.Is(err, BuilderPodDeletedError) {
 			return "", err
+		} else if errors.Is(err, BuilderPodDeletedError) {
+			if useBuildxK8sDriver && k8sClient != nil {
+				done := make(chan bool)
+				ctx, cancel := context.WithCancel(ciContext)
+				defer cancel()
+				go func() {
+					// wait for the builder pod to come up again
+					if err = k8sClient.BuilderPodLivenessDialer(ctx, deploymentNames); err == nil {
+						done <- true
+					}
+				}()
+				select {
+				case <-time.After(2 * time.Minute):
+					// timeout after 2 minutes
+					cancel()
+					return "", BuilderPodDeletedError
+				case <-done:
+					// builder pod is up again, continue with the build
+					cancel()
+				}
+				err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage)
+				if err != nil {
+					return "", err
+				}
+			}
 		}
 
 		if buildxExportCacheFunc != nil {

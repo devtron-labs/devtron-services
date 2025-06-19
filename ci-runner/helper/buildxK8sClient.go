@@ -2,10 +2,8 @@ package helper
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/devtron-labs/ci-runner/util"
-	"github.com/devtron-labs/common-lib/informer"
 	"github.com/devtron-labs/common-lib/utils"
 	corev1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
@@ -93,7 +91,7 @@ func (k8s *buildxK8sClient) builderPodLivenessDialer(ctx context.Context, deploy
 			return err
 		} else if k8sError.IsNotFound(err) || !isRunning {
 			fmt.Println(util.DEVTRON, fmt.Sprintf("builder pod liveness failed for deployment: %q", deploymentName))
-			return errors.New(informer.PodDeletedMessage)
+			return BuilderPodDeletedError
 		}
 	}
 	fmt.Println(util.DEVTRON, "builder pod liveness check passed for all deployments")
