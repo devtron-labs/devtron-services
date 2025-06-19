@@ -111,7 +111,7 @@ func (k8s *buildxK8sClient) BuilderPodLivenessDialer(ctx context.Context, deploy
 		default:
 			fmt.Println(util.DEVTRON, "sleeping for 10 seconds before next builder pod liveness check")
 			// Sleep for 10 seconds
-			<-time.After(10 * time.Second)
+			<-time.After(2 * time.Second)
 		}
 	}
 }
