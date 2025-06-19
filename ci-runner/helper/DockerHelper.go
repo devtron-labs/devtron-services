@@ -435,7 +435,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 			})
 			if err = errGroup.Wait(); err != nil {
-
+				return err
 			}
 			return nil
 		}
