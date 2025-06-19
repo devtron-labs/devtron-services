@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
+	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/kubelink/bean"
 	client "github.com/devtron-labs/kubelink/grpc"
 	"github.com/devtron-labs/kubelink/internals/lock"
@@ -657,12 +658,15 @@ func (impl *ApplicationServiceServerImpl) FluxAppDetailAdapter(req *fluxService.
 		}
 	}
 
+	appStatus := GetHealthStatus(req.TreeResponse)
+
 	treeResponse := &client.ResourceTreeResponse{
 		PodMetadata: podMetaData,
 		Nodes:       resourceNodes,
 	}
 
 	return &client.FluxAppDetail{
+		ApplicationStatus: *appStatus,
 		FluxApplication: &client.FluxApplication{
 			Name:         req.Name,
 			HealthStatus: req.HealthStatus,
@@ -679,8 +683,17 @@ func (impl *ApplicationServiceServerImpl) FluxAppDetailAdapter(req *fluxService.
 			Message: req.AppStatusDto.Message,
 			Reason:  req.AppStatusDto.Reason,
 		},
-		ResourceTreeResponse: treeResponse,
+		ResourceTreeResponse:   treeResponse,
+		LastObservedGeneration: req.LastObservedGeneration,
 	}
+}
+
+func GetHealthStatus(response []*bean.ResourceTreeResponse) *commonBean.HealthStatusCode {
+	var resourceNodes []*commonBean.ResourceNode
+	for _, r := range response {
+		resourceNodes = append(resourceNodes, r.Nodes...)
+	}
+	return k8sObjectsUtil.BuildAppHealthStatus(resourceNodes)
 }
 
 func (impl *ApplicationServiceServerImpl) GetReleaseDetails(ctx context.Context, releaseIdentifier *client.ReleaseIdentifier) (*client.DeployedAppDetail, error) {
