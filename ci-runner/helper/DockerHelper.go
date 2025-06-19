@@ -423,16 +423,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				return nil
 			})
 			errGroup.Go(func() error {
-				errChan := make(chan error)
-				go func() {
-					errChan <- impl.executeCmdWithCtx(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
-				}()
-				select {
-				case <-groupCtx.Done():
-					return groupCtx.Err()
-				case err := <-errChan:
-					return err
-				}
+				return impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
 			})
 			if err = errGroup.Wait(); err != nil {
 				return err
@@ -512,6 +503,19 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	}
 
 	return dest, nil
+}
+
+func (impl *DockerHelperImpl) runDockerBuildCommand(ciContext cicxt.CiContext, dockerBuild string) error {
+	errChan := make(chan error)
+	go func() {
+		errChan <- impl.executeCmdWithCtx(ciContext, dockerBuild)
+	}()
+	select {
+	case <-ciContext.Done():
+		return ciContext.Err()
+	case err := <-errChan:
+		return err
+	}
 }
 
 func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
