@@ -368,6 +368,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 						return err
 					}
 					k8sClient.PatchOwnerReferenceInBuilders()
+					err = k8sClient.RegisterBuilderPods(ciContext)
+					if err != nil {
+						log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
+						return err
+					}
 				} else {
 					err = impl.createBuildxBuilderForMultiArchBuild(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage)
 					if err != nil {
@@ -415,13 +420,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			} else {
 				log.Println("Docker build started..")
 			}
-			if useBuildxK8sDriver && k8sClient != nil {
-				err = k8sClient.RegisterBuilderPods(ciContext)
-				if err != nil {
-					log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
-					return err
-				}
-			}
 			errGroup, groupCtx := errgroup.WithContext(ciContext)
 			errGroup.Go(func() error {
 				if useBuildxK8sDriver && k8sClient != nil {
@@ -442,7 +440,17 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		if err != nil && !errors.Is(err, BuilderPodDeletedError) {
 			return "", err
 		} else if errors.Is(err, BuilderPodDeletedError) {
-			if useBuildxK8sDriver && k8sClient != nil {
+			if useBuildxK8sDriver {
+				k8sClient, err = newBuildxK8sClient(deploymentNames)
+				if err != nil {
+					log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
+					return "", err
+				}
+				err = k8sClient.RegisterBuilderPods(ciContext)
+				if err != nil {
+					log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
+					return "", err
+				}
 				done := make(chan bool)
 				ctx, cancel := context.WithCancel(ciContext)
 				defer cancel()
