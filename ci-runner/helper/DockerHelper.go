@@ -362,12 +362,12 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
-					k8sClient, err = newBuildxK8sClient()
+					k8sClient, err = newBuildxK8sClient(deploymentNames)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
 						return err
 					}
-					k8sClient.PatchOwnerReferenceInBuilders(deploymentNames)
+					k8sClient.PatchOwnerReferenceInBuilders()
 				} else {
 					err = impl.createBuildxBuilderForMultiArchBuild(ciContext, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage)
 					if err != nil {
@@ -415,10 +415,17 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			} else {
 				log.Println("Docker build started..")
 			}
+			if useBuildxK8sDriver && k8sClient != nil {
+				err = k8sClient.RegisterBuilderPods(ciContext)
+				if err != nil {
+					log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
+					return err
+				}
+			}
 			errGroup, groupCtx := errgroup.WithContext(ciContext)
 			errGroup.Go(func() error {
 				if useBuildxK8sDriver && k8sClient != nil {
-					return k8sClient.BuilderPodLivenessDialer(groupCtx, deploymentNames)
+					return k8sClient.BuilderPodLivenessDialer(groupCtx)
 				}
 				return nil
 			})
@@ -441,7 +448,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				defer cancel()
 				go func() {
 					// wait for the builder pod to come up again
-					if err = k8sClient.BuilderPodLivenessDialer(ctx, deploymentNames); err == nil {
+					if err = k8sClient.BuilderPodLivenessDialer(ctx); err == nil {
 						done <- true
 					}
 				}()
