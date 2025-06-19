@@ -423,13 +423,19 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				return nil
 			})
 			errGroup.Go(func() error {
-				if groupCtx.Err() != nil {
+				errChan := make(chan error)
+				go func() {
+					errChan <- impl.executeCmdWithCtx(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
+				}()
+				select {
+				case <-groupCtx.Done():
 					return groupCtx.Err()
+				case err := <-errChan:
+					return err
 				}
-				return impl.executeCmdWithCtx(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
 			})
 			if err = errGroup.Wait(); err != nil {
-				return err
+
 			}
 			return nil
 		}
