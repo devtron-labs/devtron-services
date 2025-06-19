@@ -425,7 +425,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			errGroup, groupCtx := errgroup.WithContext(ciContext)
 			errGroup.Go(func() error {
 				if useBuildxK8sDriver && k8sClient != nil {
-					return k8sClient.BuilderPodLivenessDialer(groupCtx)
+					return k8sClient.CatchBuilderPodLivenessError(groupCtx)
 				}
 				return nil
 			})
@@ -446,20 +446,15 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				done := make(chan bool)
 				ctx, cancel := context.WithCancel(ciContext)
 				defer cancel()
-				go func() {
-					// wait for the builder pod to come up again
-					if err = k8sClient.BuilderPodLivenessDialer(ctx); err == nil {
-						done <- true
-					}
-				}()
+				go k8sClient.WaitUntilBuilderPodLive(ctx, done)
 				select {
+				case <-done:
+					// builder pod is up again, continue with the build
+					cancel()
 				case <-time.After(2 * time.Minute):
 					// timeout after 2 minutes
 					cancel()
 					return "", BuilderPodDeletedError
-				case <-done:
-					// builder pod is up again, continue with the build
-					cancel()
 				}
 				err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage)
 				if err != nil {

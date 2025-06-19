@@ -20,7 +20,8 @@ import (
 type BuildxK8sInterface interface {
 	PatchOwnerReferenceInBuilders()
 	RegisterBuilderPods(ctx context.Context) error
-	BuilderPodLivenessDialer(ctx context.Context) error
+	CatchBuilderPodLivenessError(ctx context.Context) error
+	WaitUntilBuilderPodLive(ctx context.Context, done chan<- bool)
 }
 
 type buildxK8sClient struct {
@@ -73,7 +74,7 @@ func (k8s *buildxK8sClient) PatchOwnerReferenceInBuilders() {
 	}
 }
 
-func (k8s *buildxK8sClient) BuilderPodLivenessDialer(ctx context.Context) error {
+func (k8s *buildxK8sClient) CatchBuilderPodLivenessError(ctx context.Context) error {
 	if k8s == nil {
 		return nil
 	}
@@ -86,6 +87,27 @@ func (k8s *buildxK8sClient) BuilderPodLivenessDialer(ctx context.Context) error 
 		case <-ctx.Done():
 			log.Println(util.DEVTRON, "context done, exiting builder pod liveness check")
 			return nil
+		default:
+			log.Println(util.DEVTRON, "sleeping for 10 seconds before next builder pod liveness check")
+			// Sleep for 10 seconds
+			<-time.After(10 * time.Second)
+		}
+	}
+}
+
+func (k8s *buildxK8sClient) WaitUntilBuilderPodLive(ctx context.Context, done chan<- bool) {
+	if k8s == nil {
+		return
+	}
+	for {
+		if err := k8s.builderPodLivenessDialer(ctx); err == nil {
+			done <- true
+			return
+		}
+		select {
+		case <-ctx.Done():
+			log.Println(util.DEVTRON, "context done, exiting builder pod liveness check")
+			return
 		default:
 			log.Println(util.DEVTRON, "sleeping for 10 seconds before next builder pod liveness check")
 			// Sleep for 10 seconds
