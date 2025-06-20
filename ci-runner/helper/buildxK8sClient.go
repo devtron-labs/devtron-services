@@ -80,7 +80,7 @@ func (k8s *buildxK8sClient) CatchBuilderPodLivenessError(ctx context.Context) er
 	}
 	for {
 		err := k8s.builderPodLivenessDialer(ctx)
-		if err != nil {
+		if err != nil && ctx.Err() == nil {
 			return err
 		}
 		select {

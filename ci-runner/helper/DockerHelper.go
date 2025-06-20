@@ -299,6 +299,37 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return performDockerLogin()
 }
 
+func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext,
+	envVars *EnvironmentVariables, dockerBuild string, useBuildxK8sDriver bool,
+	k8sClient BuildxK8sInterface) error {
+	if envVars.ShowDockerBuildCmdInLogs {
+		log.Println("Starting docker build : ", dockerBuild)
+	} else {
+		log.Println("Docker build started..")
+	}
+	ctx, cancel := context.WithCancel(ciContext)
+	defer cancel()
+	errGroup, groupCtx := errgroup.WithContext(ctx)
+	errGroup.Go(func() error {
+		if useBuildxK8sDriver && k8sClient != nil {
+			return k8sClient.CatchBuilderPodLivenessError(groupCtx)
+		}
+		return nil
+	})
+	errGroup.Go(func() error {
+		err := impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
+		if err != nil {
+			return err
+		}
+		cancel()
+		return nil
+	})
+	if err := errGroup.Wait(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	envVars := &EnvironmentVariables{}
@@ -333,7 +364,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			} else {
 				dockerBuild = dockerBuildxBuild + " "
 			}
-
 		}
 		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
 		for key, value := range dockerBuildFlags {
@@ -412,28 +442,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			dockerBuild, buildxExportCacheFunc = impl.getBuildxBuildCommand(ciContext, exportBuildxCacheAfterBuild, cacheEnabled, ciRequest.BuildxCacheModeMin, dockerBuild, oldCacheBuildxPath, localCachePath, dest, dockerBuildConfig, dockerfilePath)
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
-		}
-
-		buildImageStage := func() error {
-			if envVars.ShowDockerBuildCmdInLogs {
-				log.Println("Starting docker build : ", dockerBuild)
-			} else {
-				log.Println("Docker build started..")
-			}
-			errGroup, groupCtx := errgroup.WithContext(ciContext)
-			errGroup.Go(func() error {
-				if useBuildxK8sDriver && k8sClient != nil {
-					return k8sClient.CatchBuilderPodLivenessError(groupCtx)
-				}
-				return nil
-			})
-			errGroup.Go(func() error {
-				return impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
-			})
-			if err = errGroup.Wait(); err != nil {
-				return err
-			}
-			return nil
 		}
 
 		err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage)
