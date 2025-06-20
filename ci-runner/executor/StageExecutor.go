@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 )
 
 type StageExecutorImpl struct {
@@ -225,6 +226,10 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 			stepOutputVarsFinal = stageOutputVars
 			if len(step.ArtifactPaths) > 0 {
 				for _, path := range step.ArtifactPaths {
+					if strings.HasPrefix(path, util.WORKINGDIR) {
+						log.Printf("skipping copying files to '/devtroncd' path as it's reserved")
+						continue
+					}
 					err = copylib.Copy(path, filepath.Join(util.TmpArtifactLocation, step.Name, path))
 					if err != nil {
 						if _, ok := err.(*os.PathError); ok {
