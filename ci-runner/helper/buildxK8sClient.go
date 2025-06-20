@@ -12,26 +12,34 @@ import (
 	appsV1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"log"
 	"net/http"
+	"slices"
 	"time"
 )
 
 type BuildxK8sInterface interface {
 	PatchOwnerReferenceInBuilders()
 	RegisterBuilderPods(ctx context.Context) error
+	RestartBuilders(ctx context.Context) error
 	CatchBuilderPodLivenessError(ctx context.Context) error
 	WaitUntilBuilderPodLive(ctx context.Context, done chan<- bool)
 }
 
 type buildxK8sClient struct {
-	restConfig      *rest.Config
-	httpClient      *http.Client
-	appV1Client     *appsV1.AppsV1Client
-	coreV1Client    *clientcorev1.CoreV1Client
-	namespace       string
-	deploymentNames []string
-	podNames        []string
+	restConfig   *rest.Config
+	httpClient   *http.Client
+	appV1Client  *appsV1.AppsV1Client
+	coreV1Client *clientcorev1.CoreV1Client
+	namespace    string
+	deployments  map[string][]podStatus
+}
+
+type podStatus struct {
+	name  string
+	phase corev1.PodPhase
+	err   error
 }
 
 func newBuildxK8sClient(deploymentNames []string) (*buildxK8sClient, error) {
@@ -51,13 +59,17 @@ func newBuildxK8sClient(deploymentNames []string) (*buildxK8sClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	deployments := make(map[string][]podStatus)
+	for _, deploymentName := range deploymentNames {
+		deployments[deploymentName] = make([]podStatus, 0)
+	}
 	return &buildxK8sClient{
-		restConfig:      restConfig,
-		httpClient:      k8sHttpClient,
-		appV1Client:     appV1ClientSet,
-		coreV1Client:    coreV1ClientSet,
-		namespace:       "devtron-ci",
-		deploymentNames: deploymentNames,
+		restConfig:   restConfig,
+		httpClient:   k8sHttpClient,
+		appV1Client:  appV1ClientSet,
+		coreV1Client: coreV1ClientSet,
+		namespace:    "devtron-ci",
+		deployments:  deployments,
 	}, nil
 }
 
@@ -65,7 +77,7 @@ func (k8s *buildxK8sClient) PatchOwnerReferenceInBuilders() {
 	if k8s == nil {
 		return
 	}
-	for _, deploymentName := range k8s.deploymentNames {
+	for deploymentName := range k8s.deployments {
 		if err := k8s.jsonPatchOwnerReferenceInDeployment(deploymentName); err != nil {
 			log.Println(util.DEVTRON, "failed to patch the buildkit deployment's owner reference, ", " deployment: ", deploymentName, " err: ", err)
 		} else {
@@ -79,7 +91,7 @@ func (k8s *buildxK8sClient) CatchBuilderPodLivenessError(ctx context.Context) er
 		return nil
 	}
 	for {
-		err := k8s.builderPodLivenessDialer(ctx)
+		err := k8s.builderLivenessDialer(ctx)
 		if err != nil && ctx.Err() == nil {
 			return err
 		}
@@ -100,7 +112,7 @@ func (k8s *buildxK8sClient) WaitUntilBuilderPodLive(ctx context.Context, done ch
 		return
 	}
 	for {
-		if err := k8s.builderPodLivenessDialer(ctx); err == nil {
+		if err := k8s.builderLivenessDialer(ctx); err == nil {
 			done <- true
 			return
 		}
@@ -120,19 +132,23 @@ func (k8s *buildxK8sClient) RegisterBuilderPods(ctx context.Context) error {
 	if k8s == nil {
 		return nil
 	}
-	k8s.podNames = make([]string, 0)
-	for _, deploymentName := range k8s.deploymentNames {
-		podNames, err := k8s.getBuilderPods(ctx, deploymentName)
+	for deploymentName := range k8s.deployments {
+		pods, err := k8s.getBuilderPods(ctx, deploymentName)
 		if err != nil {
 			log.Println(util.DEVTRON, fmt.Sprintf("error while getting builder pods for deployment: %q, err: %v", deploymentName, err))
 			return err
 		}
-		if len(podNames) == 0 {
-			log.Println(util.DEVTRON, fmt.Sprintf("no running builder pods found for deployment: %q", deploymentName))
-			return BuilderPodDeletedError
+		k8s.deployments[deploymentName] = pods
+		log.Println(util.DEVTRON, fmt.Sprintf("registered builder pods for deployment: %q", deploymentName))
+	}
+	return nil
+}
+
+func (k8s *buildxK8sClient) RestartBuilders(ctx context.Context) error {
+	for _, pods := range k8s.deployments {
+		if err := k8s.rotateBuilders(ctx, pods); err != nil {
+			return err
 		}
-		k8s.podNames = append(k8s.podNames, podNames...)
-		log.Println(util.DEVTRON, fmt.Sprintf("registered builder pods for deployment: %q, pods: %v", deploymentName, podNames))
 	}
 	return nil
 }
@@ -155,14 +171,16 @@ func (k8s *buildxK8sClient) jsonPatchOwnerReferenceInDeployment(deploymentName s
 	return nil
 }
 
-func (k8s *buildxK8sClient) builderPodLivenessDialer(ctx context.Context) error {
-	for _, podName := range k8s.podNames {
-		isRunning, err := k8s.verifyRunningBuilder(ctx, podName)
-		if err != nil && !k8sError.IsNotFound(err) {
-			log.Println(util.DEVTRON, fmt.Sprintf("error while verifying running builders for pod: %q, err: %v", podName, err))
-			return err
-		} else if k8sError.IsNotFound(err) || !isRunning {
-			log.Println(util.DEVTRON, fmt.Sprintf("builder pod liveness failed for pod: %q", podName))
+func (k8s *buildxK8sClient) builderLivenessDialer(ctx context.Context) error {
+	for deployment, pods := range k8s.deployments {
+		updatedPods := k8s.getLivePodStatus(ctx, pods)
+		k8s.deployments[deployment] = updatedPods
+	}
+	for deployment, pods := range k8s.deployments {
+		if !slices.ContainsFunc(pods, func(pod podStatus) bool {
+			return pod.phase == corev1.PodRunning && pod.err == nil
+		}) {
+			log.Println(util.DEVTRON, fmt.Sprintf("builder pod liveness check failed for deployment: %q", deployment))
 			return BuilderPodDeletedError
 		}
 	}
@@ -170,20 +188,50 @@ func (k8s *buildxK8sClient) builderPodLivenessDialer(ctx context.Context) error 
 	return nil
 }
 
-func (k8s *buildxK8sClient) verifyRunningBuilder(ctx context.Context, podName string) (bool, error) {
-	pod, err := k8s.coreV1Client.Pods("devtron-ci").Get(ctx, podName, metav1.GetOptions{})
-	if err != nil {
-		return false, err
+func (k8s *buildxK8sClient) rotateBuilders(ctx context.Context, pods []podStatus) error {
+	deleteOptions := metav1.DeleteOptions{}
+	deleteOptions.GracePeriodSeconds = ptr.To(int64(0))
+	for _, pod := range pods {
+		if pod.phase == corev1.PodRunning || pod.err == nil {
+			err := k8s.coreV1Client.Pods(k8s.namespace).Delete(ctx, pod.name, deleteOptions)
+			if err != nil && !k8sError.IsNotFound(err) {
+				log.Println(util.DEVTRON, fmt.Sprintf("error while deleting pod: %q, err: %v", pod.name, err))
+				return err
+			}
+		}
 	}
-	if pod.Status.Phase == corev1.PodRunning {
-		log.Println(util.DEVTRON, fmt.Sprintf("Pod %q is running", pod.Name))
-		return true, err
-	}
-	log.Println(util.DEVTRON, fmt.Sprintf("Pod %q is not running, current phase: %q", pod.Name, pod.Status.Phase))
-	return false, err
+	return nil
 }
 
-func (k8s *buildxK8sClient) getBuilderPods(ctx context.Context, deploymentName string) ([]string, error) {
+func (k8s *buildxK8sClient) getLivePodStatus(ctx context.Context, pods []podStatus) []podStatus {
+	updatedPods := make([]podStatus, 0, len(pods))
+	for _, pod := range pods {
+		updatedPod := podStatus{
+			name: pod.name,
+		}
+		podPhase, err := k8s.getBuilderPhase(ctx, pod.name)
+		updatedPod.phase = podPhase
+		if err != nil && !k8sError.IsNotFound(err) {
+			log.Println(util.DEVTRON, fmt.Sprintf("error while verifying running builders for pod: %q, err: %v", pod.name, err))
+			updatedPod.err = err
+		} else if k8sError.IsNotFound(err) || podPhase != corev1.PodRunning {
+			log.Println(util.DEVTRON, fmt.Sprintf("builder pod liveness failed for pod: %q, phase: %q", pod.name, podPhase))
+			updatedPod.err = BuilderPodDeletedError
+		}
+		updatedPods = append(updatedPods, updatedPod)
+	}
+	return updatedPods
+}
+
+func (k8s *buildxK8sClient) getBuilderPhase(ctx context.Context, podName string) (corev1.PodPhase, error) {
+	pod, err := k8s.coreV1Client.Pods("devtron-ci").Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return corev1.PodUnknown, err
+	}
+	return pod.Status.Phase, err
+}
+
+func (k8s *buildxK8sClient) getBuilderPods(ctx context.Context, deploymentName string) ([]podStatus, error) {
 	deploy, err := k8s.appV1Client.Deployments("devtron-ci").Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -199,13 +247,13 @@ func (k8s *buildxK8sClient) getBuilderPods(ctx context.Context, deploymentName s
 	if err != nil {
 		return nil, err
 	}
-	podNames := make([]string, 0, len(podList.Items))
+	podNames := make([]podStatus, 0, len(podList.Items))
 	for i := range podList.Items {
 		pod := &podList.Items[i]
-		if pod.Status.Phase == corev1.PodRunning {
-			log.Println(util.DEVTRON, fmt.Sprintf("Pod %q is running", pod.Name))
-			podNames = append(podNames, pod.Name)
-		}
+		podNames = append(podNames, podStatus{
+			name:  pod.Name,
+			phase: pod.Status.Phase,
+		})
 	}
 	return podNames, err
 }

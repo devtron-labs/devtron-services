@@ -49,6 +49,7 @@ const (
 	DOCKER_LOGIN_STAGE                   = "Docker Login"
 	DOCKER_PUSH                          = "Docker Push"
 	DOCKER_BUILD                         = "Docker Build"
+	DOCKER_REBUILD                       = "Docker Re-Build"
 	DOCKER_STOP                          = "Docker Stop"
 	BUILD_ARTIFACT                       = "Build Artifact"
 	UPLOAD_ARTIFACT                      = "Uploading Artifact"

@@ -455,6 +455,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return "", err
 		} else if errors.Is(err, BuilderPodDeletedError) {
 			if useBuildxK8sDriver {
+				k8sErr := k8sClient.RestartBuilders(ciContext)
+				if k8sErr != nil {
+					log.Println(util.DEVTRON, fmt.Sprintf(" error in RestartBuilders : %s", k8sErr.Error()))
+					return "", k8sErr
+				}
 				k8sClient, err = newBuildxK8sClient(deploymentNames)
 				if err != nil {
 					log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
@@ -462,7 +467,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				err = k8sClient.RegisterBuilderPods(ciContext)
 				if err != nil {
-					log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
+					log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err.Error())
 					return "", err
 				}
 				done := make(chan bool)
@@ -479,7 +484,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					return "", BuilderPodDeletedError
 				}
 				err = util.ExecuteWithStageInfoLogWithMetadata(
-					util.DOCKER_BUILD,
+					util.DOCKER_REBUILD,
 					bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)},
 					impl.buildImageStage(ciContext, envVars, dockerBuild, useBuildxK8sDriver, k8sClient),
 				)
