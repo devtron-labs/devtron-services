@@ -301,33 +301,35 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 
 func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext,
 	envVars *EnvironmentVariables, dockerBuild string, useBuildxK8sDriver bool,
-	k8sClient BuildxK8sInterface) error {
-	if envVars.ShowDockerBuildCmdInLogs {
-		log.Println("Starting docker build : ", dockerBuild)
-	} else {
-		log.Println("Docker build started..")
-	}
-	ctx, cancel := context.WithCancel(ciContext)
-	defer cancel()
-	errGroup, groupCtx := errgroup.WithContext(ctx)
-	errGroup.Go(func() error {
-		if useBuildxK8sDriver && k8sClient != nil {
-			return k8sClient.CatchBuilderPodLivenessError(groupCtx)
+	k8sClient BuildxK8sInterface) func() error {
+	return func() error {
+		if envVars.ShowDockerBuildCmdInLogs {
+			log.Println("Starting docker build : ", dockerBuild)
+		} else {
+			log.Println("Docker build started..")
 		}
-		return nil
-	})
-	errGroup.Go(func() error {
-		err := impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
-		if err != nil {
+		ctx, cancel := context.WithCancel(ciContext)
+		defer cancel()
+		errGroup, groupCtx := errgroup.WithContext(ctx)
+		errGroup.Go(func() error {
+			if useBuildxK8sDriver && k8sClient != nil {
+				return k8sClient.CatchBuilderPodLivenessError(groupCtx)
+			}
+			return nil
+		})
+		errGroup.Go(func() error {
+			err := impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
+			if err != nil {
+				return err
+			}
+			cancel()
+			return nil
+		})
+		if err := errGroup.Wait(); err != nil {
 			return err
 		}
-		cancel()
 		return nil
-	})
-	if err := errGroup.Wait(); err != nil {
-		return err
 	}
-	return nil
 }
 
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
@@ -444,7 +446,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
 
-		err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage)
+		err = util.ExecuteWithStageInfoLogWithMetadata(
+			util.DOCKER_BUILD,
+			bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)},
+			impl.buildImageStage(ciContext, envVars, dockerBuild, useBuildxK8sDriver, k8sClient),
+		)
 		if err != nil && !errors.Is(err, BuilderPodDeletedError) {
 			return "", err
 		} else if errors.Is(err, BuilderPodDeletedError) {
@@ -472,7 +478,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					cancel()
 					return "", BuilderPodDeletedError
 				}
-				err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage)
+				err = util.ExecuteWithStageInfoLogWithMetadata(
+					util.DOCKER_BUILD,
+					bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)},
+					impl.buildImageStage(ciContext, envVars, dockerBuild, useBuildxK8sDriver, k8sClient),
+				)
 				if err != nil {
 					return "", err
 				}
