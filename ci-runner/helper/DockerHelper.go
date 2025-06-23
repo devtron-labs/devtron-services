@@ -36,6 +36,7 @@ import (
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
+	"github.com/devtron-labs/common-lib/utils/retryFunc"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"io/ioutil"
@@ -299,14 +300,61 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return performDockerLogin()
 }
 
-func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext,
-	envVars *EnvironmentVariables, dockerBuild string, useBuildxK8sDriver bool,
-	k8sClient BuildxK8sInterface) func() error {
+func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8sClient BuildxK8sInterface,
+	useBuildxK8sDriver bool, dockerBuild string, deploymentNames []string,
+	dockerBuildStageMetadata bean2.DockerBuildStageMetadata, reBuildLogs []any) error {
+	if !useBuildxK8sDriver {
+		return nil
+	}
+	k8sErr := k8sClient.RestartBuilders(ciContext)
+	if k8sErr != nil {
+		log.Println(util.DEVTRON, fmt.Sprintf(" error in RestartBuilders : %s", k8sErr.Error()))
+		return k8sErr
+	}
+	k8sClient, err := newBuildxK8sClient(deploymentNames)
+	if err != nil {
+		log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
+		return err
+	}
+	err = k8sClient.RegisterBuilderPods(ciContext)
+	if err != nil {
+		log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err.Error())
+		return err
+	}
+	done := make(chan bool)
+	ctx, cancel := context.WithCancel(ciContext)
+	defer cancel()
+	go k8sClient.WaitUntilBuilderPodLive(ctx, done)
+	select {
+	case <-done:
+		// builder pod is up again, continue with the build
+		cancel()
+	case <-time.After(2 * time.Minute):
+		// timeout after 2 minutes
+		cancel()
+		return BuilderPodDeletedError
+	}
+	err = util.ExecuteWithStageInfoLogWithMetadata(
+		util.DOCKER_REBUILD,
+		dockerBuildStageMetadata,
+		impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, reBuildLogs),
+	)
+	if err != nil && !errors.Is(err, BuilderPodDeletedError) {
+		return err
+	} else if errors.Is(err, BuilderPodDeletedError) {
+		// Log error message for builder pod interruption due to
+		log.Println(fmt.Sprintf("%sERROR: %s.%s", BuilderPodDeletedError.Error(), util.ColorRed, util.ColorReset))
+		// if the builder pod is deleted, we will retry the build
+		return retryFunc.NewRetryableError(BuilderPodDeletedError)
+	}
+	return nil
+}
+
+func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext, dockerBuild string,
+	useBuildxK8sDriver bool, k8sClient BuildxK8sInterface, buildLogs []any) func() error {
 	return func() error {
-		if envVars.ShowDockerBuildCmdInLogs {
-			log.Println("Starting docker build : ", dockerBuild)
-		} else {
-			log.Println("Docker build started..")
+		if len(buildLogs) > 0 {
+			log.Println(buildLogs...)
 		}
 		ctx, cancel := context.WithCancel(ciContext)
 		defer cancel()
@@ -445,52 +493,35 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
-
+		dockerBuildStageMetadata := bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}
+		buildLogs := []any{"Docker build started..."}
+		if envVars.ShowDockerBuildCmdInLogs {
+			buildLogs = []any{"Starting docker build : ", dockerBuild}
+		}
 		err = util.ExecuteWithStageInfoLogWithMetadata(
 			util.DOCKER_BUILD,
-			bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)},
-			impl.buildImageStage(ciContext, envVars, dockerBuild, useBuildxK8sDriver, k8sClient),
+			dockerBuildStageMetadata,
+			impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, buildLogs),
 		)
 		if err != nil && !errors.Is(err, BuilderPodDeletedError) {
 			return "", err
 		} else if errors.Is(err, BuilderPodDeletedError) {
-			if useBuildxK8sDriver {
-				k8sErr := k8sClient.RestartBuilders(ciContext)
-				if k8sErr != nil {
-					log.Println(util.DEVTRON, fmt.Sprintf(" error in RestartBuilders : %s", k8sErr.Error()))
-					return "", k8sErr
+			// Log error message for builder pod interruption due to
+			log.Println(fmt.Sprintf("%sERROR: %s.%s", BuilderPodDeletedError.Error(), util.ColorRed, util.ColorReset))
+			maxRetry := ciRequest.BuildxInterruptionMaxRetry - 1 // -1 because we already tried once
+			callback := func(retriesLeft int) error {
+				attempt := maxRetry - retriesLeft
+				reBuildLogs := []any{fmt.Sprintf("Docker re build started (Attempt %d)...", attempt)}
+				if envVars.ShowDockerBuildCmdInLogs {
+					reBuildLogs = []any{fmt.Sprintf("Starting re docker build (Attempt %d) : ", attempt), dockerBuild}
 				}
-				k8sClient, err = newBuildxK8sClient(deploymentNames)
-				if err != nil {
-					log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
-					return "", err
-				}
-				err = k8sClient.RegisterBuilderPods(ciContext)
-				if err != nil {
-					log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err.Error())
-					return "", err
-				}
-				done := make(chan bool)
-				ctx, cancel := context.WithCancel(ciContext)
-				defer cancel()
-				go k8sClient.WaitUntilBuilderPodLive(ctx, done)
-				select {
-				case <-done:
-					// builder pod is up again, continue with the build
-					cancel()
-				case <-time.After(2 * time.Minute):
-					// timeout after 2 minutes
-					cancel()
-					return "", BuilderPodDeletedError
-				}
-				err = util.ExecuteWithStageInfoLogWithMetadata(
-					util.DOCKER_REBUILD,
-					bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)},
-					impl.buildImageStage(ciContext, envVars, dockerBuild, useBuildxK8sDriver, k8sClient),
-				)
-				if err != nil {
-					return "", err
-				}
+				return impl.executeDockerReBuild(ciContext, k8sClient, useBuildxK8sDriver, dockerBuild,
+					deploymentNames, dockerBuildStageMetadata, reBuildLogs)
+			}
+			err = retryFunc.RetryWithOutLogging(callback, retryFunc.IsRetryableError, maxRetry, 1*time.Second)
+			if err != nil {
+				log.Println(util.DEVTRON, " error in executing docker re-build ", " err: ", err)
+				return "", err
 			}
 		}
 
@@ -1072,7 +1103,7 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 		builderExecCmd := impl.GetCommandToExecute(builderCmd)
 		err = impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
+			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err)
 			return deploymentNames, err
 		}
 	}

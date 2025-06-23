@@ -298,3 +298,9 @@ func PrintFileContent(filePath string) {
 	// Print the file content
 	log.Println(util.DEVTRON, string(content))
 }
+
+const (
+	ColorYellow = "\033[33m"
+	ColorRed    = "\033[31m"
+	ColorReset  = "\033[0m" // Resets color to default
+)
