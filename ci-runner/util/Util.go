@@ -300,7 +300,6 @@ func PrintFileContent(filePath string) {
 }
 
 const (
-	ColorYellow = "\033[33m"
-	ColorRed    = "\033[31m"
-	ColorReset  = "\033[0m" // Resets color to default
+	ColorRed   = "\033[31m"
+	ColorReset = "\033[0m" // Resets color to default
 )

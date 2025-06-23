@@ -321,29 +321,40 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 		log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err.Error())
 		return err
 	}
-	done := make(chan bool)
-	ctx, cancel := context.WithCancel(ciContext)
-	defer cancel()
-	go k8sClient.WaitUntilBuilderPodLive(ctx, done)
-	select {
-	case <-done:
-		// builder pod is up again, continue with the build
-		cancel()
-	case <-time.After(2 * time.Minute):
-		// timeout after 2 minutes
-		cancel()
-		return BuilderPodDeletedError
+	rebuildImageStage := func() error {
+		// wait for the builder pod to be up again
+		startTime := time.Now()
+		log.Println("Waiting for builder pod to be ready, timeout: 2 minutes")
+		done := make(chan bool)
+		ctx, cancel := context.WithCancel(ciContext)
+		defer cancel()
+		go k8sClient.WaitUntilBuilderPodLive(ctx, done)
+		select {
+		case <-done:
+			// builder pod is up again, continue with the build
+			cancel()
+		case <-time.After(2 * time.Minute):
+			// timeout after 2 minutes
+			cancel()
+			return BuilderPodDeletedError
+		}
+		log.Println(fmt.Sprintf("DONE %fs", time.Since(startTime).Seconds()))
+		buildImageFunc := impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, reBuildLogs)
+		if buildImageFunc != nil {
+			return buildImageFunc()
+		}
+		return nil
 	}
 	err = util.ExecuteWithStageInfoLogWithMetadata(
 		util.DOCKER_REBUILD,
 		dockerBuildStageMetadata,
-		impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, reBuildLogs),
+		rebuildImageStage,
 	)
 	if err != nil && !errors.Is(err, BuilderPodDeletedError) {
 		return err
 	} else if errors.Is(err, BuilderPodDeletedError) {
 		// Log error message for builder pod interruption due to
-		log.Println(fmt.Sprintf("%sERROR: %s.%s", BuilderPodDeletedError.Error(), util.ColorRed, util.ColorReset))
+		log.Println(fmt.Sprintf("%sERROR: %s.%s", util.ColorRed, BuilderPodDeletedError.Error(), util.ColorReset))
 		// if the builder pod is deleted, we will retry the build
 		return retryFunc.NewRetryableError(BuilderPodDeletedError)
 	}
@@ -507,7 +518,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return "", err
 		} else if errors.Is(err, BuilderPodDeletedError) {
 			// Log error message for builder pod interruption due to
-			log.Println(fmt.Sprintf("%sERROR: %s.%s", BuilderPodDeletedError.Error(), util.ColorRed, util.ColorReset))
+			log.Println(fmt.Sprintf("%sERROR: %s.%s", util.ColorRed, BuilderPodDeletedError.Error(), util.ColorReset))
 			maxRetry := ciRequest.BuildxInterruptionMaxRetry - 1 // -1 because we already tried once
 			callback := func(retriesLeft int) error {
 				attempt := maxRetry - retriesLeft
