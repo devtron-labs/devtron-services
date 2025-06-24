@@ -300,6 +300,44 @@ func PrintFileContent(filePath string) {
 }
 
 const (
-	ColorRed   = "\033[31m"
-	ColorReset = "\033[0m" // Resets color to default
+	ColorGreen  = "\033[32m"
+	ColorYellow = "\033[33m"
+	ColorRed    = "\033[31m"
+	ColorReset  = "\033[0m" // Resets color to default
 )
+
+func LogError(msg ...any) {
+	if len(msg) == 0 {
+		return
+	}
+	message := []any{"ERROR:", ColorRed}
+	message = append(message, msg...)
+	message = append(message, ColorReset)
+	log.SetFlags(0)
+	log.Println(message...)
+	log.SetFlags(log.Ldate | log.Ltime)
+}
+
+func LogWarn(msg ...any) {
+	if len(msg) == 0 {
+		return
+	}
+	message := []any{"WARNING:", ColorYellow}
+	message = append(message, msg...)
+	message = append(message, ColorReset)
+	log.SetFlags(0)
+	log.Println(message...)
+	log.SetFlags(log.Ldate | log.Ltime)
+}
+
+func LogInfo(msg ...any) {
+	if len(msg) == 0 {
+		return
+	}
+	message := []any{"INFO:", ColorGreen}
+	message = append(message, msg...)
+	message = append(message, ColorReset)
+	log.SetFlags(0)
+	log.Println(message...)
+	log.SetFlags(log.Ldate | log.Ltime)
+}

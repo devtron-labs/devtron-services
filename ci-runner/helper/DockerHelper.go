@@ -324,7 +324,7 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 	rebuildImageStage := func() error {
 		// wait for the builder pod to be up again
 		startTime := time.Now()
-		log.Println("Waiting for builder pod to be ready, timeout: 2 minutes")
+		util.LogInfo("Waiting for builder pod to be ready,", "timeout: 2 minutes")
 		done := make(chan bool)
 		ctx, cancel := context.WithCancel(ciContext)
 		defer cancel()
@@ -338,7 +338,7 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 			cancel()
 			return BuilderPodDeletedError
 		}
-		log.Println(fmt.Sprintf("DONE %fs", time.Since(startTime).Seconds()))
+		util.LogInfo("DONE -->", time.Since(startTime).Seconds())
 		buildImageFunc := impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, reBuildLogs)
 		if buildImageFunc != nil {
 			return buildImageFunc()
@@ -354,7 +354,9 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 		return err
 	} else if errors.Is(err, BuilderPodDeletedError) {
 		// Log error message for builder pod interruption due to
-		log.Println(fmt.Sprintf("%sERROR: %s.%s", util.ColorRed, BuilderPodDeletedError.Error(), util.ColorReset))
+		util.LogError(BuilderPodDeletedError)
+		util.LogWarn("Frequent spot interruptions can lead to build failures.\n",
+			"Consider using a different node type or increasing the spot interruption tolerance.\n")
 		// if the builder pod is deleted, we will retry the build
 		return retryFunc.NewRetryableError(BuilderPodDeletedError)
 	}
@@ -518,7 +520,9 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			return "", err
 		} else if errors.Is(err, BuilderPodDeletedError) {
 			// Log error message for builder pod interruption due to
-			log.Println(fmt.Sprintf("%sERROR: %s.%s", util.ColorRed, BuilderPodDeletedError.Error(), util.ColorReset))
+			util.LogError(BuilderPodDeletedError)
+			util.LogWarn("Frequent spot interruptions can lead to build failures.\n",
+				"Consider using a different node type or increasing the spot interruption tolerance.\n")
 			maxRetry := ciRequest.BuildxInterruptionMaxRetry - 1 // -1 because we already tried once
 			callback := func(retriesLeft int) error {
 				attempt := maxRetry - retriesLeft

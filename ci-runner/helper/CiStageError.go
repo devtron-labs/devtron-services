@@ -127,4 +127,4 @@ func (err *CdStageError) Unwrap() error {
 	return err.stageErr
 }
 
-var BuilderPodDeletedError = errors.New("buildx pod(s) was terminated in response to imminent node shutdown")
+var BuilderPodDeletedError = errors.New("Buildx pod(s) was terminated in response to imminent node shutdown.")
