@@ -250,6 +250,12 @@ func (k8s *buildxK8sClient) getBuilderPods(ctx context.Context, deploymentName s
 	podNames := make([]podStatus, 0, len(podList.Items))
 	for i := range podList.Items {
 		pod := &podList.Items[i]
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed ||
+			pod.DeletionTimestamp != nil {
+			log.Println(util.DEVTRON, fmt.Sprintf("ignoring pod %q as it is not in running state, phase: %q", pod.Name, pod.Status.Phase))
+			continue
+		}
+		// register the running pod only
 		podNames = append(podNames, podStatus{
 			name:  pod.Name,
 			phase: pod.Status.Phase,
