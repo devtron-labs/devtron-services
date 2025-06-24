@@ -256,6 +256,7 @@ func (k8s *buildxK8sClient) getBuilderPods(ctx context.Context, deploymentName s
 			continue
 		}
 		// register the running pod only
+		log.Println(util.DEVTRON, fmt.Sprintf("found running pod %q for deployment %q, phase: %q", pod.Name, deploymentName, pod.Status.Phase))
 		podNames = append(podNames, podStatus{
 			name:  pod.Name,
 			phase: pod.Status.Phase,
