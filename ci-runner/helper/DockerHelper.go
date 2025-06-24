@@ -366,27 +366,30 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext, dockerBuild string,
 	useBuildxK8sDriver bool, k8sClient BuildxK8sInterface, buildLogs []any) func() error {
 	return func() error {
-		if len(buildLogs) > 0 {
-			log.Println(buildLogs...)
-		}
-		ctx, cancel := context.WithCancelCause(ciContext)
-		defer cancel(nil)
+		ctx, cancel := context.WithCancel(ciContext)
+		defer cancel()
 		errGroup, groupCtx := errgroup.WithContext(ctx)
 		errGroup.Go(func() error {
 			if useBuildxK8sDriver && k8sClient != nil {
-				return k8sClient.CatchBuilderPodLivenessError(groupCtx)
+				if err := k8sClient.CatchBuilderPodLivenessError(groupCtx); err != nil {
+					cancel() // Cancel the context if there's an error in catching builder pod liveness
+					return err
+				}
 			}
 			return nil
 		})
 		errGroup.Go(func() error {
+			if len(buildLogs) > 0 {
+				log.Println(buildLogs...)
+			}
 			err := impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
 			if err != nil {
 				return err
 			}
+			cancel() // Cancel the context after the build is done
 			return nil
 		})
 		if err := errGroup.Wait(); err != nil {
-			cancel(err)
 			return err
 		}
 		return nil
