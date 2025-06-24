@@ -355,8 +355,8 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 	} else if errors.Is(err, BuilderPodDeletedError) {
 		// Log error message for builder pod interruption due to
 		util.LogError(BuilderPodDeletedError)
-		util.LogWarn("Frequent spot interruptions can lead to build failures.\n",
-			"Consider using a different node type or increasing the spot interruption tolerance.\n")
+		util.LogWarn("Frequent spot interruptions can lead to build failures.",
+			"Consider using a different node type or increasing the spot interruption tolerance.")
 		// if the builder pod is deleted, we will retry the build
 		return retryFunc.NewRetryableError(BuilderPodDeletedError)
 	}
