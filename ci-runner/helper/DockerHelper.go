@@ -369,8 +369,8 @@ func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext, dockerB
 		if len(buildLogs) > 0 {
 			log.Println(buildLogs...)
 		}
-		ctx, cancel := context.WithCancel(ciContext)
-		defer cancel()
+		ctx, cancel := context.WithCancelCause(ciContext)
+		defer cancel(nil)
 		errGroup, groupCtx := errgroup.WithContext(ctx)
 		errGroup.Go(func() error {
 			if useBuildxK8sDriver && k8sClient != nil {
@@ -383,10 +383,10 @@ func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext, dockerB
 			if err != nil {
 				return err
 			}
-			cancel()
 			return nil
 		})
 		if err := errGroup.Wait(); err != nil {
+			cancel(err)
 			return err
 		}
 		return nil
