@@ -41,39 +41,50 @@ type App struct {
 	db               *pg.DB
 	natsSubscription *pubsub.NatSubscriptionImpl
 	pubSubClient     *client.PubSubClientServiceImpl
+	serverConfig     *ServerConfig
 }
 
 func NewApp(Router *api.Router, Logger *zap.SugaredLogger,
 	db *pg.DB, natsSubscription *pubsub.NatSubscriptionImpl,
 	pubSubClient *client.PubSubClientServiceImpl) *App {
+	serverConfig, err := GetServerConfig()
+	if err != nil {
+		Logger.Errorw("error in getting server config", "err", err)
+	}
 	return &App{
 		Router:           Router,
 		Logger:           Logger,
 		db:               db,
 		natsSubscription: natsSubscription,
 		pubSubClient:     pubSubClient,
+		serverConfig:     serverConfig,
 	}
 }
 
 type ServerConfig struct {
-	SERVER_HTTP_PORT int `env:"SERVER_HTTP_PORT" envDefault:"8080"`
+	SERVER_HTTP_PORT      int           `env:"SERVER_HTTP_PORT" envDefault:"8080"`
+	ServerShutdownTimeout time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"5m" envDescription:"server shutdown timeout , default is 5 minutes"`
 }
 
-func (app *App) Start() {
+func GetServerConfig() (*ServerConfig, error) {
 	serverConfig := ServerConfig{}
 	err := env.Parse(&serverConfig)
 	if err != nil {
-		app.Logger.Errorw("error in parsing server config from environment", "err", err)
-		os.Exit(2)
+		return &serverConfig, err
 	}
-	httpPort := serverConfig.SERVER_HTTP_PORT
+	return &serverConfig, nil
+}
+
+func (app *App) Start() {
+
+	httpPort := app.serverConfig.SERVER_HTTP_PORT
 	app.Logger.Infow("starting server on ", "httpPort", httpPort)
 	app.Router.Init()
 	server := &http.Server{Addr: fmt.Sprintf(":%d", httpPort), Handler: app.Router.Router}
 	app.Router.Router.Use(middleware.PrometheusMiddleware)
 	app.Router.Router.Use(middlewares.Recovery)
 	app.server = server
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		app.Logger.Errorw("error in startup", "err", err)
 		os.Exit(2)
@@ -82,7 +93,8 @@ func (app *App) Start() {
 
 func (app *App) Stop() {
 	app.Logger.Infow("image scanner shutdown initiating")
-	timeoutContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	app.Logger.Infow("server shutdown timeout", "timeout", app.serverConfig.ServerShutdownTimeout)
+	timeoutContext, cancel := context.WithTimeout(context.Background(), app.serverConfig.ServerShutdownTimeout)
 	defer cancel()
 	app.Logger.Infow("closing router")
 	err := app.server.Shutdown(timeoutContext)
