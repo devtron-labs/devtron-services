@@ -168,4 +168,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250624130631-fd0c2f8fd85c
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250702064426-05664fd92d8c
