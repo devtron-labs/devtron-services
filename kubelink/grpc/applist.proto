@@ -110,6 +110,7 @@ message FluxApplication{
   string syncStatus=3;
   EnvironmentDetails environmentDetail = 4;
   string fluxAppDeploymentType=5;
+  string helmReleaseNamespace = 6;
 }
 //---------------flux external app detail-------
 
@@ -127,6 +128,8 @@ message FluxAppDetail{
   FluxApplication fluxApplication=1;
   FluxAppStatusDetail FluxAppStatusDetail = 2;
   ResourceTreeResponse resourceTreeResponse =3;
+  string applicationStatus = 4;
+  string lastObservedGeneration = 5;
 }
 
 message FluxAppStatusDetail{
