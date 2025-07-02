@@ -298,7 +298,7 @@ github.com/cncf/xds/go/xds/type/v3
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250619104711-cec22dd450d6
+# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250702060842-d55c3f381071
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/blob-storage
 github.com/devtron-labs/common-lib/constants
@@ -313,6 +313,8 @@ github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/dockerOperations
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
+github.com/devtron-labs/common-lib/utils/retryFunc
+github.com/devtron-labs/common-lib/utils/runTime
 github.com/devtron-labs/common-lib/utils/workFlow
 github.com/devtron-labs/common-lib/workflow
 # github.com/distribution/reference v0.6.0
@@ -1125,6 +1127,7 @@ k8s.io/client-go/features
 k8s.io/client-go/gentype
 k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/kubernetes/typed/apps/v1
+k8s.io/client-go/kubernetes/typed/core/v1
 k8s.io/client-go/openapi
 k8s.io/client-go/pkg/apis/clientauthentication
 k8s.io/client-go/pkg/apis/clientauthentication/install
@@ -1137,6 +1140,7 @@ k8s.io/client-go/rest/watch
 k8s.io/client-go/testing
 k8s.io/client-go/tools/clientcmd/api
 k8s.io/client-go/tools/metrics
+k8s.io/client-go/tools/reference
 k8s.io/client-go/transport
 k8s.io/client-go/util/apply
 k8s.io/client-go/util/cert
@@ -1194,4 +1198,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250619104711-cec22dd450d6
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250702060842-d55c3f381071
