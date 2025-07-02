@@ -29,7 +29,7 @@ func extractColumnDefinitions(columnsDataRaw interface{}) map[string]int {
 }
 
 // extractValuesFromRowCells extracting fields from the list of fluxAppList rowCells based on the columnDefinitions fields,
-func extractValuesFromRowCells(rowCells []interface{}, columnDefinitions map[string]int) (string, string, string) {
+func extractValuesFromRowCells(rowCells []interface{}, columnDefinitions map[string]int) (string, string, string, string) {
 	getValue := func(index int) string {
 		valueAtIndex := "Unknown"
 		if index < len(rowCells) {
@@ -43,7 +43,8 @@ func extractValuesFromRowCells(rowCells []interface{}, columnDefinitions map[str
 	name := getValue(columnDefinitions[AppNameKey])
 	syncStatus := getValue(columnDefinitions[StatusKey])
 	healthStatus := getValue(columnDefinitions[ReadyKey])
-	return name, syncStatus, healthStatus
+	namespace := getValue(columnDefinitions[NamespaceKey])
+	return name, namespace, syncStatus, healthStatus
 }
 
 // isKsChildHelmRelease checking for the helmRelease Dependency on any kustomization or not
@@ -156,6 +157,7 @@ func GetFluxAppDetailDto(appDetail *FluxApplicationDto) *client.FluxApplication 
 			ClusterId:   int32(appDetail.EnvironmentDetails.ClusterId),
 			Namespace:   appDetail.EnvironmentDetails.Namespace,
 		},
+		HelmReleaseNamespace: appDetail.HelmReleaseNamespace,
 	}
 }
 
