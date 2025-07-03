@@ -247,10 +247,11 @@ func (impl *RepositoryManagerImpl) Fetch(gitCtx GitContext, url string, location
 	res, errMsg, err := impl.gitManager.Fetch(gitCtx, location)
 
 	if err == nil && len(res) > 0 {
+		onlySSHWarning := IsOutputOnlySSHWarning(res)
 		impl.logger.Infow("repository updated", "location", url)
 		//updated
 		middleware.GitPullDuration.WithLabelValues("true", "true").Observe(time.Since(start).Seconds())
-		return true, r, "", nil
+		return !onlySSHWarning, r, "", nil
 	} else if err == nil && len(res) == 0 {
 		impl.logger.Debugw("no update for ", "path", url)
 		middleware.GitPullDuration.WithLabelValues("true", "false").Observe(time.Since(start).Seconds())
@@ -261,6 +262,19 @@ func (impl *RepositoryManagerImpl) Fetch(gitCtx GitContext, url string, location
 		return false, r, errMsg, err
 	}
 
+}
+
+func IsOutputOnlySSHWarning(output string) bool {
+	outputSplit := strings.Split(output, "\n")
+	if len(outputSplit) > 1 {
+		return false
+	}
+	for _, line := range outputSplit {
+		if strings.Contains(line, "Warning: Permanently added") {
+			return true
+		}
+	}
+	return false
 }
 
 func (impl *RepositoryManagerImpl) GetCommitForTag(gitCtx GitContext, checkoutPath, tag string) (*GitCommitBase, error) {
