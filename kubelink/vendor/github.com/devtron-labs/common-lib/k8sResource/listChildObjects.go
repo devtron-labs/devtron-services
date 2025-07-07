@@ -3,9 +3,11 @@ package k8sResource
 import (
 	"context"
 	"errors"
+	customErr "github.com/devtron-labs/common-lib/k8sResource/errors"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	coreV1 "k8s.io/api/core/v1"
+	errors2 "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -196,8 +198,15 @@ func (impl *K8sServiceImpl) getChildObject(client *dynamicClient.DynamicClient, 
 			filterListStartTime := time.Now()
 			childrenObjectsList, k8sErr := childResourceClient.List(context.Background(), options)
 			if k8sErr != nil {
-				impl.logger.Errorw("error in getting child listObjects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds(), "err", k8sErr)...)
-				return nil, k8sErr
+				statusError, matched := k8sErr.(*errors2.StatusError)
+				if !matched || statusError.ErrStatus.Reason != metaV1.StatusReasonNotFound {
+					internalErr := customErr.ConvertHelmErrorToInternalError(k8sErr)
+					if internalErr != nil {
+						k8sErr = internalErr
+					}
+					impl.logger.Errorw("error in getting child listObjects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds(), "err", k8sErr)...)
+					return nil, k8sErr
+				}
 			}
 			impl.logger.Debugw("listing child objects", filterObjRequest.GetLoggerMetadata("counter", counter, "timeTaken", time.Since(filterListStartTime).Seconds())...)
 			filterObjRequest = filterObjRequest.WithListObjects(childrenObjectsList)
