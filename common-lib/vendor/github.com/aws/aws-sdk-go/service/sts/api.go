@@ -2300,6 +2300,10 @@ type AssumeRoleWithWebIdentityInput struct {
 	// replaced with "sensitive" in string returned by AssumeRoleWithWebIdentityInput's
 	// String and GoString methods.
 	//
+	// WebIdentityToken is a sensitive parameter and its value will be
+	// replaced with "sensitive" in string returned by AssumeRoleWithWebIdentityInput's
+	// String and GoString methods.
+	//
 	// WebIdentityToken is a required field
 	WebIdentityToken *string `min:"4" type:"string" required:"true" sensitive:"true"`
 }

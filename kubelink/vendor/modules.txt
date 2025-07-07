@@ -125,7 +125,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250619100439-8e8e182b498a
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250704063028-ee904611f07c
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -133,6 +133,8 @@ github.com/devtron-labs/common-lib/fetchAllEnv
 github.com/devtron-labs/common-lib/git-manager/util
 github.com/devtron-labs/common-lib/helmLib/registry
 github.com/devtron-labs/common-lib/informer
+github.com/devtron-labs/common-lib/k8sResource
+github.com/devtron-labs/common-lib/k8sResource/errors
 github.com/devtron-labs/common-lib/middlewares
 github.com/devtron-labs/common-lib/monitoring
 github.com/devtron-labs/common-lib/monitoring/pprof
@@ -1386,4 +1388,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
 sigs.k8s.io/yaml/goyaml.v3
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250619100439-8e8e182b498a
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250704063028-ee904611f07c
