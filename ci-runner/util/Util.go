@@ -42,6 +42,7 @@ const (
 )
 
 const (
+	SSH_TUNNELING_STEP                   = "SSH Tunneling"
 	PREPARE_STEP                         = "Git cloning & preparing docker"
 	CACHE_PULL                           = "Pulling Cache"
 	GIT_CLONE_CHECKOUT                   = "Git Clone & Checkout"

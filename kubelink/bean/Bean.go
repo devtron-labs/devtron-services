@@ -21,7 +21,6 @@ import (
 	remoteConnectionBean "github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	client "github.com/devtron-labs/kubelink/grpc"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"time"
 )
 
@@ -113,14 +112,6 @@ type ClusterConfig struct {
 	Token        string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	ClusterId    int32  `protobuf:"varint,3,opt,name=clusterId,proto3" json:"clusterId,omitempty"`
 	ClusterName  string `protobuf:"bytes,4,opt,name=clusterName,proto3" json:"clusterName,omitempty"`
-}
-
-type KubernetesResourcePatchRequest struct {
-	Name      string
-	Namespace string
-	Gvk       *schema.GroupVersionKind
-	Patch     string
-	PatchType string
 }
 
 type HelmAppDeploymentDetail struct {

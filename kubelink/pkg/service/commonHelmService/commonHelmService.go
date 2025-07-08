@@ -2,6 +2,7 @@ package commonHelmService
 
 import (
 	"context"
+	"github.com/devtron-labs/common-lib/k8sResource"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	yamlUtil "github.com/devtron-labs/common-lib/utils/yaml"
 	"github.com/devtron-labs/kubelink/bean"
@@ -24,7 +25,7 @@ type CommonHelmService interface {
 }
 
 type CommonHelmServiceImpl struct {
-	k8sService          K8sService
+	k8sService          k8sResource.K8sService
 	logger              *zap.SugaredLogger
 	k8sUtil             k8sUtils.K8sService
 	converter           converter.ClusterBeanConverter
@@ -34,7 +35,7 @@ type CommonHelmServiceImpl struct {
 
 func NewCommonHelmServiceImpl(logger *zap.SugaredLogger,
 	k8sUtil k8sUtils.K8sService, converter converter.ClusterBeanConverter,
-	k8sService K8sService, helmReleaseConfig *globalConfig.HelmReleaseConfig,
+	k8sService k8sResource.K8sService, helmReleaseConfig *globalConfig.HelmReleaseConfig,
 	resourceTreeService ResourceTreeService) *CommonHelmServiceImpl {
 	return &CommonHelmServiceImpl{
 		logger:              logger,
@@ -83,7 +84,7 @@ func (impl *CommonHelmServiceImpl) BuildResourceTreeForHelmRelease(ctx context.C
 		impl.logger.Errorw("Error in getting helm release", "appDetailRequest", appDetailRequest, "err", err)
 		return nil, err
 	}
-	
+
 	return impl.resourceTreeService.BuildResourceTreeUsingParentObjects(ctx, appDetailRequest, conf, parentObjects)
 
 }
