@@ -50,6 +50,7 @@ const (
 	DOCKER_LOGIN_STAGE                   = "Docker Login"
 	DOCKER_PUSH                          = "Docker Push"
 	DOCKER_BUILD                         = "Docker Build"
+	DOCKER_REBUILD                       = "Docker Re-Build"
 	DOCKER_STOP                          = "Docker Stop"
 	BUILD_ARTIFACT                       = "Build Artifact"
 	UPLOAD_ARTIFACT                      = "Uploading Artifact"
@@ -297,4 +298,47 @@ func PrintFileContent(filePath string) {
 
 	// Print the file content
 	log.Println(util.DEVTRON, string(content))
+}
+
+const (
+	ColorGreen  = "\033[32m"
+	ColorYellow = "\033[33m"
+	ColorRed    = "\033[31m"
+	ColorReset  = "\033[0m" // Resets color to default
+)
+
+func LogError(msg ...any) {
+	if len(msg) == 0 {
+		return
+	}
+	message := []any{"ERROR:", ColorRed}
+	message = append(message, msg...)
+	message = append(message, ColorReset)
+	log.SetFlags(0)
+	log.Println(message...)
+	log.SetFlags(log.Ldate | log.Ltime)
+}
+
+func LogWarn(msg ...any) {
+	if len(msg) == 0 {
+		return
+	}
+	message := []any{"WARNING:", ColorYellow}
+	message = append(message, msg...)
+	message = append(message, ColorReset)
+	log.SetFlags(0)
+	log.Println(message...)
+	log.SetFlags(log.Ldate | log.Ltime)
+}
+
+func LogInfo(msg ...any) {
+	if len(msg) == 0 {
+		return
+	}
+	message := []any{"INFO:", ColorGreen}
+	message = append(message, msg...)
+	message = append(message, ColorReset)
+	log.SetFlags(0)
+	log.Println(message...)
+	log.SetFlags(log.Ldate | log.Ltime)
 }

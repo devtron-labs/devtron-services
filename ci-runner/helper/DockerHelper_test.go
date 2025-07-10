@@ -41,7 +41,7 @@ func TestCreateBuildXK8sDriver(t *testing.T) {
 	eligibleK8sNodes := dockerBuildConfig.GetEligibleK8sDriverNodes()
 	impl := getDockerHelperImpl()
 	ciContext := cicxt.BuildCiContext(context.Background(), true)
-	err := impl.createBuildxBuilderWithK8sDriver(ciContext, false, "", "", eligibleK8sNodes, 1, 1)
+	_, err := impl.createBuildxBuilderWithK8sDriver(ciContext, false, "", "", eligibleK8sNodes, 1, 1)
 	t.Cleanup(func() {
 		buildxDelete := fmt.Sprintf("docker buildx rm %s", BUILDX_K8S_DRIVER_NAME)
 		builderRemoveCmd := exec.Command("/bin/sh", "-c", buildxDelete)
@@ -64,7 +64,7 @@ func TestCleanBuildxK8sDriver(t *testing.T) {
 	eligibleK8sNodes := dockerBuildConfig.GetEligibleK8sDriverNodes()
 	impl := getDockerHelperImpl()
 	ciContext := cicxt.BuildCiContext(context.Background(), true)
-	err := impl.createBuildxBuilderWithK8sDriver(ciContext, false, "", "", eligibleK8sNodes, 1, 1)
+	_, err := impl.createBuildxBuilderWithK8sDriver(ciContext, false, "", "", eligibleK8sNodes, 1, 1)
 	if err != nil {
 		fmt.Println(err.Error())
 		t.Fail()
