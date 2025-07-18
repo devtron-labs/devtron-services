@@ -195,6 +195,7 @@ type CommonWorkflowRequest struct {
 	IntermediateDockerRegistryUrl string                         `json:"-"` // this URL will be used for all operations and can be mutated
 	BuildxCacheModeMin            bool                           `json:"buildxCacheModeMin"`
 	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
+	BuildxInterruptionMaxRetry    int                            `json:"buildxInterruptionMaxRetry"`
 	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
 	HostUrl                       string                         `json:"hostUrl"`
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
