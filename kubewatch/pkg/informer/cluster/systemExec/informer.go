@@ -97,7 +97,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 			if val, ok := podLabels[informerBean.WorkflowTypeLabelKey]; ok {
 				workflowType = val
 			}
-			impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObjStatus", newPodObj.Status)
+			impl.logger.Debugw("event received in pods update informer", "time", time.Now(), "podObj.DeletionTimestamp", newPodObj.DeletionTimestamp, "podObj.DeletionGracePeriodSeconds", newPodObj.DeletionGracePeriodSeconds, "podObjSpec", newPodObj.Spec, "podObjStatus", newPodObj.Status)
 			nodeStatus := impl.assessNodeStatus(bean.UpdateEvent, newPodObj)
 			workflowStatus := getWorkflowStatus(newPodObj, nodeStatus, workflowType)
 			if workflowStatus.Message == "" && workflowStatus.Phase == v1alpha1.WorkflowFailed {
@@ -143,7 +143,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 		if val, ok := podLabels[informerBean.WorkflowTypeLabelKey]; ok {
 			workflowType = val
 		}
-		impl.logger.Debugw("event received in Pods delete informer", "time", time.Now(), "podObjStatus", podObj.Status)
+		impl.logger.Debugw("event received in Pods delete informer", "time", time.Now(), "podObj.DeletionTimestamp", podObj.DeletionTimestamp, "podObj.DeletionGracePeriodSeconds", podObj.DeletionGracePeriodSeconds, "podObjSpec", podObj.Spec, "podObjStatus", podObj.Status)
 		nodeStatus := impl.assessNodeStatus(bean.DeleteEvent, podObj)
 		nodeStatus, reTriggerRequired := impl.checkIfPodDeletedAndUpdateMessage(podObj.Name, podObj.Namespace, nodeStatus, restConfig)
 		if !reTriggerRequired {
