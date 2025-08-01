@@ -30,6 +30,7 @@ const (
 
 	ExitCode143Error   = "Error (exit code 143)"
 	NodeNoLongerExists = "PodGC: node no longer exists"
+	NodeForceDeleted   = "Pod was force deleted"
 	UpdateEvent        = "update_event"
 	DeleteEvent        = "delete_event"
 
