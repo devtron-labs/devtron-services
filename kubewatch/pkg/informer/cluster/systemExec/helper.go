@@ -60,7 +60,8 @@ func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInf
 func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string,
 	nodeStatus v1alpha1.NodeStatus, config *rest.Config) (v1alpha1.NodeStatus, bool) {
 
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == bean.ExitCode143Error || nodeStatus.Message == bean.NodeNoLongerExists) {
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == bean.ExitCode143Error || nodeStatus.Message == bean.NodeNoLongerExists ||
+		nodeStatus.Message == bean.NodeForceDeleted) {
 		clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 		if k8sErr != nil {
 			return nodeStatus, false
@@ -84,20 +85,40 @@ func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace s
 
 func (impl *InformerImpl) assessNodeStatus(eventType string, pod *coreV1.Pod) v1alpha1.NodeStatus {
 	nodeStatus := v1alpha1.NodeStatus{}
-	switch pod.Status.Phase {
-	case coreV1.PodPending:
-		nodeStatus.Phase = v1alpha1.NodePending
-		nodeStatus.Message = getPendingReason(pod)
-	case coreV1.PodSucceeded:
-		nodeStatus.Phase = v1alpha1.NodeSucceeded
-	case coreV1.PodFailed:
-		nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(eventType, pod)
-		impl.logger.Infof("Pod %s failed: %s", pod.Name, nodeStatus.Message)
-	case coreV1.PodRunning:
-		nodeStatus.Phase = v1alpha1.NodeRunning
-	default:
-		nodeStatus.Phase = v1alpha1.NodeError
-		nodeStatus.Message = fmt.Sprintf("Unexpected pod phase for %s: %s", pod.ObjectMeta.Name, pod.Status.Phase)
+
+	/*
+		Special handling for delete events with force delete scenarios, Kubernetes does NOT guarantee that the pod status
+		will be updated to "Failed" during force delete. Sometimes the pod phase can be "Running" even after force delete.
+		Force deletion immediately removes the Pod object from the Kubernetes API server without waiting for
+		the kubelet on the node to confirm termination.
+
+		If the application within the pod on the node is still running and hasn't received a termination signal or processed
+		it yet, the container processes might continue to exist on the node even after the Pod object is gone from the API
+		server. This can lead to a state where the pod effectively exists on the node, but Kubernetes no longer tracks it,
+		and it might appear as Running if you were to inspect the node's process list.
+	*/
+	if eventType == bean.DeleteEvent && isPodForceDeletedWhileRunning(pod) {
+		// Force delete detected - treat as failed regardless of current phase
+		impl.logger.Infow("Force delete detected for pod", "podName", pod.Name, "currentPhase", pod.Status.Phase, "deletionGracePeriod", *pod.DeletionGracePeriodSeconds)
+		nodeStatus.Phase = v1alpha1.NodeFailed
+		nodeStatus.Message = bean.NodeForceDeleted
+		return nodeStatus
+	} else {
+		switch pod.Status.Phase {
+		case coreV1.PodPending:
+			nodeStatus.Phase = v1alpha1.NodePending
+			nodeStatus.Message = getPendingReason(pod)
+		case coreV1.PodSucceeded:
+			nodeStatus.Phase = v1alpha1.NodeSucceeded
+		case coreV1.PodFailed:
+			nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(eventType, pod)
+			impl.logger.Infof("Pod %s failed: %s", pod.Name, nodeStatus.Message)
+		case coreV1.PodRunning:
+			nodeStatus.Phase = v1alpha1.NodeRunning
+		default:
+			nodeStatus.Phase = v1alpha1.NodeError
+			nodeStatus.Message = fmt.Sprintf("Unexpected pod phase for %s: %s", pod.ObjectMeta.Name, pod.Status.Phase)
+		}
 	}
 
 	// only update Pod IP for daemoned nodes to reduce number of updates
