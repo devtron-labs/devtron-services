@@ -24,18 +24,16 @@ RUN apk update && apk add --no-cache --virtual .build-deps && apk add bash && ap
     apk --purge -v del py-pip && \
     rm /var/cache/apk/*
 
-# Disable core dumps for interactive shells
-# 1) Login shells (ash): sourced via /etc/profile.d/*.sh
-RUN mkdir -p /etc/profile.d && \
-    printf 'ulimit -c 0\n' > /etc/profile.d/disable-core.sh
-
-# 2) Bash interactive shells: ~/.bashrc and /etc/bash.bashrc
-RUN printf 'ulimit -c 0\n' > /etc/bash.bashrc && \
-    printf 'ulimit -c 0\n' >> /root/.bashrc
-
-# 3) Non-login interactive /bin/sh will source $ENV
+# Ensure /bin/sh reads /etc/shinit for interactive shells
 ENV ENV=/etc/shinit
-RUN printf 'ulimit -c 0\n' > /etc/shinit
+
+# Disable core dumps for login shells, bash, and non-login /bin/sh
+RUN set -euo pipefail; \
+    mkdir -p /etc/profile.d; \
+    printf 'ulimit -c 0\n' > /etc/profile.d/disable-core.sh; \
+    printf 'ulimit -c 0\n' > /etc/bash.bashrc; \
+    printf 'ulimit -c 0\n' >> /root/.bashrc; \
+    printf 'ulimit -c 0\n' > /etc/shinit
 
 COPY --from=docker/compose:1.29.2 /usr/local/bin/docker-compose /usr/bin/docker-compose
 
