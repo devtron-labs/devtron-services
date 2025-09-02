@@ -17,17 +17,12 @@
 package pkg
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/lens/internal/dto"
 	"github.com/devtron-labs/lens/internal/sql"
+	"github.com/devtron-labs/lens/pkg/constants"
+	utils2 "github.com/devtron-labs/lens/pkg/utils"
 	"go.uber.org/zap"
-)
-
-const (
-	layout = "2006-01-02T15:04:05.000Z"
 )
 
 type DeploymentMetricService interface {
@@ -56,7 +51,7 @@ func NewDeploymentMetricServiceImpl(
 }
 
 func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *dto.MetricRequest) (*dto.Metrics, error) {
-	from, to, err := impl.parseDateRange(request.From, request.To)
+	from, to, err := utils2.ParseDateRange(request.From, request.To)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +63,7 @@ func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *dto.Metric
 	}
 
 	if len(releases) == 0 {
-		return impl.createEmptyMetrics(), nil
+		return utils2.CreateEmptyMetrics(), nil
 	}
 	var releaseIds []int
 	for _, v := range releases {
@@ -117,7 +112,7 @@ func (impl DeploymentMetricServiceImpl) GetBulkDeploymentMetrics(request *dto.Bu
 }
 
 func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(request *dto.BulkMetricRequest, response *dto.BulkMetricsResponse) (*dto.BulkMetricsResponse, error) {
-	from, to, err := impl.parseDateRange(request.From, request.To)
+	from, to, err := utils2.ParseDateRange(request.From, request.To)
 	if err != nil {
 		impl.logger.Errorw("error parsing date range", "from", request.From, "to", request.To, "err", err)
 		return nil, err
@@ -135,7 +130,7 @@ func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(
 	var allReleaseIds []int
 
 	for _, release := range allReleases {
-		key := impl.generateAppEnvKey(release.AppId, release.EnvironmentId)
+		key := utils2.GenerateAppEnvKey(release.AppId, release.EnvironmentId)
 		releasesByAppEnv[key] = append(releasesByAppEnv[key], release)
 		allReleaseIds = append(allReleaseIds, release.Id)
 	}
@@ -167,7 +162,7 @@ func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(
 
 	// Step 5: Process each app-env pair
 	for i, pair := range request.AppEnvPairs {
-		key := impl.generateAppEnvKey(pair.AppId, pair.EnvId)
+		key := utils2.GenerateAppEnvKey(pair.AppId, pair.EnvId)
 		releases := releasesByAppEnv[key]
 
 		appEnvMetric := dto.AppEnvMetrics{
@@ -176,7 +171,7 @@ func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(
 		}
 
 		if len(releases) == 0 {
-			appEnvMetric.Metrics = impl.createEmptyMetrics()
+			appEnvMetric.Metrics = utils2.CreateEmptyMetrics()
 		} else {
 			metrics, err := impl.processAppEnvMetrics(releases, allMaterials, allLeadTimes, previousReleases[key])
 			if err != nil {
@@ -191,29 +186,6 @@ func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(
 	}
 
 	return response, nil
-}
-
-// parseDateRange parses from and to date strings
-func (impl DeploymentMetricServiceImpl) parseDateRange(from, to string) (time.Time, time.Time, error) {
-	fromTime, err := time.Parse(layout, from)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	toTime, err := time.Parse(layout, to)
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
-	return fromTime, toTime, nil
-}
-
-// generateAppEnvKey creates a consistent key for app-env pair mapping
-func (impl DeploymentMetricServiceImpl) generateAppEnvKey(appId, envId int) string {
-	return fmt.Sprintf("%d-%d", appId, envId)
-}
-
-// createEmptyMetrics creates an empty metrics response
-func (impl DeploymentMetricServiceImpl) createEmptyMetrics() *dto.Metrics {
-	return &dto.Metrics{Series: []*dto.Metric{}}
 }
 
 // processAppEnvMetrics processes metrics for a single app-env pair
@@ -325,7 +297,7 @@ func (impl DeploymentMetricServiceImpl) calculateChangeFailureRateAndRecoveryTim
 	for _, v := range releases {
 		if v.ReleaseStatus == dto.Failure {
 			if metrics.LastFailedTime == "" {
-				metrics.LastFailedTime = v.ReleaseTime.Format(layout)
+				metrics.LastFailedTime = v.ReleaseTime.Format(constants.Layout)
 			}
 			//if i != 0 {
 			//	releases[i].RecoveryTime = releases[i].ReleaseTime.Sub(releases[i+1].ReleaseTime)
