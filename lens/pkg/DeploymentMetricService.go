@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/lens/internal/dto"
 	"github.com/devtron-labs/lens/internal/sql"
 	"go.uber.org/zap"
 )
@@ -30,64 +31,8 @@ const (
 )
 
 type DeploymentMetricService interface {
-	GetDeploymentMetrics(request *MetricRequest) (*Metrics, error)
-	GetBulkDeploymentMetrics(request *BulkMetricRequest) (*BulkMetricsResponse, error)
-}
-
-type Metrics struct {
-	Series                 []*Metric `json:"series"`
-	AverageCycleTime       float64   `json:"average_cycle_time"`
-	AverageLeadTime        float64   `json:"average_lead_time"`
-	ChangeFailureRate      float64   `json:"change_failure_rate"`
-	AverageRecoveryTime    float64   `json:"average_recovery_time"`
-	AverageDeploymentSize  float32   `json:"average_deployment_size"`
-	AverageLineAdded       float32   `json:"average_line_added"`
-	AverageLineDeleted     float32   `json:"average_line_deleted"`
-	LastFailedTime         string    `json:"last_failed_time"`
-	RecoveryTimeLastFailed float64   `json:"recovery_time_last_failed"`
-}
-
-type Metric struct {
-	ReleaseType           sql.ReleaseType   `json:"release_type"`
-	ReleaseStatus         sql.ReleaseStatus `json:"release_status"`
-	ReleaseTime           time.Time         `json:"release_time"`
-	ChangeSizeLineAdded   int               `json:"change_size_line_added"`
-	ChangeSizeLineDeleted int               `json:"change_size_line_deleted"`
-	DeploymentSize        int               `json:"deployment_size"`
-	CommitHash            string            `json:"commit_hash"`
-	CommitTime            time.Time         `json:"commit_time"`
-	LeadTime              float64           `json:"lead_time"`
-	CycleTime             float64           `json:"cycle_time"`
-	RecoveryTime          float64           `json:"recovery_time"`
-}
-
-type MetricRequest struct {
-	AppId int    `json:"app_id"`
-	EnvId int    `json:"env_id"`
-	From  string `json:"from"`
-	To    string `json:"to"`
-}
-
-type AppEnvPair struct {
-	AppId int `json:"app_id"`
-	EnvId int `json:"env_id"`
-}
-
-type BulkMetricRequest struct {
-	AppEnvPairs []AppEnvPair `json:"appEnvPairs"`
-	From        string       `json:"from"`
-	To          string       `json:"to"`
-}
-
-type AppEnvMetrics struct {
-	AppId   int      `json:"app_id"`
-	EnvId   int      `json:"env_id"`
-	Metrics *Metrics `json:"metrics"`
-	Error   string   `json:"error,omitempty"`
-}
-
-type BulkMetricsResponse struct {
-	Results []AppEnvMetrics `json:"results"`
+	GetDeploymentMetrics(request *dto.MetricRequest) (*dto.Metrics, error)
+	GetBulkDeploymentMetrics(request *dto.BulkMetricRequest) (*dto.BulkMetricsResponse, error)
 }
 
 type DeploymentMetricServiceImpl struct {
@@ -110,7 +55,7 @@ func NewDeploymentMetricServiceImpl(
 	}
 }
 
-func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *MetricRequest) (*Metrics, error) {
+func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *dto.MetricRequest) (*dto.Metrics, error) {
 	from, to, err := impl.parseDateRange(request.From, request.To)
 	if err != nil {
 		return nil, err
@@ -159,29 +104,27 @@ func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *MetricRequ
 	return impl.populateMetrics(releases, materials, leadTimes, lastRelease)
 }
 
-func (impl DeploymentMetricServiceImpl) GetBulkDeploymentMetrics(request *BulkMetricRequest) (*BulkMetricsResponse, error) {
+func (impl DeploymentMetricServiceImpl) GetBulkDeploymentMetrics(request *dto.BulkMetricRequest) (*dto.BulkMetricsResponse, error) {
 	if len(request.AppEnvPairs) == 0 {
-		return &BulkMetricsResponse{Results: []AppEnvMetrics{}}, nil
+		return &dto.BulkMetricsResponse{Results: []dto.AppEnvMetrics{}}, nil
 	}
 
-	response := &BulkMetricsResponse{
-		Results: make([]AppEnvMetrics, len(request.AppEnvPairs)),
+	response := &dto.BulkMetricsResponse{
+		Results: make([]dto.AppEnvMetrics, len(request.AppEnvPairs)),
 	}
 
 	return impl.getBulkDeploymentMetricsWithBulkQueries(request, response)
 }
 
-func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(request *BulkMetricRequest, response *BulkMetricsResponse) (*BulkMetricsResponse, error) {
+func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(request *dto.BulkMetricRequest, response *dto.BulkMetricsResponse) (*dto.BulkMetricsResponse, error) {
 	from, to, err := impl.parseDateRange(request.From, request.To)
 	if err != nil {
 		impl.logger.Errorw("error parsing date range", "from", request.From, "to", request.To, "err", err)
 		return nil, err
 	}
 
-	sqlAppEnvPairs := impl.convertToSqlAppEnvPairs(request.AppEnvPairs)
-
 	// Step 1: Get all releases for all app-env pairs in one query
-	allReleases, err := impl.appReleaseRepository.GetReleaseBetweenBulk(sqlAppEnvPairs, from, to)
+	allReleases, err := impl.appReleaseRepository.GetReleaseBetweenBulk(request.AppEnvPairs, from, to)
 	if err != nil {
 		impl.logger.Errorw("error getting bulk releases from db", "err", err)
 		return nil, err
@@ -227,7 +170,7 @@ func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(
 		key := impl.generateAppEnvKey(pair.AppId, pair.EnvId)
 		releases := releasesByAppEnv[key]
 
-		appEnvMetric := AppEnvMetrics{
+		appEnvMetric := dto.AppEnvMetrics{
 			AppId: pair.AppId,
 			EnvId: pair.EnvId,
 		}
@@ -263,30 +206,18 @@ func (impl DeploymentMetricServiceImpl) parseDateRange(from, to string) (time.Ti
 	return fromTime, toTime, nil
 }
 
-// convertToSqlAppEnvPairs converts pkg.AppEnvPair to sql.AppEnvPair
-func (impl DeploymentMetricServiceImpl) convertToSqlAppEnvPairs(pairs []AppEnvPair) []sql.AppEnvPair {
-	sqlPairs := make([]sql.AppEnvPair, len(pairs))
-	for i, pair := range pairs {
-		sqlPairs[i] = sql.AppEnvPair{
-			AppId: pair.AppId,
-			EnvId: pair.EnvId,
-		}
-	}
-	return sqlPairs
-}
-
 // generateAppEnvKey creates a consistent key for app-env pair mapping
 func (impl DeploymentMetricServiceImpl) generateAppEnvKey(appId, envId int) string {
 	return fmt.Sprintf("%d-%d", appId, envId)
 }
 
 // createEmptyMetrics creates an empty metrics response
-func (impl DeploymentMetricServiceImpl) createEmptyMetrics() *Metrics {
-	return &Metrics{Series: []*Metric{}}
+func (impl DeploymentMetricServiceImpl) createEmptyMetrics() *dto.Metrics {
+	return &dto.Metrics{Series: []*dto.Metric{}}
 }
 
 // processAppEnvMetrics processes metrics for a single app-env pair
-func (impl DeploymentMetricServiceImpl) processAppEnvMetrics(releases []sql.AppRelease, allMaterials []*sql.PipelineMaterial, allLeadTimes []sql.LeadTime, previousRelease *sql.AppRelease) (*Metrics, error) {
+func (impl DeploymentMetricServiceImpl) processAppEnvMetrics(releases []sql.AppRelease, allMaterials []*sql.PipelineMaterial, allLeadTimes []sql.LeadTime, previousRelease *sql.AppRelease) (*dto.Metrics, error) {
 	releaseIds := make([]int, len(releases))
 	for i, release := range releases {
 		releaseIds[i] = release.Id
@@ -339,7 +270,7 @@ func (impl DeploymentMetricServiceImpl) filterLeadTimesByReleaseIds(allLeadTimes
 	return filtered
 }
 
-func (impl DeploymentMetricServiceImpl) populateMetrics(appReleases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime, lastRelease *sql.AppRelease) (*Metrics, error) {
+func (impl DeploymentMetricServiceImpl) populateMetrics(appReleases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime, lastRelease *sql.AppRelease) (*dto.Metrics, error) {
 	releases := impl.transform(appReleases, materials, leadTimes)
 	leadTimesCount := 0
 	totalLeadTime := float64(0)
@@ -368,7 +299,7 @@ func (impl DeploymentMetricServiceImpl) populateMetrics(appReleases []sql.AppRel
 		averageCycleTime = totalCycleTime / float64(cycleTimeCount)
 	}
 
-	metrics := &Metrics{
+	metrics := &dto.Metrics{
 		Series: releases,
 		//ChangeFailureRate: changeFailureRate,
 		AverageCycleTime: averageCycleTime,
@@ -385,14 +316,14 @@ func (impl DeploymentMetricServiceImpl) populateMetrics(appReleases []sql.AppRel
 	return metrics, nil
 }
 
-func (impl DeploymentMetricServiceImpl) calculateChangeFailureRateAndRecoveryTime(metrics *Metrics) {
+func (impl DeploymentMetricServiceImpl) calculateChangeFailureRateAndRecoveryTime(metrics *dto.Metrics) {
 	releases := metrics.Series
 	failed := 0
 	success := 0
 	recoveryTime := float64(0)
 	recovered := 0
 	for _, v := range releases {
-		if v.ReleaseStatus == sql.Failure {
+		if v.ReleaseStatus == dto.Failure {
 			if metrics.LastFailedTime == "" {
 				metrics.LastFailedTime = v.ReleaseTime.Format(layout)
 			}
@@ -402,17 +333,17 @@ func (impl DeploymentMetricServiceImpl) calculateChangeFailureRateAndRecoveryTim
 			//}
 			failed++
 		}
-		if v.ReleaseStatus == sql.Success {
+		if v.ReleaseStatus == dto.Success {
 			success++
 		}
 	}
 	for i := 0; i < len(releases); i++ {
-		if releases[i].ReleaseStatus == sql.Failure {
-			if i < len(releases)-1 && releases[i+1].ReleaseStatus == sql.Failure {
+		if releases[i].ReleaseStatus == dto.Failure {
+			if i < len(releases)-1 && releases[i+1].ReleaseStatus == dto.Failure {
 				continue
 			}
 			for j := i - 1; j >= 0; j-- {
-				if releases[j].ReleaseStatus == sql.Success {
+				if releases[j].ReleaseStatus == dto.Success {
 					releases[i].RecoveryTime = releases[j].ReleaseTime.Sub(releases[i].ReleaseTime).Minutes()
 					recoveryTime += releases[i].RecoveryTime
 					recovered++
@@ -436,7 +367,7 @@ func (impl DeploymentMetricServiceImpl) calculateChangeFailureRateAndRecoveryTim
 	metrics.AverageRecoveryTime = averageRecoveryTime
 }
 
-func (impl DeploymentMetricServiceImpl) calculateChangeSize(metrics *Metrics) {
+func (impl DeploymentMetricServiceImpl) calculateChangeSize(metrics *dto.Metrics) {
 	releases := metrics.Series
 	lineAdded := 0
 	lineDeleted := 0
@@ -451,7 +382,7 @@ func (impl DeploymentMetricServiceImpl) calculateChangeSize(metrics *Metrics) {
 	metrics.AverageLineDeleted = float32(lineDeleted) / float32(len(releases))
 }
 
-func (impl DeploymentMetricServiceImpl) transform(releases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime) []*Metric {
+func (impl DeploymentMetricServiceImpl) transform(releases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime) []*dto.Metric {
 	pm := make(map[int]*sql.PipelineMaterial)
 	for _, v := range materials {
 		pm[v.AppReleaseId] = v
@@ -463,9 +394,9 @@ func (impl DeploymentMetricServiceImpl) transform(releases []sql.AppRelease, mat
 
 	impl.logger.Errorw("materials ", "mat", pm)
 
-	metrics := make([]*Metric, 0)
+	metrics := make([]*dto.Metric, 0)
 	for _, v := range releases {
-		metric := &Metric{
+		metric := &dto.Metric{
 			ReleaseType:           v.ReleaseType,
 			ReleaseStatus:         v.ReleaseStatus,
 			ReleaseTime:           v.TriggerTime,

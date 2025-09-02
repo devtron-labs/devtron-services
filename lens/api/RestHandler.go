@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/devtron-labs/lens/internal/dto"
 	"github.com/devtron-labs/lens/pkg"
 	"go.uber.org/zap"
 )
@@ -107,7 +108,7 @@ func (impl *RestHandlerImpl) GetDeploymentMetrics(w http.ResponseWriter, r *http
 	//decoder := json.NewDecoder(r.Body)
 	v := r.URL.Query()
 	impl.logger.Infow("metrics request", "req", v)
-	metricRequest := &pkg.MetricRequest{}
+	metricRequest := &dto.MetricRequest{}
 	if v.Get("env_id") != "" {
 		envId, err := strconv.Atoi(v.Get("env_id"))
 		if err != nil {
@@ -146,7 +147,7 @@ func (impl *RestHandlerImpl) GetDeploymentMetrics(w http.ResponseWriter, r *http
 
 func (impl *RestHandlerImpl) GetBulkDeploymentMetrics(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	bulkRequest := &pkg.BulkMetricRequest{}
+	bulkRequest := &dto.BulkMetricRequest{}
 
 	err := decoder.Decode(bulkRequest)
 	if err != nil {

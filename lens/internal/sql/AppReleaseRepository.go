@@ -22,74 +22,31 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devtron-labs/lens/internal/dto"
 	pg "github.com/go-pg/pg/v10"
 	"go.uber.org/zap"
 )
 
-type AppEnvPair struct {
-	AppId int
-	EnvId int
-}
-
 type AppRelease struct {
-	tableName             struct{}      `pg:"app_release"`
-	Id                    int           `pg:"id,pk"`
-	AppId                 int           `pg:"app_id,notnull,use_zero"`                   //orchestrator appId
-	EnvironmentId         int           `pg:"environment_id,notnull,use_zero"`           //orchestrator env id
-	CiArtifactId          int           `pg:"ci_artifact_id,notnull,use_zero"`           //orchestrator ciAretefactId  used for identifying rollback (appId,environmentId, ciArtifactId)
-	ReleaseId             int           `pg:"release_id,notnull,use_zero"`               // orchestrator release counter
-	PipelineOverrideId    int           `pg:"pipeline_override_id,notnull,use_zero"`     //pipeline override id orchestrator
-	ChangeSizeLineAdded   int           `pg:"change_size_line_added,notnull,use_zero"`   //total lines added in this release
-	ChangeSizeLineDeleted int           `pg:"change_size_line_deleted,notnull,use_zero"` //total lines deleted during this release
-	TriggerTime           time.Time     `pg:"trigger_time,notnull"`                      //deployment time
-	ReleaseType           ReleaseType   `pg:"release_type,notnull,use_zero"`
-	ReleaseStatus         ReleaseStatus `pg:"release_status,notnull,use_zero"`
-	ProcessStage          ProcessStage  `pg:"process_status,notnull,use_zero"`
-	CreatedTime           time.Time     `pg:"created_time,notnull"`
-	UpdatedTime           time.Time     `pg:"updated_time,notnull"`
+	tableName             struct{}          `pg:"app_release"`
+	Id                    int               `pg:"id,pk"`
+	AppId                 int               `pg:"app_id,notnull,use_zero"`                   //orchestrator appId
+	EnvironmentId         int               `pg:"environment_id,notnull,use_zero"`           //orchestrator env id
+	CiArtifactId          int               `pg:"ci_artifact_id,notnull,use_zero"`           //orchestrator ciAretefactId  used for identifying rollback (appId,environmentId, ciArtifactId)
+	ReleaseId             int               `pg:"release_id,notnull,use_zero"`               // orchestrator release counter
+	PipelineOverrideId    int               `pg:"pipeline_override_id,notnull,use_zero"`     //pipeline override id orchestrator
+	ChangeSizeLineAdded   int               `pg:"change_size_line_added,notnull,use_zero"`   //total lines added in this release
+	ChangeSizeLineDeleted int               `pg:"change_size_line_deleted,notnull,use_zero"` //total lines deleted during this release
+	TriggerTime           time.Time         `pg:"trigger_time,notnull"`                      //deployment time
+	ReleaseType           dto.ReleaseType   `pg:"release_type,notnull,use_zero"`
+	ReleaseStatus         dto.ReleaseStatus `pg:"release_status,notnull,use_zero"`
+	ProcessStage          dto.ProcessStage  `pg:"process_status,notnull,use_zero"`
+	CreatedTime           time.Time         `pg:"created_time,notnull"`
+	UpdatedTime           time.Time         `pg:"updated_time,notnull"`
 	LeadTime              *LeadTime
 }
 
-// --------------
-type ReleaseStatus int
-
-const (
-	Success ReleaseStatus = iota
-	Failure
-)
-
-func (releaseStatus ReleaseStatus) String() string {
-	return [...]string{"Success", "Failure"}[releaseStatus]
-}
-
-// ----------------
-type ReleaseType int
-
-const (
-	Unknown ReleaseType = iota
-	RollForward
-	RollBack
-	Patch
-)
-
-func (releaseType ReleaseType) String() string {
-	return [...]string{"Unknown", "RollForward", "RollBack", "Patch"}[releaseType]
-}
-
-// ------
-type ProcessStage int
-
-const (
-	Init ProcessStage = iota
-	ReleaseTypeDetermined
-	LeadTimeFetch
-)
-
 var ctx = context.Background()
-
-func (ProcessStage ProcessStage) String() string {
-	return [...]string{"Init", "ReleaseTypeDetermined", "LeadTimeFetch"}[ProcessStage]
-}
 
 type AppReleaseRepository interface {
 	Save(appRelease *AppRelease) (*AppRelease, error)
@@ -98,7 +55,7 @@ type AppReleaseRepository interface {
 	GetPreviousReleaseWithinTime(appId, environmentId int, within time.Time, currentAppReleaseId int) (*AppRelease, error)
 	GetPreviousRelease(appId, environmentId int, appReleaseId int) (*AppRelease, error)
 	GetReleaseBetween(appId, environmentId int, from time.Time, to time.Time) ([]AppRelease, error)
-	GetReleaseBetweenBulk(appEnvPairs []AppEnvPair, from time.Time, to time.Time) ([]AppRelease, error)
+	GetReleaseBetweenBulk(appEnvPairs []dto.AppEnvPair, from time.Time, to time.Time) ([]AppRelease, error)
 	GetPreviousReleasesBulk(latestReleases []AppRelease) (map[string]*AppRelease, error)
 	CleanAppDataForEnvironment(appId, environmentId int) error
 }
@@ -184,7 +141,7 @@ func (impl *AppReleaseRepositoryImpl) GetReleaseBetween(appId, environmentId int
 	return appReleases, err
 }
 
-func (impl *AppReleaseRepositoryImpl) GetReleaseBetweenBulk(appEnvPairs []AppEnvPair, from time.Time, to time.Time) ([]AppRelease, error) {
+func (impl *AppReleaseRepositoryImpl) GetReleaseBetweenBulk(appEnvPairs []dto.AppEnvPair, from time.Time, to time.Time) ([]AppRelease, error) {
 	if len(appEnvPairs) == 0 {
 		return []AppRelease{}, nil
 	}
