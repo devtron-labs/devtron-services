@@ -41,18 +41,48 @@ func GetSettings(conf *DexConfig) (*oidc.Settings, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	requestedScopes := conf.GetDexScopes()
+
 	settings := &oidc.Settings{
 		URL: conf.Url,
 		OIDCConfig: oidc.OIDCConfig{CLIClientID: conf.DexClientID,
 			ClientSecret:    conf.DexClientSecret,
 			Issuer:          proxyUrl,
 			ServerSecret:    conf.ServerSecret,
-			RequestedScopes: conf.DexScopes,
+			RequestedScopes: requestedScopes,
 		},
 		UserSessionDuration: time.Duration(conf.UserSessionDurationSeconds) * time.Second,
 		AdminPasswordMtime:  conf.AdminPasswordMtime,
 	}
 	return settings, nil
+}
+func (conf *DexConfig) GetDexScopes() []string {
+	// passing empty array to get default scopes
+	defaultScopes := oidc.GetScopesOrDefault([]string{})
+	additionalScopes := conf.DexScopes
+
+	// if no additional scopes configured return only default scopes
+	if len(additionalScopes) == 0 {
+		return defaultScopes
+	}
+
+	occurrenceMap := make(map[string]struct{})
+	finalScopes := make([]string, 0)
+
+	// first add all the default
+	for _, scope := range defaultScopes {
+		occurrenceMap[scope] = struct{}{}
+		finalScopes = append(finalScopes, scope)
+	}
+	// append extra configs
+	for _, scope := range additionalScopes {
+		if _, exists := occurrenceMap[scope]; !exists {
+			occurrenceMap[scope] = struct{}{}
+			finalScopes = append(finalScopes, scope)
+		}
+	}
+	return finalScopes
 }
 func getOidcClient(dexServerAddress string, settings *oidc.Settings, userVerifier oidc.UserVerifier, RedirectUrlSanitiser oidc.RedirectUrlSanitiser) (*oidc.ClientApp, func(writer http.ResponseWriter, request *http.Request), error) {
 	dexClient := &http.Client{
