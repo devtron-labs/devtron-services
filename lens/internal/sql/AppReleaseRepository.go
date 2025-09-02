@@ -17,13 +17,19 @@
 package sql
 
 import (
-	"time"
-
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	pg "github.com/go-pg/pg/v10"
 	"go.uber.org/zap"
 )
+
+type AppEnvPair struct {
+	AppId int
+	EnvId int
+}
 
 type AppRelease struct {
 	tableName             struct{}      `pg:"app_release"`
@@ -92,6 +98,8 @@ type AppReleaseRepository interface {
 	GetPreviousReleaseWithinTime(appId, environmentId int, within time.Time, currentAppReleaseId int) (*AppRelease, error)
 	GetPreviousRelease(appId, environmentId int, appReleaseId int) (*AppRelease, error)
 	GetReleaseBetween(appId, environmentId int, from time.Time, to time.Time) ([]AppRelease, error)
+	GetReleaseBetweenBulk(appEnvPairs []AppEnvPair, from time.Time, to time.Time) ([]AppRelease, error)
+	GetPreviousReleasesBulk(latestReleases []AppRelease) (map[string]*AppRelease, error)
 	CleanAppDataForEnvironment(appId, environmentId int) error
 }
 type AppReleaseRepositoryImpl struct {
@@ -174,6 +182,69 @@ func (impl *AppReleaseRepositoryImpl) GetReleaseBetween(appId, environmentId int
 		Order("id desc").
 		Select()
 	return appReleases, err
+}
+
+func (impl *AppReleaseRepositoryImpl) GetReleaseBetweenBulk(appEnvPairs []AppEnvPair, from time.Time, to time.Time) ([]AppRelease, error) {
+	if len(appEnvPairs) == 0 {
+		return []AppRelease{}, nil
+	}
+
+	var appReleases []AppRelease
+
+	// Build the WHERE clause for multiple app-env pairs
+	query := impl.dbConnection.Model(&appReleases).
+		Where("trigger_time >= ?", from).
+		Where("trigger_time <= ?", to)
+
+	// Create OR conditions for each app-env pair
+	var conditions []string
+	var args []interface{}
+	for _, pair := range appEnvPairs {
+		conditions = append(conditions, "(app_id = ? AND environment_id = ?)")
+		args = append(args, pair.AppId, pair.EnvId)
+	}
+
+	// Combine all conditions with OR
+	whereClause := "(" + strings.Join(conditions, " OR ") + ")"
+	query = query.Where(whereClause, args...)
+
+	err := query.Order("app_id, environment_id, id desc").Select()
+	return appReleases, err
+}
+
+func (impl *AppReleaseRepositoryImpl) GetPreviousReleasesBulk(latestReleases []AppRelease) (map[string]*AppRelease, error) {
+	appEnvToPreviousReleaseMap := make(map[string]*AppRelease)
+
+	// Group by app-env pair and get the latest release for each
+	latestByAppEnv := make(map[string]*AppRelease)
+	for i := range latestReleases {
+		key := fmt.Sprintf("%d-%d", latestReleases[i].AppId, latestReleases[i].EnvironmentId)
+		if _, exists := latestByAppEnv[key]; !exists {
+			latestByAppEnv[key] = &latestReleases[i]
+		}
+	}
+
+	// Now get previous releases for each latest release
+	for key, latest := range latestByAppEnv {
+		previous := &AppRelease{}
+		err := impl.dbConnection.
+			Model(previous).
+			Where("app_id = ?", latest.AppId).
+			Where("environment_id = ?", latest.EnvironmentId).
+			Where("id < ?", latest.Id).
+			Last()
+
+		if err != nil && err != pg.ErrNoRows {
+			impl.logger.Errorw("error getting previous release", "appId", latest.AppId, "envId", latest.EnvironmentId, "err", err)
+			continue
+		}
+
+		if err != pg.ErrNoRows {
+			appEnvToPreviousReleaseMap[key] = previous
+		}
+	}
+
+	return appEnvToPreviousReleaseMap, nil
 }
 
 func (impl *AppReleaseRepositoryImpl) cleanAppDataForEnvironment(appId, environmentId int, tx *pg.Tx) error {

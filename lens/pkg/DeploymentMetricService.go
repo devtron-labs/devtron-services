@@ -17,10 +17,11 @@
 package pkg
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/lens/internal/sql"
-	pg "github.com/go-pg/pg/v10"
 	"go.uber.org/zap"
 )
 
@@ -30,6 +31,7 @@ const (
 
 type DeploymentMetricService interface {
 	GetDeploymentMetrics(request *MetricRequest) (*Metrics, error)
+	GetBulkDeploymentMetrics(request *BulkMetricRequest) (*BulkMetricsResponse, error)
 }
 
 type Metrics struct {
@@ -66,6 +68,28 @@ type MetricRequest struct {
 	To    string `json:"to"`
 }
 
+type AppEnvPair struct {
+	AppId int `json:"app_id"`
+	EnvId int `json:"env_id"`
+}
+
+type BulkMetricRequest struct {
+	AppEnvPairs []AppEnvPair `json:"appEnvPairs"`
+	From        string       `json:"from"`
+	To          string       `json:"to"`
+}
+
+type AppEnvMetrics struct {
+	AppId   int      `json:"app_id"`
+	EnvId   int      `json:"env_id"`
+	Metrics *Metrics `json:"metrics"`
+	Error   string   `json:"error,omitempty"`
+}
+
+type BulkMetricsResponse struct {
+	Results []AppEnvMetrics `json:"results"`
+}
+
 type DeploymentMetricServiceImpl struct {
 	logger                     *zap.SugaredLogger
 	appReleaseRepository       sql.AppReleaseRepository
@@ -87,49 +111,232 @@ func NewDeploymentMetricServiceImpl(
 }
 
 func (impl DeploymentMetricServiceImpl) GetDeploymentMetrics(request *MetricRequest) (*Metrics, error) {
-	from, err := time.Parse(layout, request.From)
+	from, to, err := impl.parseDateRange(request.From, request.To)
 	if err != nil {
 		return nil, err
 	}
-	to, err := time.Parse(layout, request.To)
-	if err != nil {
-		return nil, err
-	}
+
 	releases, err := impl.appReleaseRepository.GetReleaseBetween(request.AppId, request.EnvId, from, to)
 	if err != nil {
-		impl.logger.Errorf("error getting data from db ", "err", err)
+		impl.logger.Errorw("error getting data from db ", "err", err)
 		return nil, err
 	}
+
 	if len(releases) == 0 {
-		return &Metrics{Series: []*Metric{}}, nil
+		return impl.createEmptyMetrics(), nil
 	}
-	var ids []int
+	var releaseIds []int
 	for _, v := range releases {
-		ids = append(ids, v.Id)
+		releaseIds = append(releaseIds, v.Id)
 	}
-	materials, err := impl.pipelineMaterialRepository.FindByAppReleaseIds(ids)
+
+	materials, err := impl.pipelineMaterialRepository.FindByAppReleaseIds(releaseIds)
 	if err != nil {
-		impl.logger.Errorf("error getting material from db ", "err", err)
+		impl.logger.Errorw("error getting material from db ", "err", err)
 		return nil, err
 	}
-	leadTimes, err := impl.leadTimeRepository.FindByIds(ids)
+
+	leadTimes, err := impl.leadTimeRepository.FindByIds(releaseIds)
 	if err != nil {
-		impl.logger.Errorf("error getting lead time from db ", "err", err)
+		impl.logger.Errorw("error getting lead time from db ", "err", err)
 		return nil, err
 	}
-	lastId := releases[len(releases)-1].Id
-	lastRelease, err := impl.appReleaseRepository.GetPreviousRelease(request.AppId, request.EnvId, lastId)
-	if err != nil {
-		if err != pg.ErrNoRows {
-			impl.logger.Errorf("error getting data from db ", "err", err)
+
+	// Get previous release with bounds checking
+	var lastRelease *sql.AppRelease
+	if len(releases) > 0 {
+		lastId := releases[len(releases)-1].Id
+		lastRelease, err = impl.appReleaseRepository.GetPreviousRelease(request.AppId, request.EnvId, lastId)
+		if err != nil && !utils.IsErrNoRows(err) {
+			impl.logger.Errorw("error getting previous release from db ", "err", err)
+			// Don't return error, just continue without previous release
 		}
-		lastRelease = nil
+		if utils.IsErrNoRows(err) {
+			lastRelease = nil
+		}
 	}
-	metrics, err := impl.populateMetrics(releases, materials, leadTimes, lastRelease)
+
+	return impl.populateMetrics(releases, materials, leadTimes, lastRelease)
+}
+
+func (impl DeploymentMetricServiceImpl) GetBulkDeploymentMetrics(request *BulkMetricRequest) (*BulkMetricsResponse, error) {
+	if len(request.AppEnvPairs) == 0 {
+		return &BulkMetricsResponse{Results: []AppEnvMetrics{}}, nil
+	}
+
+	response := &BulkMetricsResponse{
+		Results: make([]AppEnvMetrics, len(request.AppEnvPairs)),
+	}
+
+	return impl.getBulkDeploymentMetricsWithBulkQueries(request, response)
+}
+
+func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(request *BulkMetricRequest, response *BulkMetricsResponse) (*BulkMetricsResponse, error) {
+	from, to, err := impl.parseDateRange(request.From, request.To)
 	if err != nil {
+		impl.logger.Errorw("error parsing date range", "from", request.From, "to", request.To, "err", err)
 		return nil, err
 	}
-	return metrics, nil
+
+	sqlAppEnvPairs := impl.convertToSqlAppEnvPairs(request.AppEnvPairs)
+
+	// Step 1: Get all releases for all app-env pairs in one query
+	allReleases, err := impl.appReleaseRepository.GetReleaseBetweenBulk(sqlAppEnvPairs, from, to)
+	if err != nil {
+		impl.logger.Errorw("error getting bulk releases from db", "err", err)
+		return nil, err
+	}
+
+	// Step 2: Group releases by app-env pair
+	releasesByAppEnv := make(map[string][]sql.AppRelease)
+	var allReleaseIds []int
+
+	for _, release := range allReleases {
+		key := impl.generateAppEnvKey(release.AppId, release.EnvironmentId)
+		releasesByAppEnv[key] = append(releasesByAppEnv[key], release)
+		allReleaseIds = append(allReleaseIds, release.Id)
+	}
+
+	// Step 3: Get all materials and lead times in bulk
+	var allMaterials []*sql.PipelineMaterial
+	var allLeadTimes []sql.LeadTime
+
+	if len(allReleaseIds) > 0 {
+		allMaterials, err = impl.pipelineMaterialRepository.FindByAppReleaseIds(allReleaseIds)
+		if err != nil {
+			impl.logger.Errorw("error getting bulk materials from db", "err", err)
+			return nil, err
+		}
+
+		allLeadTimes, err = impl.leadTimeRepository.FindByIds(allReleaseIds)
+		if err != nil {
+			impl.logger.Errorw("error getting bulk lead times from db", "err", err)
+			return nil, err
+		}
+	}
+
+	// Step 4: Get previous releases for all app-env pairs
+	previousReleases, err := impl.appReleaseRepository.GetPreviousReleasesBulk(allReleases)
+	if err != nil {
+		impl.logger.Errorw("error getting bulk previous releases from db", "err", err)
+		return nil, err
+	}
+
+	// Step 5: Process each app-env pair
+	for i, pair := range request.AppEnvPairs {
+		key := impl.generateAppEnvKey(pair.AppId, pair.EnvId)
+		releases := releasesByAppEnv[key]
+
+		appEnvMetric := AppEnvMetrics{
+			AppId: pair.AppId,
+			EnvId: pair.EnvId,
+		}
+
+		if len(releases) == 0 {
+			appEnvMetric.Metrics = impl.createEmptyMetrics()
+		} else {
+			metrics, err := impl.processAppEnvMetrics(releases, allMaterials, allLeadTimes, previousReleases[key])
+			if err != nil {
+				appEnvMetric.Error = err.Error()
+				impl.logger.Errorw("error populating metrics for app-env pair", "appId", pair.AppId, "envId", pair.EnvId, "err", err)
+			} else {
+				appEnvMetric.Metrics = metrics
+			}
+		}
+
+		response.Results[i] = appEnvMetric
+	}
+
+	return response, nil
+}
+
+// parseDateRange parses from and to date strings
+func (impl DeploymentMetricServiceImpl) parseDateRange(from, to string) (time.Time, time.Time, error) {
+	fromTime, err := time.Parse(layout, from)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	toTime, err := time.Parse(layout, to)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return fromTime, toTime, nil
+}
+
+// convertToSqlAppEnvPairs converts pkg.AppEnvPair to sql.AppEnvPair
+func (impl DeploymentMetricServiceImpl) convertToSqlAppEnvPairs(pairs []AppEnvPair) []sql.AppEnvPair {
+	sqlPairs := make([]sql.AppEnvPair, len(pairs))
+	for i, pair := range pairs {
+		sqlPairs[i] = sql.AppEnvPair{
+			AppId: pair.AppId,
+			EnvId: pair.EnvId,
+		}
+	}
+	return sqlPairs
+}
+
+// generateAppEnvKey creates a consistent key for app-env pair mapping
+func (impl DeploymentMetricServiceImpl) generateAppEnvKey(appId, envId int) string {
+	return fmt.Sprintf("%d-%d", appId, envId)
+}
+
+// createEmptyMetrics creates an empty metrics response
+func (impl DeploymentMetricServiceImpl) createEmptyMetrics() *Metrics {
+	return &Metrics{Series: []*Metric{}}
+}
+
+// processAppEnvMetrics processes metrics for a single app-env pair
+func (impl DeploymentMetricServiceImpl) processAppEnvMetrics(releases []sql.AppRelease, allMaterials []*sql.PipelineMaterial, allLeadTimes []sql.LeadTime, previousRelease *sql.AppRelease) (*Metrics, error) {
+	releaseIds := make([]int, len(releases))
+	for i, release := range releases {
+		releaseIds[i] = release.Id
+	}
+
+	// Filter materials and lead times for this app-env pair
+	materials := impl.filterMaterialsByReleaseIds(allMaterials, releaseIds)
+	leadTimes := impl.filterLeadTimesByReleaseIds(allLeadTimes, releaseIds)
+
+	return impl.populateMetrics(releases, materials, leadTimes, previousRelease)
+}
+
+// filterMaterialsByReleaseIds filters materials for specific release IDs
+func (impl DeploymentMetricServiceImpl) filterMaterialsByReleaseIds(allMaterials []*sql.PipelineMaterial, releaseIds []int) []*sql.PipelineMaterial {
+	if len(releaseIds) == 0 {
+		return []*sql.PipelineMaterial{}
+	}
+
+	releaseIdSet := make(map[int]bool, len(releaseIds))
+	for _, id := range releaseIds {
+		releaseIdSet[id] = true
+	}
+
+	filtered := make([]*sql.PipelineMaterial, 0, len(releaseIds))
+	for _, material := range allMaterials {
+		if releaseIdSet[material.AppReleaseId] {
+			filtered = append(filtered, material)
+		}
+	}
+	return filtered
+}
+
+// filterLeadTimesByReleaseIds filters lead times for specific release IDs
+func (impl DeploymentMetricServiceImpl) filterLeadTimesByReleaseIds(allLeadTimes []sql.LeadTime, releaseIds []int) []sql.LeadTime {
+	if len(releaseIds) == 0 {
+		return []sql.LeadTime{}
+	}
+
+	releaseIdSet := make(map[int]bool, len(releaseIds))
+	for _, id := range releaseIds {
+		releaseIdSet[id] = true
+	}
+
+	filtered := make([]sql.LeadTime, 0, len(releaseIds)) // Pre-allocate with estimated capacity
+	for _, leadTime := range allLeadTimes {
+		if releaseIdSet[leadTime.AppReleaseId] {
+			filtered = append(filtered, leadTime)
+		}
+	}
+	return filtered
 }
 
 func (impl DeploymentMetricServiceImpl) populateMetrics(appReleases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime, lastRelease *sql.AppRelease) (*Metrics, error) {
