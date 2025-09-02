@@ -62,23 +62,18 @@ func (conf *DexConfig) GetDexScopes() []string {
 	defaultScopes := oidc.GetScopesOrDefault([]string{})
 	additionalScopes := conf.DexScopes
 
-	// if no additional scopes configured return only default scopes
-	if len(additionalScopes) == 0 {
-		return defaultScopes
-	}
-
-	occurrenceMap := make(map[string]struct{})
-	finalScopes := make([]string, 0)
+	occurrenceMap := make(map[string]bool)
+	finalScopes := make([]string, 0, len(defaultScopes)+len(additionalScopes))
 
 	// first add all the default
 	for _, scope := range defaultScopes {
-		occurrenceMap[scope] = struct{}{}
+		occurrenceMap[scope] = true
 		finalScopes = append(finalScopes, scope)
 	}
 	// append extra configs
 	for _, scope := range additionalScopes {
 		if _, exists := occurrenceMap[scope]; !exists {
-			occurrenceMap[scope] = struct{}{}
+			occurrenceMap[scope] = true
 			finalScopes = append(finalScopes, scope)
 		}
 	}
