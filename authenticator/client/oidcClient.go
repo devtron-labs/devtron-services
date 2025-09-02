@@ -42,15 +42,13 @@ func GetSettings(conf *DexConfig) (*oidc.Settings, error) {
 		return nil, err
 	}
 
-	requestedScopes := conf.GetDexScopes()
-
 	settings := &oidc.Settings{
 		URL: conf.Url,
 		OIDCConfig: oidc.OIDCConfig{CLIClientID: conf.DexClientID,
 			ClientSecret:    conf.DexClientSecret,
 			Issuer:          proxyUrl,
 			ServerSecret:    conf.ServerSecret,
-			RequestedScopes: requestedScopes,
+			RequestedScopes: conf.GetDexScopes(),
 		},
 		UserSessionDuration: time.Duration(conf.UserSessionDurationSeconds) * time.Second,
 		AdminPasswordMtime:  conf.AdminPasswordMtime,
