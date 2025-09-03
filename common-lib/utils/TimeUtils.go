@@ -42,7 +42,7 @@ const (
 	LastMonth TimeWindows = "lastMonth"
 )
 
-func (timeRange *TimeRangeRequest) ParseTimeRange() (*TimeRangeRequest, error) {
+func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeRequest, error) {
 	if timeRange == nil {
 		return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("invalid time range request. either from/to or timeWindow must be provided")
 	}
