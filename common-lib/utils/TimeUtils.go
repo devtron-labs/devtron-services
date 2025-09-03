@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2024. Devtron Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package utils
 
 import (
@@ -6,9 +22,9 @@ import (
 )
 
 type TimeRangeRequest struct {
-	From       *time.Time   `json:"from"`
-	To         *time.Time   `json:"to"`
-	TimeWindow *TimeWindows `json:"timeWindow" validate:"oneof=today yesterday week month quarter lastWeek lastMonth"`
+	From       *time.Time   `json:"from" schema:"from"`
+	To         *time.Time   `json:"to" schema:"to"`
+	TimeWindow *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty,oneof=today yesterday week month quarter lastWeek lastMonth"`
 }
 
 func NewTimeRangeRequest(from *time.Time, to *time.Time) *TimeRangeRequest {
@@ -42,9 +58,11 @@ const (
 	LastMonth TimeWindows = "lastMonth"
 )
 
-func (timeRange *TimeRangeRequest) ParseTimeRange() (*TimeRangeRequest, error) {
+func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeRequest, error) {
+	if timeRange == nil {
+		return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("invalid time range request. either from/to or timeWindow must be provided")
+	}
 	now := time.Now()
-
 	// If timeWindow is provided, it takes preference over from/to
 	if timeRange.TimeWindow != nil {
 		switch *timeRange.TimeWindow {
@@ -91,7 +109,7 @@ func (timeRange *TimeRangeRequest) ParseTimeRange() (*TimeRangeRequest, error) {
 	}
 
 	// Use from/to dates if provided
-	if timeRange.From != nil && NewTimeRangeRequest(&time.Time{}, &time.Time{}) != nil {
+	if timeRange.From != nil && timeRange.To != nil {
 		if timeRange.From.After(*timeRange.To) {
 			return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("from date cannot be after to date")
 		}
