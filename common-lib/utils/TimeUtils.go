@@ -93,7 +93,7 @@ func (timeRange *TimeRangeRequest) ParseTimeRange() (*TimeRangeRequest, error) {
 	}
 
 	// Use from/to dates if provided
-	if timeRange.From != nil && NewTimeRangeRequest(&time.Time{}, &time.Time{}) != nil {
+	if timeRange.From != nil && timeRange.To != nil {
 		if timeRange.From.After(*timeRange.To) {
 			return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("from date cannot be after to date")
 		}
