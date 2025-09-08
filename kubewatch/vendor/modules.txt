@@ -51,8 +51,8 @@ github.com/ProtonMail/go-crypto/openpgp/packet
 github.com/ProtonMail/go-crypto/openpgp/s2k
 github.com/ProtonMail/go-crypto/openpgp/x25519
 github.com/ProtonMail/go-crypto/openpgp/x448
-# github.com/argoproj/argo-cd/v2 v2.14.13
-## explicit; go 1.23.0
+# github.com/argoproj/argo-cd/v2 v2.14.17
+## explicit; go 1.24.6
 github.com/argoproj/argo-cd/v2/assets
 github.com/argoproj/argo-cd/v2/common
 github.com/argoproj/argo-cd/v2/pkg/apis/application
