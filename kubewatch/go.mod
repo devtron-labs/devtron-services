@@ -1,11 +1,11 @@
 module github.com/devtron-labs/kubewatch
 
-go 1.24.2
+go 1.24.6
 
-toolchain go1.24.3
+toolchain go1.24.7
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.14.13
+	github.com/argoproj/argo-cd/v2 v2.14.17
 	github.com/argoproj/argo-workflows/v3 v3.6.7
 	github.com/argoproj/gitops-engine v0.7.1-0.20250521000818-c08b0a72c1f1
 	github.com/caarlos0/env v3.5.0+incompatible
