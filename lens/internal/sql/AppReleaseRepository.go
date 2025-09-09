@@ -165,7 +165,7 @@ func (impl *AppReleaseRepositoryImpl) GetReleaseBetweenBulk(appEnvPairs []dto.Ap
 	whereClause := "(" + strings.Join(conditions, " OR ") + ")"
 	query = query.Where(whereClause, args...)
 
-	err := query.Order("app_id, environment_id, id desc").Select()
+	err := query.Order("app_id").Order("environment_id").Order("id desc").Select()
 	return appReleases, err
 }
 

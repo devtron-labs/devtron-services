@@ -55,19 +55,19 @@ type MetricRequest struct {
 }
 
 type AppEnvPair struct {
-	AppId int `json:"app_id"`
-	EnvId int `json:"env_id"`
+	AppId int `json:"appId"`
+	EnvId int `json:"envId"`
 }
 
 type BulkMetricRequest struct {
 	AppEnvPairs []AppEnvPair `json:"appEnvPairs"`
-	From        string       `json:"from"`
-	To          string       `json:"to"`
+	From        *time.Time   `json:"from"`
+	To          *time.Time   `json:"to"`
 }
 
 type AppEnvMetrics struct {
-	AppId   int      `json:"app_id"`
-	EnvId   int      `json:"env_id"`
+	AppId   int      `json:"appId"`
+	EnvId   int      `json:"envId"`
 	Metrics *Metrics `json:"metrics"`
 	Error   string   `json:"error,omitempty"`
 }

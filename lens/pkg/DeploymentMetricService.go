@@ -104,22 +104,15 @@ func (impl DeploymentMetricServiceImpl) GetBulkDeploymentMetrics(request *dto.Bu
 		return &dto.BulkMetricsResponse{Results: []dto.AppEnvMetrics{}}, nil
 	}
 
+	return impl.getBulkDeploymentMetricsWithBulkQueries(request)
+}
+
+func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(request *dto.BulkMetricRequest) (*dto.BulkMetricsResponse, error) {
 	response := &dto.BulkMetricsResponse{
 		Results: make([]dto.AppEnvMetrics, len(request.AppEnvPairs)),
 	}
-
-	return impl.getBulkDeploymentMetricsWithBulkQueries(request, response)
-}
-
-func (impl DeploymentMetricServiceImpl) getBulkDeploymentMetricsWithBulkQueries(request *dto.BulkMetricRequest, response *dto.BulkMetricsResponse) (*dto.BulkMetricsResponse, error) {
-	from, to, err := utils2.ParseDateRange(request.From, request.To)
-	if err != nil {
-		impl.logger.Errorw("error parsing date range", "from", request.From, "to", request.To, "err", err)
-		return nil, err
-	}
-
 	// Step 1: Get all releases for all app-env pairs in one query
-	allReleases, err := impl.appReleaseRepository.GetReleaseBetweenBulk(request.AppEnvPairs, from, to)
+	allReleases, err := impl.appReleaseRepository.GetReleaseBetweenBulk(request.AppEnvPairs, *request.From, *request.To)
 	if err != nil {
 		impl.logger.Errorw("error getting bulk releases from db", "err", err)
 		return nil, err

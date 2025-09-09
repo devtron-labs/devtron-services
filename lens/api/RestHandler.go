@@ -164,7 +164,7 @@ func (impl *RestHandlerImpl) GetBulkDeploymentMetrics(w http.ResponseWriter, r *
 		return
 	}
 
-	if bulkRequest.From == "" || bulkRequest.To == "" {
+	if bulkRequest.From == nil || bulkRequest.To == nil {
 		impl.writeJsonResp(w, fmt.Errorf("from and to dates are required"), nil, http.StatusBadRequest)
 		return
 	}
