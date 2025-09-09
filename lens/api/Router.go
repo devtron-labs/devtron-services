@@ -55,7 +55,7 @@ func (r MuxRouter) Init() {
 	r.Router.Path("/deployment-metrics").HandlerFunc(r.restHandler.GetDeploymentMetrics).
 		Queries("app_id", "{app_id}", "env_id", "{env_id}", "from", "{from}", "to", "{to}").
 		Methods("GET", "OPTIONS")
-	r.Router.Path("/deployment-metrics/bulk").HandlerFunc(r.restHandler.GetBulkDeploymentMetrics).Methods("POST", "OPTIONS")
+	r.Router.Path("/deployment-metrics/bulk").HandlerFunc(r.restHandler.GetBulkDeploymentMetrics).Methods("GET", "OPTIONS")
 	r.Router.Path("/new-deployment-event").HandlerFunc(r.restHandler.ProcessDeploymentEvent).Methods("POST")
 	r.Router.Path("/reset-app-environment").HandlerFunc(r.restHandler.ResetApplication).Methods("POST")
 
