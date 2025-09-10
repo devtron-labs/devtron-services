@@ -24,7 +24,7 @@ import (
 type TimeRangeRequest struct {
 	From       *time.Time   `json:"from" schema:"from"`
 	To         *time.Time   `json:"to" schema:"to"`
-	TimeWindow *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty,oneof=today yesterday week month quarter lastWeek lastMonth"`
+	TimeWindow *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty,oneof=today yesterday week month quarter lastWeek lastMonth lastQuarter"`
 }
 
 func NewTimeRangeRequest(from *time.Time, to *time.Time) *TimeRangeRequest {
@@ -49,13 +49,14 @@ func (timeRange TimeWindows) String() string {
 
 // Define constants for different time windows
 const (
-	Today     TimeWindows = "today"
-	Yesterday TimeWindows = "yesterday"
-	Week      TimeWindows = "week"
-	Month     TimeWindows = "month"
-	Quarter   TimeWindows = "quarter"
-	LastWeek  TimeWindows = "lastWeek"
-	LastMonth TimeWindows = "lastMonth"
+	Today       TimeWindows = "today"
+	Yesterday   TimeWindows = "yesterday"
+	Week        TimeWindows = "week"
+	Month       TimeWindows = "month"
+	Quarter     TimeWindows = "quarter"
+	LastWeek    TimeWindows = "lastWeek"
+	LastMonth   TimeWindows = "lastMonth"
+	LastQuarter TimeWindows = "lastQuarter"
 )
 
 func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeRequest, error) {
@@ -103,6 +104,37 @@ func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeReques
 			lastMonthStart := thisMonthStart.AddDate(0, -1, 0)
 			lastMonthEnd := thisMonthStart.Add(-time.Second)
 			return NewTimeRangeRequest(&lastMonthStart, &lastMonthEnd), nil
+		case LastQuarter:
+			// Calculate current quarter
+			currentQuarter := ((int(now.Month()) - 1) / 3) + 1
+
+			// Calculate previous quarter
+			var prevQuarter int
+			var prevYear int
+			if currentQuarter == 1 {
+				// If current quarter is Q1, previous quarter is Q4 of previous year
+				prevQuarter = 4
+				prevYear = now.Year() - 1
+			} else {
+				// Otherwise, previous quarter is in the same year
+				prevQuarter = currentQuarter - 1
+				prevYear = now.Year()
+			}
+
+			// Calculate start and end of previous quarter
+			prevQuarterStartMonth := time.Month((prevQuarter-1)*3 + 1)
+			prevQuarterStart := time.Date(prevYear, prevQuarterStartMonth, 1, 0, 0, 0, 0, now.Location())
+
+			// End of previous quarter is the start of current quarter minus 1 second
+			currentQuarterStartMonth := time.Month((currentQuarter-1)*3 + 1)
+			currentQuarterStart := time.Date(now.Year(), currentQuarterStartMonth, 1, 0, 0, 0, 0, now.Location())
+			if currentQuarter == 1 {
+				// If current quarter is Q1, we need to calculate Q4 end of previous year
+				currentQuarterStart = time.Date(now.Year(), time.January, 1, 0, 0, 0, 0, now.Location())
+			}
+			prevQuarterEnd := currentQuarterStart.Add(-time.Second)
+
+			return NewTimeRangeRequest(&prevQuarterStart, &prevQuarterEnd), nil
 		default:
 			return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("unsupported time window: %q", *timeRange.TimeWindow)
 		}
