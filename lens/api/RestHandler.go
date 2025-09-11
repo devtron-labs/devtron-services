@@ -169,7 +169,7 @@ func (impl *RestHandlerImpl) GetBulkDeploymentMetrics(w http.ResponseWriter, r *
 		return
 	}
 
-	bulkMetrics, err := impl.deploymentMetricService.GetBulkDeploymentMetrics(bulkRequest)
+	bulkMetrics, err := impl.deploymentMetricService.ProcessBulkDoraMetrics(bulkRequest)
 	impl.logger.Infof("bulk metrics response: %+v", bulkMetrics)
 	impl.writeJsonResp(w, err, bulkMetrics, 200)
 }
