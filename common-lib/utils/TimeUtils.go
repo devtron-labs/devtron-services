@@ -18,6 +18,7 @@ package utils
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -56,6 +57,7 @@ const (
 	Quarter     TimeWindows = "quarter"
 	LastWeek    TimeWindows = "lastWeek"
 	LastMonth   TimeWindows = "lastMonth"
+	Year      TimeWindows = "year"
 	LastQuarter TimeWindows = "lastQuarter"
 )
 
@@ -135,6 +137,9 @@ func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeReques
 			prevQuarterEnd := currentQuarterStart.Add(-time.Second)
 
 			return NewTimeRangeRequest(&prevQuarterStart, &prevQuarterEnd), nil
+		case Year:
+			start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+			return NewTimeRangeRequest(&start, &now), nil
 		default:
 			return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("unsupported time window: %q", *timeRange.TimeWindow)
 		}
@@ -149,4 +154,170 @@ func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeReques
 	} else {
 		return NewTimeRangeRequest(&time.Time{}, &time.Time{}), fmt.Errorf("from and to dates are required if time window is not provided")
 	}
+}
+
+// TimeBoundariesRequest represents the request for time boundary frames
+type TimeBoundariesRequest struct {
+	TimeWindowBoundaries []string     `json:"timeWindowBoundaries" schema:"timeWindowBoundaries" validate:"omitempty, min=1"`
+	TimeWindow           *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty, oneof=week month quarter year"` // week, month, quarter, year
+	Iterations           int          `json:"iterations" schema:"iterations" validate:"omitempty, min=1"`
+}
+
+// TimeWindowBoundaries represents the start and end times for a time window
+type TimeWindowBoundaries struct {
+	StartTime time.Time
+	EndTime   time.Time
+}
+
+func (timeBoundaries *TimeBoundariesRequest) ParseAndValidateTimeBoundaries() ([]TimeWindowBoundaries, error) {
+	if timeBoundaries == nil {
+		return []TimeWindowBoundaries{}, fmt.Errorf("invalid time boundaries request")
+	}
+	// If timeWindow is provided, it takes preference over timeWindowBoundaries
+	if timeBoundaries.TimeWindow != nil {
+		switch *timeBoundaries.TimeWindow {
+		case Week:
+			return GetWeeklyTimeBoundaries(timeBoundaries.Iterations), nil
+		case Month:
+			return GetMonthlyTimeBoundaries(timeBoundaries.Iterations), nil
+		case Quarter:
+			return GetQuarterlyTimeBoundaries(timeBoundaries.Iterations), nil
+		case Year:
+			return GetYearlyTimeBoundaries(timeBoundaries.Iterations), nil
+		default:
+			return []TimeWindowBoundaries{}, fmt.Errorf("unsupported time window: %q", *timeBoundaries.TimeWindow)
+		}
+	} else if len(timeBoundaries.TimeWindowBoundaries) != 0 {
+		// Validate time window
+		return DecodeAndValidateTimeWindowBoundaries(timeBoundaries.TimeWindowBoundaries)
+	} else {
+		return []TimeWindowBoundaries{}, fmt.Errorf("time window boundaries are required if time window is not provided")
+	}
+}
+
+func GetWeeklyTimeBoundaries(iterations int) []TimeWindowBoundaries {
+	if iterations <= 0 {
+		return []TimeWindowBoundaries{}
+	}
+	boundaries := make([]TimeWindowBoundaries, iterations)
+	now := time.Now()
+	weekday := int(now.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	// Get start of this week (Monday)
+	weekStart := now.AddDate(0, 0, -(weekday - 1))
+	// Set time to midnight
+	weekStart = time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, weekStart.Location())
+
+	for i := 0; i < iterations; i++ {
+		start := weekStart.AddDate(0, 0, -7*i)
+		end := start.AddDate(0, 0, 7)
+		// For the current week, if now < end, set end = now
+		if i == 0 && now.Before(end) {
+			end = now
+		}
+		boundaries[i] = TimeWindowBoundaries{
+			StartTime: start,
+			EndTime:   end,
+		}
+	}
+	return boundaries
+}
+
+func GetMonthlyTimeBoundaries(iterations int) []TimeWindowBoundaries {
+	if iterations <= 0 {
+		return []TimeWindowBoundaries{}
+	}
+	boundaries := make([]TimeWindowBoundaries, iterations)
+	now := time.Now()
+	// Get start of this month (1st)
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	for i := 0; i < iterations; i++ {
+		start := monthStart.AddDate(0, -i, 0)
+		end := start.AddDate(0, 1, 0)
+		// For the current month, if now < end, set end = now
+		if i == 0 && now.Before(end) {
+			end = now
+		}
+		boundaries[i] = TimeWindowBoundaries{
+			StartTime: start,
+			EndTime:   end,
+		}
+	}
+	return boundaries
+}
+
+func GetQuarterlyTimeBoundaries(iterations int) []TimeWindowBoundaries {
+	if iterations <= 0 {
+		return []TimeWindowBoundaries{}
+	}
+	boundaries := make([]TimeWindowBoundaries, iterations)
+	now := time.Now()
+	quarter := ((int(now.Month()) - 1) / 3) + 1
+	quarterMonth := time.Month((quarter-1)*3 + 1)
+	// Get start of this quarter (1st of the month)
+	quarterStart := time.Date(now.Year(), quarterMonth, 1, 0, 0, 0, 0, now.Location())
+	for i := 0; i < iterations; i++ {
+		start := quarterStart.AddDate(0, -3*i, 0)
+		end := start.AddDate(0, 3, 0)
+		// For the current quarter, if now < end, set end = now
+		if i == 0 && now.Before(end) {
+			end = now
+		}
+		boundaries[i] = TimeWindowBoundaries{
+			StartTime: start,
+			EndTime:   end,
+		}
+	}
+	return boundaries
+}
+
+func GetYearlyTimeBoundaries(iterations int) []TimeWindowBoundaries {
+	if iterations <= 0 {
+		return []TimeWindowBoundaries{}
+	}
+	boundaries := make([]TimeWindowBoundaries, iterations)
+	now := time.Now()
+	// Get start of this year (1st of January)
+	yearStart := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+	for i := 0; i < iterations; i++ {
+		start := yearStart.AddDate(-i, 0, 0)
+		end := start.AddDate(1, 0, 0)
+		// For the current year, if now < end, set end = now
+		if i == 0 && now.Before(end) {
+			end = now
+		}
+		boundaries[i] = TimeWindowBoundaries{
+			StartTime: start,
+			EndTime:   end,
+		}
+	}
+	return boundaries
+}
+
+func DecodeAndValidateTimeWindowBoundaries(timeWindowBoundaries []string) ([]TimeWindowBoundaries, error) {
+	boundaries := make([]TimeWindowBoundaries, 0, len(timeWindowBoundaries))
+	for _, boundary := range timeWindowBoundaries {
+		parts := strings.Split(boundary, "|")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid time window boundary format: %q", boundary)
+		}
+		startTime, err := time.Parse(time.RFC3339, parts[0])
+		if err != nil {
+			return nil, fmt.Errorf("invalid start time format: %q. expected format: %q", parts[0], time.RFC3339)
+		}
+		endTime, err := time.Parse(time.RFC3339, parts[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid end time format: %q. expected format: %q", parts[1], time.RFC3339)
+		}
+		if startTime.After(endTime) {
+			return nil, fmt.Errorf("start time cannot be after end time: %q", boundary)
+		}
+		boundaries = append(boundaries, TimeWindowBoundaries{
+			StartTime: startTime,
+			EndTime:   endTime,
+		})
+	}
+	return boundaries, nil
 }
