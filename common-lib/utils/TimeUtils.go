@@ -110,9 +110,9 @@ func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeReques
 
 // TimeBoundariesRequest represents the request for time boundary frames
 type TimeBoundariesRequest struct {
-	TimeWindowBoundaries []string     `json:"timeWindowBoundaries" schema:"timeWindowBoundaries" validate:"omitempty, min=1"`
-	TimeWindow           *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty, oneof=week month quarter year"` // week, month, quarter, year
-	Iterations           int          `json:"iterations" schema:"iterations" validate:"omitempty, min=1"`
+	TimeWindowBoundaries []string     `json:"timeWindowBoundaries" schema:"timeWindowBoundaries" validate:"omitempty,min=1"`
+	TimeWindow           *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty,oneof=week month quarter year"` // week, month, quarter, year
+	Iterations           int          `json:"iterations" schema:"iterations" validate:"omitempty,min=1"`
 }
 
 // TimeWindowBoundaries represents the start and end times for a time window
