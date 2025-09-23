@@ -19,6 +19,7 @@ package router
 import (
 	"encoding/json"
 	"github.com/devtron-labs/common-lib/monitoring"
+	"github.com/devtron-labs/kubelink/api/handler"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -29,6 +30,7 @@ type RouterImpl struct {
 	logger           *zap.SugaredLogger
 	Router           *mux.Router
 	monitoringRouter *monitoring.MonitoringRouter
+	handler          handler.Handler
 }
 
 func NewRouter(logger *zap.SugaredLogger, monitoringRouter *monitoring.MonitoringRouter) *RouterImpl {
@@ -36,6 +38,7 @@ func NewRouter(logger *zap.SugaredLogger, monitoringRouter *monitoring.Monitorin
 		logger:           logger,
 		Router:           mux.NewRouter(),
 		monitoringRouter: monitoringRouter,
+		handler:          handler.NewHandlerImpl(logger),
 	}
 }
 
@@ -64,4 +67,5 @@ func (r *RouterImpl) InitRouter() {
 		}
 		_, _ = writer.Write(b)
 	})
+	r.Router.Path("/sample").HandlerFunc(r.handler.GetSampleRepsonse).Methods("GET")
 }
