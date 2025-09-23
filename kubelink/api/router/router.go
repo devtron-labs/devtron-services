@@ -67,5 +67,5 @@ func (r *RouterImpl) InitRouter() {
 		}
 		_, _ = writer.Write(b)
 	})
-	r.Router.Path("/sample").HandlerFunc(r.handler.GetSampleRepsonse).Methods("GET")
+	r.Router.Path("/kubelink/sample").HandlerFunc(r.handler.GetSampleRepsonse).Methods("GET")
 }
