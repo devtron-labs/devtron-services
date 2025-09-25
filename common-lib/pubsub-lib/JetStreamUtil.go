@@ -124,6 +124,9 @@ const (
 	INFRA_HELM_RELEASE_ACTION_TOPIC                    string = "INFRA_HELM_RELEASE_ACTION_TOPIC"
 	INFRA_HELM_RELEASE_ACTION_GROUP                    string = "INFRA_HELM_RELEASE_ACTION_GROUP"
 	INFRA_HELM_RELEASE_ACTION_DURABLE                  string = "INFRA_HELM_RELEASE_ACTION_DURABLE"
+	AUDIT_LOG_TOPIC                                    string = "AUDIT_LOG_TOPIC"
+	AUDIT_LOG_GROUP                                    string = "AUDIT_LOG_GROUP"
+	AUDIT_LOG_DURABLE                                  string = "AUDIT_LOG_DURABLE"
 )
 
 type NatsTopic struct {
@@ -179,6 +182,7 @@ var natsTopicMapping = map[string]NatsTopic{
 	INFRASTRACTURE_INSTALLATION_SUCCESS_TOPIC:        {topicName: INFRASTRACTURE_INSTALLATION_SUCCESS_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: INFRASTRACTURE_INSTALLATION_SUCCESS_GROUP, consumerName: INFRASTRACTURE_INSTALLATION_SUCCESS_DURABLE},
 	INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_TOPIC: {topicName: INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_GROUP, consumerName: INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_DURABLE},
 	INFRA_HELM_RELEASE_ACTION_TOPIC:                  {topicName: INFRA_HELM_RELEASE_ACTION_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: INFRA_HELM_RELEASE_ACTION_GROUP, consumerName: INFRA_HELM_RELEASE_ACTION_DURABLE},
+	AUDIT_LOG_TOPIC:                                  {topicName: AUDIT_LOG_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: AUDIT_LOG_GROUP, consumerName: AUDIT_LOG_DURABLE},
 }
 
 var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
@@ -221,6 +225,7 @@ var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
 	INFRASTRACTURE_INSTALLATION_SUCCESS_DURABLE:        {},
 	INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_DURABLE: {},
 	INFRA_HELM_RELEASE_ACTION_DURABLE:                  {},
+	AUDIT_LOG_DURABLE:                                  {},
 }
 
 // getConsumerConfigMap will fetch the consumer wise config from the json string
