@@ -407,6 +407,7 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 	} else {
 		material.CheckoutLocation = checkoutLocationForFetching
 		material.CheckoutStatus = true
+		material.CheckoutMsgAny = ""
 		material.FetchStatus = true
 	}
 	err = impl.materialRepository.Update(material)
