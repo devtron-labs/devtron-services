@@ -57,12 +57,12 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 
 func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluster) error {
 	if !impl.appConfig.GetAcdConfig().ACDInformer || impl.appConfig.GetExternalConfig().External {
-		impl.logger.Debugw("argo cd informer is not enabled for cluster, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
+		impl.logger.Warnw("argo cd informer is not enabled for cluster, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
 		return nil
 	}
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start argo cd informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start argo cd informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
 	}()
 	stopper, ok := impl.argoCdInformerStopper[clusterInfo.Id]
 	if ok && stopper.HasInformer() {
