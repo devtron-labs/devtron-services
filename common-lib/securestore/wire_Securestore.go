@@ -7,3 +7,9 @@ var SecurestoreWireSet = wire.NewSet(
 	wire.Bind(new(AttributesRepository), new(*AttributesRepositoryImpl)),
 	NewEncryptionKeyServiceImpl,
 	wire.Bind(new(EncryptionKeyService), new(*EncryptionKeyServiceImpl)))
+
+var SecurestoreWireSetNonOrchDbServices = wire.NewSet(
+	NewAttributesRepositoryImplForOrchestrator,
+	wire.Bind(new(AttributesRepository), new(*AttributesRepositoryImpl)),
+	NewEncryptionKeyServiceImpl,
+	wire.Bind(new(EncryptionKeyService), new(*EncryptionKeyServiceImpl)))
