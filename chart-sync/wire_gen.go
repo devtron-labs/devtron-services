@@ -12,6 +12,7 @@ import (
 	"github.com/devtron-labs/chart-sync/internals/sql"
 	"github.com/devtron-labs/chart-sync/pkg"
 	"github.com/devtron-labs/common-lib/helmLib/registry"
+	"github.com/devtron-labs/common-lib/securestore"
 )
 
 // Injectors from wire.go:
@@ -39,6 +40,11 @@ func InitializeApp() (*App, error) {
 	defaultSettingsGetterImpl := registry.NewDefaultSettingsGetter(sugaredLogger)
 	settingsFactoryImpl := registry.NewSettingsFactoryImpl(defaultSettingsGetterImpl)
 	syncServiceImpl := pkg.NewSyncServiceImpl(chartRepoRepositoryImpl, sugaredLogger, helmRepoManagerImpl, dockerArtifactStoreRepositoryImpl, ociRegistryConfigRepositoryImpl, appStoreRepositoryImpl, appStoreApplicationVersionRepositoryImpl, configuration, settingsFactoryImpl)
-	app := NewApp(sugaredLogger, db, syncServiceImpl, configuration)
+	attributesRepositoryImpl := securestore.NewAttributesRepositoryImpl(db)
+	encryptionKeyServiceImpl, err := securestore.NewEncryptionKeyServiceImpl(sugaredLogger, attributesRepositoryImpl)
+	if err != nil {
+		return nil, err
+	}
+	app := NewApp(sugaredLogger, db, syncServiceImpl, configuration, encryptionKeyServiceImpl)
 	return app, nil
 }

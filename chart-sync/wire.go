@@ -9,11 +9,13 @@ import (
 	"github.com/devtron-labs/chart-sync/internals/sql"
 	"github.com/devtron-labs/chart-sync/pkg"
 	"github.com/devtron-labs/common-lib/helmLib/registry"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/google/wire"
 )
 
 func InitializeApp() (*App, error) {
 	wire.Build(
+		securestore.SecurestoreWireSet,
 		NewApp,
 		logger.NewSugardLogger,
 		sql.GetConfig,

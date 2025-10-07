@@ -74,7 +74,7 @@ github.com/cespare/xxhash/v2
 github.com/coreos/clair/api/v3/clairpb
 github.com/coreos/clair/database
 github.com/coreos/clair/ext/versionfmt
-# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251007035719-29c145e8ed19
+# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251007065221-2e7d0614e356
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -94,6 +94,7 @@ github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
 github.com/devtron-labs/common-lib/utils/runTime
+github.com/devtron-labs/common-lib/utils/sql
 # github.com/docker/cli v28.1.1+incompatible
 ## explicit
 github.com/docker/cli/cli/config
@@ -457,4 +458,4 @@ google.golang.org/protobuf/types/known/wrapperspb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251007035719-29c145e8ed19
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251007065221-2e7d0614e356

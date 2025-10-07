@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/devtron-labs/chart-sync/internals"
 	"github.com/devtron-labs/chart-sync/pkg"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/go-pg/pg"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -12,21 +13,24 @@ import (
 )
 
 type App struct {
-	Logger        *zap.SugaredLogger
-	db            *pg.DB
-	syncService   pkg.SyncService
-	configuration *internals.Configuration
+	Logger            *zap.SugaredLogger
+	db                *pg.DB
+	syncService       pkg.SyncService
+	configuration     *internals.Configuration
+	encryptionService securestore.EncryptionKeyService
 }
 
 func NewApp(Logger *zap.SugaredLogger,
 	db *pg.DB,
 	syncService pkg.SyncService,
-	configuration *internals.Configuration) *App {
+	configuration *internals.Configuration,
+	encryptionService securestore.EncryptionKeyService) *App {
 	return &App{
-		Logger:        Logger,
-		db:            db,
-		syncService:   syncService,
-		configuration: configuration,
+		Logger:            Logger,
+		db:                db,
+		syncService:       syncService,
+		configuration:     configuration,
+		encryptionService: encryptionService,
 	}
 }
 

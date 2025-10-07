@@ -10,6 +10,7 @@ import (
 	"github.com/devtron-labs/common-lib/helmLib/registry"
 	"github.com/devtron-labs/common-lib/k8sResource"
 	"github.com/devtron-labs/common-lib/monitoring"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/common-lib/utils/k8s"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
@@ -85,6 +86,11 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	app := NewApp(sugaredLogger, applicationServiceServerImpl, routerImpl, k8sInformerImpl, db, configuration)
+	attributesRepositoryImpl := securestore.NewAttributesRepositoryImpl(db)
+	encryptionKeyServiceImpl, err := securestore.NewEncryptionKeyServiceImpl(sugaredLogger, attributesRepositoryImpl)
+	if err != nil {
+		return nil, err
+	}
+	app := NewApp(sugaredLogger, applicationServiceServerImpl, routerImpl, k8sInformerImpl, db, configuration, encryptionKeyServiceImpl)
 	return app, nil
 }

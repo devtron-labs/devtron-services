@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/image-scanner/pkg/middleware"
 	"net/http"
 	"os"
@@ -35,29 +36,32 @@ import (
 )
 
 type App struct {
-	Router           *api.Router
-	Logger           *zap.SugaredLogger
-	server           *http.Server
-	db               *pg.DB
-	natsSubscription *pubsub.NatSubscriptionImpl
-	pubSubClient     *client.PubSubClientServiceImpl
-	serverConfig     *ServerConfig
+	Router            *api.Router
+	Logger            *zap.SugaredLogger
+	server            *http.Server
+	db                *pg.DB
+	natsSubscription  *pubsub.NatSubscriptionImpl
+	pubSubClient      *client.PubSubClientServiceImpl
+	serverConfig      *ServerConfig
+	encryptionService securestore.EncryptionKeyService
 }
 
 func NewApp(Router *api.Router, Logger *zap.SugaredLogger,
 	db *pg.DB, natsSubscription *pubsub.NatSubscriptionImpl,
-	pubSubClient *client.PubSubClientServiceImpl) *App {
+	pubSubClient *client.PubSubClientServiceImpl,
+	encryptionService securestore.EncryptionKeyService) *App {
 	serverConfig, err := GetServerConfig()
 	if err != nil {
 		Logger.Errorw("error in getting server config", "err", err)
 	}
 	return &App{
-		Router:           Router,
-		Logger:           Logger,
-		db:               db,
-		natsSubscription: natsSubscription,
-		pubSubClient:     pubSubClient,
-		serverConfig:     serverConfig,
+		Router:            Router,
+		Logger:            Logger,
+		db:                db,
+		natsSubscription:  natsSubscription,
+		pubSubClient:      pubSubClient,
+		serverConfig:      serverConfig,
+		encryptionService: encryptionService,
 	}
 }
 

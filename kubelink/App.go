@@ -23,6 +23,7 @@ import (
 	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/middlewares"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
+	"github.com/devtron-labs/common-lib/securestore"
 	grpcUtil "github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/kubelink/api/router"
 	client "github.com/devtron-labs/kubelink/grpc"
@@ -45,28 +46,31 @@ import (
 )
 
 type App struct {
-	Logger      *zap.SugaredLogger
-	ServerImpl  *service.ApplicationServiceServerImpl
-	router      *router.RouterImpl
-	k8sInformer k8sInformer.K8sInformer
-	db          *pg.DB
-	server      *http.Server
-	grpcServer  *grpc.Server
-	cfg         *grpcUtil.Configuration
+	Logger            *zap.SugaredLogger
+	ServerImpl        *service.ApplicationServiceServerImpl
+	router            *router.RouterImpl
+	k8sInformer       k8sInformer.K8sInformer
+	db                *pg.DB
+	server            *http.Server
+	grpcServer        *grpc.Server
+	cfg               *grpcUtil.Configuration
+	encryptionService securestore.EncryptionKeyService
 }
 
 func NewApp(Logger *zap.SugaredLogger,
 	ServerImpl *service.ApplicationServiceServerImpl,
 	router *router.RouterImpl,
 	k8sInformer k8sInformer.K8sInformer,
-	db *pg.DB, cfg *grpcUtil.Configuration) *App {
+	db *pg.DB, cfg *grpcUtil.Configuration,
+	encryptionService securestore.EncryptionKeyService) *App {
 	return &App{
-		Logger:      Logger,
-		ServerImpl:  ServerImpl,
-		router:      router,
-		k8sInformer: k8sInformer,
-		db:          db,
-		cfg:         cfg,
+		Logger:            Logger,
+		ServerImpl:        ServerImpl,
+		router:            router,
+		k8sInformer:       k8sInformer,
+		db:                db,
+		cfg:               cfg,
+		encryptionService: encryptionService,
 	}
 }
 

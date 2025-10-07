@@ -22,3 +22,11 @@
  | PG_USER | string |user |  |  | false |
  | PROMETHEUS_MATRIX_PORT | int |8080 |  |  | false |
 
+
+## POSTGRES Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CASBIN_DATABASE | string |casbin |  |  | false |
+ | PG_READ_TIMEOUT | int64 |30 |  |  | false |
+ | PG_WRITE_TIMEOUT | int64 |30 |  |  | false |
+
