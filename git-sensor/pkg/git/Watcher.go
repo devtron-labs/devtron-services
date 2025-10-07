@@ -201,7 +201,7 @@ func (impl *GitWatcherImpl) handleSshKeyCreationAndRetry(gitCtx GitContext, mate
 			return false, nil, errMsg, err
 		}
 	}
-	_, errMsg, err = impl.repositoryManager.CreateSshFileIfNotExistsAndConfigureSshCommand(gitCtx, location, gitProvider.Id, gitProvider.SshPrivateKey)
+	_, errMsg, err = impl.repositoryManager.CreateSshFileIfNotExistsAndConfigureSshCommand(gitCtx, location, gitProvider.Id, gitProvider.SshPrivateKey.String())
 	if err != nil {
 		impl.logger.Errorw("error in creating/configuring ssh private key on disk ", "repo", material.Url, "gitProviderId", gitProvider.Id, "errMsg", errMsg, "err", err)
 		return false, nil, errMsg, err
