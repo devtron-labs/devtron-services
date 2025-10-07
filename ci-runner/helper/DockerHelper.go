@@ -31,18 +31,15 @@ import (
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
-	"github.com/devtron-labs/common-lib/constants"
-
 	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
+	"github.com/devtron-labs/common-lib/utils/retryFunc"
+	"golang.org/x/sync/errgroup"
 	"io"
 	"io/ioutil"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	appsV1 "k8s.io/client-go/kubernetes/typed/apps/v1"
-	"k8s.io/client-go/rest"
 	"log"
 	"os"
 	"os/exec"
@@ -303,6 +300,102 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return performDockerLogin()
 }
 
+func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8sClient BuildxK8sInterface,
+	useBuildxK8sDriver bool, dockerBuild string, deploymentNames []string,
+	dockerBuildStageMetadata bean2.DockerBuildStageMetadata, reBuildLogs []any) error {
+	if !useBuildxK8sDriver {
+		return nil
+	}
+	k8sErr := k8sClient.RestartBuilders(ciContext)
+	if k8sErr != nil {
+		log.Println(util.DEVTRON, fmt.Sprintf(" error in RestartBuilders : %s", k8sErr.Error()))
+		return k8sErr
+	}
+	k8sClient, err := newBuildxK8sClient(deploymentNames)
+	if err != nil {
+		log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
+		return err
+	}
+	err = k8sClient.RegisterBuilderPods(ciContext)
+	if err != nil {
+		log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err.Error())
+		return err
+	}
+	rebuildImageStage := func() error {
+		// wait for the builder pod to be up again
+		startTime := time.Now()
+		util.LogInfo("Waiting for builder pod to be ready,", "timeout: 2 minutes")
+		done := make(chan bool)
+		ctx, cancel := context.WithCancel(ciContext)
+		defer cancel()
+		go k8sClient.WaitUntilBuilderPodLive(ctx, done)
+		select {
+		case <-done:
+			// builder pod is up again, continue with the build
+			cancel()
+		case <-time.After(2 * time.Minute):
+			// timeout after 2 minutes
+			cancel()
+			return BuilderPodDeletedError
+		}
+		util.LogInfo("DONE -->", time.Since(startTime).Seconds())
+		buildImageFunc := impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, reBuildLogs)
+		if buildImageFunc != nil {
+			return buildImageFunc()
+		}
+		return nil
+	}
+	err = util.ExecuteWithStageInfoLogWithMetadata(
+		util.DOCKER_REBUILD,
+		dockerBuildStageMetadata,
+		rebuildImageStage,
+	)
+	if err != nil && !errors.Is(err, BuilderPodDeletedError) {
+		return err
+	} else if errors.Is(err, BuilderPodDeletedError) {
+		// Log error message for builder pod interruption due to
+		util.LogError(BuilderPodDeletedError)
+		util.LogWarn("Frequent spot interruptions can lead to build failures.",
+			"Consider using a different node type or increasing the spot interruption tolerance.")
+		// if the builder pod is deleted, we will retry the build
+		return retryFunc.NewRetryableError(BuilderPodDeletedError)
+	}
+	return nil
+}
+
+func (impl *DockerHelperImpl) buildImageStage(ciContext cicxt.CiContext, dockerBuild string,
+	useBuildxK8sDriver bool, k8sClient BuildxK8sInterface, buildLogs []any) func() error {
+	return func() error {
+		ctx, cancel := context.WithCancel(ciContext)
+		defer cancel()
+		errGroup, groupCtx := errgroup.WithContext(ctx)
+		errGroup.Go(func() error {
+			if useBuildxK8sDriver && k8sClient != nil {
+				if err := k8sClient.CatchBuilderPodLivenessError(groupCtx); err != nil {
+					cancel() // Cancel the context if there's an error in catching builder pod liveness
+					return err
+				}
+			}
+			return nil
+		})
+		errGroup.Go(func() error {
+			if len(buildLogs) > 0 {
+				log.Println(buildLogs...)
+			}
+			err := impl.runDockerBuildCommand(cicxt.BuildCiContext(groupCtx, ciContext.EnableSecretMasking), dockerBuild)
+			if err != nil {
+				return err
+			}
+			cancel() // Cancel the context after the build is done
+			return nil
+		})
+		if err := errGroup.Wait(); err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
 func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (string, error) {
 	ciContext := cicxt.BuildCiContext(context.Background(), ciRequest.EnableSecretMasking)
 	envVars := &EnvironmentVariables{}
@@ -337,7 +430,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 			} else {
 				dockerBuild = dockerBuildxBuild + " "
 			}
-
 		}
 		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
 		for key, value := range dockerBuildFlags {
@@ -350,7 +442,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 
 		dockerfilePath := getDockerfilePath(ciBuildConfig, ciRequest.CheckoutPath)
 		var buildxExportCacheFunc func() error = nil
-		useBuildxK8sDriver, eligibleK8sDriverNodes := false, make([]map[string]string, 0)
+		useBuildxK8sDriver, eligibleK8sDriverNodes, deploymentNames := false, make([]map[string]string, 0), make([]string, 0)
+		var k8sClient BuildxK8sInterface
 		if useBuildx {
 			setupBuildxBuilder := func() error {
 				err := impl.checkAndCreateDirectory(ciContext, util.LOCAL_BUILDX_LOCATION)
@@ -360,9 +453,20 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					deploymentNames, err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
+						return err
+					}
+					k8sClient, err = newBuildxK8sClient(deploymentNames)
+					if err != nil {
+						log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
+						return err
+					}
+					k8sClient.PatchOwnerReferenceInBuilders()
+					err = k8sClient.RegisterBuilderPods(ciContext)
+					if err != nil {
+						log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
 						return err
 					}
 				} else {
@@ -405,22 +509,38 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		} else {
 			dockerBuild = fmt.Sprintf("%s -f %s --network host -t %s %s", dockerBuild, dockerfilePath, ciRequest.DockerRepository, dockerBuildConfig.BuildContext)
 		}
-
-		buildImageStage := func() error {
-			if envVars.ShowDockerBuildCmdInLogs {
-				log.Println("Starting docker build : ", dockerBuild)
-			} else {
-				log.Println("Docker build started..")
-			}
-			err = impl.executeCmd(ciContext, dockerBuild)
-			if err != nil {
-				return err
-			}
-			return nil
+		dockerBuildStageMetadata := bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}
+		buildLogs := []any{"Docker build started..."}
+		if envVars.ShowDockerBuildCmdInLogs {
+			buildLogs = []any{"Starting docker build : ", dockerBuild}
 		}
-
-		if err = util.ExecuteWithStageInfoLogWithMetadata(util.DOCKER_BUILD, bean2.DockerBuildStageMetadata{TargetPlatforms: utils.ConvertTargetPlatformStringToObject(ciBuildConfig.DockerBuildConfig.TargetPlatform)}, buildImageStage); err != nil {
+		err = util.ExecuteWithStageInfoLogWithMetadata(
+			util.DOCKER_BUILD,
+			dockerBuildStageMetadata,
+			impl.buildImageStage(ciContext, dockerBuild, useBuildxK8sDriver, k8sClient, buildLogs),
+		)
+		if err != nil && !errors.Is(err, BuilderPodDeletedError) {
 			return "", err
+		} else if errors.Is(err, BuilderPodDeletedError) {
+			// Log error message for builder pod interruption due to
+			util.LogError(BuilderPodDeletedError)
+			util.LogWarn("Frequent spot interruptions can lead to build failures.\n",
+				"Consider using a different node type or increasing the spot interruption tolerance.\n")
+			maxRetry := ciRequest.BuildxInterruptionMaxRetry - 1 // -1 because we already tried once
+			callback := func(retriesLeft int) error {
+				attempt := maxRetry - retriesLeft
+				reBuildLogs := []any{fmt.Sprintf("Docker re build started (Attempt %d)...", attempt)}
+				if envVars.ShowDockerBuildCmdInLogs {
+					reBuildLogs = []any{fmt.Sprintf("Starting re docker build (Attempt %d) : ", attempt), dockerBuild}
+				}
+				return impl.executeDockerReBuild(ciContext, k8sClient, useBuildxK8sDriver, dockerBuild,
+					deploymentNames, dockerBuildStageMetadata, reBuildLogs)
+			}
+			err = retryFunc.RetryWithOutLogging(callback, retryFunc.IsRetryableError, maxRetry, 1*time.Second)
+			if err != nil {
+				log.Println(util.DEVTRON, " error in executing docker re-build ", " err: ", err)
+				return "", err
+			}
 		}
 
 		if buildxExportCacheFunc != nil {
@@ -491,6 +611,19 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	}
 
 	return dest, nil
+}
+
+func (impl *DockerHelperImpl) runDockerBuildCommand(ciContext cicxt.CiContext, dockerBuild string) error {
+	errChan := make(chan error)
+	go func() {
+		errChan <- impl.executeCmdWithCtx(ciContext, dockerBuild)
+	}()
+	select {
+	case <-ciContext.Done():
+		return ciContext.Err()
+	case err := <-errChan:
+		return err
+	}
 }
 
 func getDockerBuildFlagsMap(dockerBuildConfig *DockerBuildConfig) map[string]string {
@@ -730,9 +863,18 @@ func (impl *DockerHelperImpl) handleLanguageVersion(ciContext cicxt.CiContext, p
 
 }
 
-func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, dockerBuild string) error {
-	dockerBuildCMD := impl.GetCommandToExecute(dockerBuild)
-	err := impl.cmdExecutor.RunCommand(ciContext, dockerBuildCMD)
+func (impl *DockerHelperImpl) executeCmd(ciContext cicxt.CiContext, cmd string) error {
+	exeCmd := impl.GetCommandToExecute(cmd)
+	err := impl.cmdExecutor.RunCommand(ciContext, exeCmd)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+func (impl *DockerHelperImpl) executeCmdWithCtx(ciContext cicxt.CiContext, cmd string) error {
+	exeCmd := impl.GetCommandToExecute(cmd)
+	err := impl.cmdExecutor.RunCommandWithCtx(ciContext, exeCmd)
 	if err != nil {
 		log.Println(err)
 	}
@@ -955,16 +1097,16 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) error {
-	if len(builderNodes) == 0 {
-		return errors.New("atleast one node is expected for builder with kubernetes driver")
-	}
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) ([]string, error) {
 	deploymentNames := make([]string, 0)
+	if len(builderNodes) == 0 {
+		return deploymentNames, errors.New("atleast one node is expected for builder with kubernetes driver")
+	}
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
 		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
 		if err != nil {
-			return err
+			return deploymentNames, err
 		}
 		deploymentNames = append(deploymentNames, deploymentName)
 		// first node is used as default node, we create builder with --use flag, then we append other nodes
@@ -979,13 +1121,11 @@ func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.C
 		builderExecCmd := impl.GetCommandToExecute(builderCmd)
 		err = impl.cmdExecutor.RunCommand(ciContext, builderExecCmd)
 		if err != nil {
-			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err, " error : ")
-			return err
+			fmt.Println(util.DEVTRON, " builderCmd : ", builderCmd, " err : ", err)
+			return deploymentNames, err
 		}
 	}
-
-	patchK8sDriverNodes(deploymentNames)
-	return nil
+	return deploymentNames, nil
 }
 
 func (impl *DockerHelperImpl) CleanBuildxK8sDriver(ciContext cicxt.CiContext, nodes []map[string]string) error {
@@ -1301,59 +1441,4 @@ func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRe
 		}
 	}
 	return dockerAuthConfig
-}
-
-func patchK8sDriverNodes(deploymentNames []string) {
-	for _, deploymentName := range deploymentNames {
-		if err := jsonPatchOwnerReferenceInDeployment(deploymentName); err != nil {
-			fmt.Println(util.DEVTRON, "failed to patch the buildkit deployment's owner reference, ", " deployment: ", deploymentName, " err: ", err)
-		} else {
-			fmt.Println(util.DEVTRON, "successfully patched the buildkit deployment's owner reference, ", " deployment: ", deploymentName)
-		}
-	}
-}
-
-func jsonPatchOwnerReferenceInDeployment(deploymentName string) error {
-
-	clientSet, err := GetK8sInClusterClientSet()
-	if err != nil {
-		fmt.Println(util.DEVTRON, "error in getting k8s clientset", "err", err)
-		return err
-	}
-
-	patchStr := fmt.Sprintf(`{"metadata":{"ownerReferences":[{"apiVersion":"v1","kind":"Pod","name":"%s","uid":"%s"}]}}`, utils.GetSelfK8sPodName(), utils.GetSelfK8sUID())
-
-	// Apply the patch directly
-	// the namespace is hardcoded to devtron-ci as our k8s driver is only supported for ci's running in devtron-ci namespace.
-	_, err = clientSet.Deployments("devtron-ci").Patch(
-		context.TODO(),
-		deploymentName,
-		types.StrategicMergePatchType,
-		[]byte(patchStr),
-		v1.PatchOptions{FieldManager: "patch"},
-	)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetK8sInClusterClientSet() (*appsV1.AppsV1Client, error) {
-	restConfig, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	k8sHttpClient, err := rest.HTTPClientFor(restConfig)
-	if err != nil {
-		fmt.Println("error occurred while overriding k8s client", "reason", err)
-		return nil, err
-	}
-
-	k8sClientSet, err := appsV1.NewForConfigAndClient(restConfig, k8sHttpClient)
-	if err != nil {
-		return nil, err
-	}
-
-	return k8sClientSet, nil
 }

@@ -31,7 +31,7 @@ type InformerFactory[T any] interface {
 		eventHandlers *bean.EventHandlers[T], options ...kubeinformers.SharedInformerOption) (kubeinformers.SharedInformerFactory, error)
 }
 
-func (impl *InformerClientImpl) GetSecretInformerFactory() InformerFactory[coreV1.Secret] {
+func (impl *InformerClientImpl) GetConfigMapInformerFactory() InformerFactory[coreV1.ConfigMap] {
 	return secret.NewInformerFactoryImpl(impl.logger, impl.k8sUtil)
 }
 

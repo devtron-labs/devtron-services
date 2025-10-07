@@ -3,8 +3,9 @@ ARG GIT_COMMIT=unknown
 ARG GIT_TAG=unknown
 ARG GIT_TREE_STATE=unknown
 
-FROM golang:1.19-alpine3.16 as builder
+FROM golang:1.24-alpine3.21 as builder
 
+# libc-dev to build openapi-gen
 RUN apk update && apk add --no-cache \
     git \
     make \
@@ -12,6 +13,7 @@ RUN apk update && apk add --no-cache \
     wget \
     curl \
     gcc \
+    libc-dev \
     bash \
     mailcap
 
@@ -24,7 +26,7 @@ COPY . .
 
 ####################################################################################################
 
-FROM node:16-alpine as argo-ui
+FROM node:20-alpine as argo-ui
 
 RUN apk update && apk add --no-cache git
 
@@ -71,6 +73,8 @@ ARG GIT_TREE_STATE
 
 RUN mkdir -p ui/dist
 COPY --from=argo-ui ui/dist/app ui/dist/app
+# update timestamp so that `make` doesn't try to rebuild this -- it was already built in the previous stage
+RUN touch ui/dist/app/index.html
 
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build STATIC_FILES=true make dist/argo GIT_COMMIT=${GIT_COMMIT} GIT_TAG=${GIT_TAG} GIT_TREE_STATE=${GIT_TREE_STATE}
 
@@ -105,6 +109,8 @@ USER 8737
 
 WORKDIR /home/argo
 
+# Temporary workaround for https://github.com/grpc/grpc-go/issues/434
+ENV GRPC_ENFORCE_ALPN_ENABLED=false
 COPY hack/ssh_known_hosts /etc/ssh/
 COPY hack/nsswitch.conf /etc/
 COPY --from=argocli-build /go/src/github.com/argoproj/argo-workflows/dist/argo /bin/
