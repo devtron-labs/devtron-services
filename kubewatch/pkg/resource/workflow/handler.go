@@ -73,7 +73,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *bean.ClusterLabels, n
 		impl.logger.Errorw("error in getting dynamic interface for resource", "err", err)
 		return nil, err
 	}
-	workflowInformer := util.NewWorkflowInformer(dynamicClient, namespace, 0, nil, cache.Indexers{})
+	workflowInformer := util.NewWorkflowInformer(dynamicClient, namespace, 0, nil, nil, cache.Indexers{})
 	_, err = workflowInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {},
 		UpdateFunc: func(oldWf, newWf interface{}) {

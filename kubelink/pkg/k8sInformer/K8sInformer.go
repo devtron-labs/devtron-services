@@ -192,21 +192,21 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 	if clusterInfo.ClusterName == commonBean.DEFAULT_CLUSTER {
 		impl.logger.Debugw("starting informer, reading new cluster request for default cluster")
 		labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			//kubectl  get  secret --field-selector type==cluster.request/modify --all-namespaces
-			opts.FieldSelector = "type==cluster.request/modify"
+			opts.LabelSelector = informerBean.ClusterModifyEventCmLabelKeyValue
 		})
 		informerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(clusterClient, 15*time.Minute, labelOptions)
 		stopper := make(chan struct{})
-		secretInformer := informerFactory.Core().V1().Secrets()
-		_, err = secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		cmInformer := informerFactory.Core().V1().ConfigMaps()
+		_, err = cmInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				startTime := time.Now()
-				impl.logger.Debugw("CLUSTER_ADD_INFORMER: cluster secret add event received", "obj", obj, "time", time.Now())
-				if secretObject, ok := obj.(*coreV1.Secret); ok {
-					if secretObject.Type != informerBean.ClusterModifyEventSecretType {
+				impl.logger.Debugw("CLUSTER_ADD_INFORMER: cluster cm add event received", "obj", obj, "time", time.Now())
+				if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
+					if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+						impl.logger.Infow("label value not found in cm, hence ignoring cluster add event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 						return
 					}
-					data := secretObject.Data
+					data := cmObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
 					var idInt int
@@ -234,12 +234,13 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				startTime := time.Now()
-				impl.logger.Debugw("CLUSTER_UPDATE_INFORMER: cluster secret update event received", "oldObj", oldObj, "newObj", newObj, "time", time.Now())
-				if secretObject, ok := newObj.(*coreV1.Secret); ok {
-					if secretObject.Type != informerBean.ClusterModifyEventSecretType {
+				impl.logger.Debugw("CLUSTER_UPDATE_INFORMER: cluster cm update event received", "oldObj", oldObj, "newObj", newObj, "time", time.Now())
+				if cmObject, ok := newObj.(*coreV1.ConfigMap); ok {
+					if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+						impl.logger.Infow("label value not found in cm, hence ignoring cluster update event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 						return
 					}
-					data := secretObject.Data
+					data := cmObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
 					var idInt int
@@ -264,12 +265,13 @@ func (impl *K8sInformerImpl) startInformer(clusterInfo bean.ClusterInfo) error {
 			},
 			DeleteFunc: func(obj interface{}) {
 				startTime := time.Now()
-				impl.logger.Debugw("CLUSTER_DELETE_INFORMER: secret delete event received", "obj", obj, "time", time.Now())
-				if secretObject, ok := obj.(*coreV1.Secret); ok {
-					if secretObject.Type != informerBean.ClusterModifyEventSecretType {
+				impl.logger.Debugw("CLUSTER_DELETE_INFORMER: cm delete event received", "obj", obj, "time", time.Now())
+				if cmObject, ok := obj.(*coreV1.ConfigMap); ok {
+					if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+						impl.logger.Infow("label value not found in cm, hence ignoring cluster delete event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 						return
 					}
-					data := secretObject.Data
+					data := cmObject.Data
 					action := data["action"]
 					id := string(data["cluster_id"])
 					idInt, err := strconv.Atoi(id)

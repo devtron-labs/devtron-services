@@ -34,5 +34,6 @@
  | PROJECT_ID | string |projects/devtron-project-id |  |  | false |
  | SCANNER_TYPE | string | |  |  | false |
  | SERVER_HTTP_PORT | int |8080 |  |  | false |
+ | SERVER_SHUTDOWN_TIMEOUT |  |5m |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |
 

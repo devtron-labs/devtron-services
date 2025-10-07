@@ -60,7 +60,8 @@ func (impl *InformerImpl) getStopChannel(informerFactory kubeinformers.SharedInf
 func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace string,
 	nodeStatus v1alpha1.NodeStatus, config *rest.Config) (v1alpha1.NodeStatus, bool) {
 
-	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == bean.ExitCode143Error || nodeStatus.Message == bean.NodeNoLongerExists) {
+	if (nodeStatus.Phase == v1alpha1.NodeFailed || nodeStatus.Phase == v1alpha1.NodeError) && (nodeStatus.Message == bean.ExitCode143Error || nodeStatus.Message == bean.NodeNoLongerExists ||
+		nodeStatus.Message == bean.NodeForceDeleted) {
 		clusterClient, k8sErr := impl.k8sUtil.GetK8sClientForConfig(config)
 		if k8sErr != nil {
 			return nodeStatus, false
@@ -84,20 +85,40 @@ func (impl *InformerImpl) checkIfPodDeletedAndUpdateMessage(podName, namespace s
 
 func (impl *InformerImpl) assessNodeStatus(eventType string, pod *coreV1.Pod) v1alpha1.NodeStatus {
 	nodeStatus := v1alpha1.NodeStatus{}
-	switch pod.Status.Phase {
-	case coreV1.PodPending:
-		nodeStatus.Phase = v1alpha1.NodePending
-		nodeStatus.Message = getPendingReason(pod)
-	case coreV1.PodSucceeded:
-		nodeStatus.Phase = v1alpha1.NodeSucceeded
-	case coreV1.PodFailed:
-		nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(eventType, pod)
-		impl.logger.Infof("Pod %s failed: %s", pod.Name, nodeStatus.Message)
-	case coreV1.PodRunning:
-		nodeStatus.Phase = v1alpha1.NodeRunning
-	default:
-		nodeStatus.Phase = v1alpha1.NodeError
-		nodeStatus.Message = fmt.Sprintf("Unexpected pod phase for %s: %s", pod.ObjectMeta.Name, pod.Status.Phase)
+
+	/*
+		Special handling for delete events with force delete scenarios, Kubernetes does NOT guarantee that the pod status
+		will be updated to "Failed" during force delete. Sometimes the pod phase can be "Running" even after force delete.
+		Force deletion immediately removes the Pod object from the Kubernetes API server without waiting for
+		the kubelet on the node to confirm termination.
+
+		If the application within the pod on the node is still running and hasn't received a termination signal or processed
+		it yet, the container processes might continue to exist on the node even after the Pod object is gone from the API
+		server. This can lead to a state where the pod effectively exists on the node, but Kubernetes no longer tracks it,
+		and it might appear as Running if you were to inspect the node's process list.
+	*/
+	if eventType == bean.DeleteEvent && isPodForceDeletedWhileRunning(pod) {
+		// Force delete detected - treat as failed regardless of current phase
+		impl.logger.Infow("Force delete detected for pod", "podName", pod.Name, "currentPhase", pod.Status.Phase, "deletionGracePeriod", *pod.DeletionGracePeriodSeconds)
+		nodeStatus.Phase = v1alpha1.NodeFailed
+		nodeStatus.Message = bean.NodeForceDeleted
+		return nodeStatus
+	} else {
+		switch pod.Status.Phase {
+		case coreV1.PodPending:
+			nodeStatus.Phase = v1alpha1.NodePending
+			nodeStatus.Message = getPendingReason(pod)
+		case coreV1.PodSucceeded:
+			nodeStatus.Phase = v1alpha1.NodeSucceeded
+		case coreV1.PodFailed:
+			nodeStatus.Phase, nodeStatus.Message = impl.inferFailedReason(eventType, pod)
+			impl.logger.Infof("Pod %s failed: %s", pod.Name, nodeStatus.Message)
+		case coreV1.PodRunning:
+			nodeStatus.Phase = v1alpha1.NodeRunning
+		default:
+			nodeStatus.Phase = v1alpha1.NodeError
+			nodeStatus.Message = fmt.Sprintf("Unexpected pod phase for %s: %s", pod.ObjectMeta.Name, pod.Status.Phase)
+		}
 	}
 
 	// only update Pod IP for daemoned nodes to reduce number of updates
@@ -160,6 +181,7 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 	ctrs = append(pod.Status.InitContainerStatuses, ctrs...)
 
 	for _, ctr := range ctrs {
+		// In our case, we are not using init/wait containers. So ideally, there should be only main container.
 
 		// Virtual Kubelet environment will not set the terminate on waiting container
 		// https://github.com/argoproj/argo-workflows/issues/3879
@@ -182,10 +204,10 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 			if eventType == bean.DeleteEvent {
 				// we should mark this case as an error
 				if ctr.Name == common.MainContainerName {
-					return v1alpha1.NodeFailed, getFailedReasonFromPodConditions(pod.Status.Conditions)
+					return v1alpha1.NodeFailed, impl.getFailedReasonFromPodConditions(pod.Status.Conditions)
 				}
 			}
-			impl.logger.Warnf("Pod %s phase was Failed but %s did not have terminated state", pod.Name, ctr.Name)
+			impl.logger.Warnw("Pod phase was Failed but container did not have terminated state", "podName", pod.Name, "containerName", ctr.Name, "status", pod.Status)
 			continue
 		}
 
@@ -227,15 +249,34 @@ func (impl *InformerImpl) inferFailedReason(eventType string, pod *coreV1.Pod) (
 	// it was marking it successful, doing this as it will be skipped at upper level, and delete event will handle it.
 	// ticket - you can find debug logs/details here - https://github.com/devtron-labs/sprint-tasks/issues/2092
 	impl.logger.Infow("Pod phase was Failed but no container had terminated state, marking it as failed now", "podName", pod.Name, "status", pod.Status)
+
+	// Here we're intentionally returning empty string as message,
+	// as we don't want this event to be intercepted as actual update event.
+	// This case will be handled by the delete event.
 	return v1alpha1.NodeFailed, ""
 }
 
-func getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
+func (impl *InformerImpl) getFailedReasonFromPodConditions(conditions []coreV1.PodCondition) string {
 	if len(conditions) == 0 {
-		return "failed"
+		// This should never happen.
+		impl.logger.Warnw("Pod phase was Failed but no conditions found")
+		// If we get here, that means the pod is deleted after the container is started.
+		// The Only possible reason is NodeNoLongerExists.
+		return bean.NodeNoLongerExists
 	}
-
-	return conditions[0].Message
+	// Sort the conditions by last transition time, newest first.
+	// This is to ensure that we get the latest reason for the failure.
+	sort.Slice(conditions, func(i, j int) bool {
+		return conditions[i].LastTransitionTime.Time.After(conditions[j].LastTransitionTime.Time)
+	})
+	// If the latest condition has a message, use that.
+	if conditions[0].Message != "" {
+		return conditions[0].Message
+	}
+	// If we get here, that means the pod is deleted after the container is started.
+	// The Only possible reason is NodeNoLongerExists.
+	impl.logger.Warnw("Pod phase was Failed but the lastest condition has no message", "conditions", conditions)
+	return bean.NodeNoLongerExists
 }
 
 // foundAnyUpdateInPodStatus return true if any of the pod status fields have changed or if the pod is new

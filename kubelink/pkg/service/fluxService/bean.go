@@ -43,11 +43,13 @@ var GvkForHelmreleaseFluxApp = schema.GroupVersionKind{
 }
 
 type FluxApplicationDto struct {
-	Name                  string             `json:"appName"`
-	HealthStatus          string             `json:"appStatus"`
-	SyncStatus            string             `json:"syncStatus"`
-	EnvironmentDetails    *EnvironmentDetail `json:"environmentDetail"`
-	FluxAppDeploymentType FluxAppType        `json:"fluxAppDeploymentType"`
+	Name                   string             `json:"appName"`
+	HelmReleaseNamespace   string             `json:"helmReleaseNamespace"`
+	HealthStatus           string             `json:"appStatus"`
+	SyncStatus             string             `json:"syncStatus"`
+	EnvironmentDetails     *EnvironmentDetail `json:"environmentDetail"`
+	FluxAppDeploymentType  FluxAppType        `json:"fluxAppDeploymentType"`
+	LastObservedGeneration string             `json:"lastObservedGeneration"`
 }
 type EnvironmentDetail struct {
 	ClusterId   int    `json:"clusterId"`

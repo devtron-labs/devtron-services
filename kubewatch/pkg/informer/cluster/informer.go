@@ -18,6 +18,7 @@ package cluster
 
 import (
 	"errors"
+	"github.com/devtron-labs/common-lib/informer"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	repository "github.com/devtron-labs/kubewatch/pkg/cluster"
 	"github.com/devtron-labs/kubewatch/pkg/config"
@@ -83,7 +84,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start default cluster informer", "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start default cluster informer", "time", time.Since(startTime))
 	}()
 	clusterInfo, err := impl.clusterRepository.FindByName(commonBean.DEFAULT_CLUSTER)
 	if err != nil && !errors.Is(err, pg.ErrNoRows) {
@@ -95,50 +96,51 @@ func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	}
 	impl.logger.Debug("starting informer, reading new cluster request for default cluster", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
 	labelOptions := kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-		opts.FieldSelector = informerBean.ClusterModifyEventFieldSelector
+		opts.LabelSelector = informer.ClusterModifyEventCmLabelKeyValue
 	})
-	// addFunc is called when a new secret is created
-	addFunc := func(secretObject *coreV1.Secret) {
-		if err := impl.handleClusterChangeEvent(secretObject); err != nil {
-			impl.logger.Errorw("error in handling cluster add event", "err", err, "secretObject", secretObject)
+	// addFunc is called when a new cm is created
+	addFunc := func(cmObject *coreV1.ConfigMap) {
+		if err := impl.handleClusterChangeEvent(cmObject); err != nil {
+			impl.logger.Errorw("error in handling cluster add event", "cmObject", cmObject, "err", err)
 		}
 	}
-	// updateFunc is called when an existing secret is updated
-	updateFunc := func(oldSecretObject, newSecretObject *coreV1.Secret) {
-		if err := impl.handleClusterChangeEvent(newSecretObject); err != nil {
-			impl.logger.Errorw("error in handling cluster update event", "err", err, "newSecretObject", newSecretObject)
+	// updateFunc is called when an existing cm is updated
+	updateFunc := func(oldCmObject, newCmObject *coreV1.ConfigMap) {
+		if err := impl.handleClusterChangeEvent(newCmObject); err != nil {
+			impl.logger.Errorw("error in handling cluster update event", "newCmObject", newCmObject, "err", err)
 		}
 	}
-	// deleteFunc is called when an existing secret is deleted
-	deleteFunc := func(secretObject *coreV1.Secret) {
-		if err := impl.handleClusterDeleteEvent(secretObject); err != nil {
-			impl.logger.Errorw("error in handling cluster delete event", "err", err, "secretObject", secretObject)
+	// deleteFunc is called when an existing cm is deleted
+	deleteFunc := func(cmObject *coreV1.ConfigMap) {
+		if err := impl.handleClusterDeleteEvent(cmObject); err != nil {
+			impl.logger.Errorw("error in handling cluster delete event", "cmObject", cmObject, "err", err)
 		}
 	}
-	informerFactory := impl.informerClient.GetSecretInformerFactory()
+	informerFactory := impl.informerClient.GetConfigMapInformerFactory()
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
-	eventHandler := resourceBean.NewEventHandlers[coreV1.Secret]().
+	eventHandler := resourceBean.NewEventHandlers[coreV1.ConfigMap]().
 		AddFuncHandler(addFunc).
 		UpdateFuncHandler(updateFunc).
 		DeleteFuncHandler(deleteFunc)
+
 	clusterLabels := informerBean.NewClusterLabels(clusterInfo.ClusterName, clusterInfo.Id)
-	secretFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
+	cmFactory, err := informerFactory.GetSharedInformerFactory(restConfig, clusterLabels, eventHandler, labelOptions)
 	if err != nil {
-		impl.logger.Errorw("error in registering default cluster secret informer", "err", err)
-		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_SECRET_INFORMER)
+		impl.logger.Errorw("error in registering default cluster cm informer", "err", err)
+		middleware.IncUnregisteredInformers(clusterLabels, middleware.DEFAULT_CLUSTER_CM_INFORMER)
 		return err
 	}
-	stopChannel, err := impl.getStopChannel(secretFactory, clusterLabels)
+	stopChannel, err := impl.getStopChannel(cmFactory, clusterLabels)
 	if err != nil {
 		return err
 	}
-	secretFactory.Start(stopChannel)
+	cmFactory.Start(stopChannel)
 	// waiting for cache sync
-	synced := secretFactory.WaitForCacheSync(stopChannel)
+	synced := cmFactory.WaitForCacheSync(stopChannel)
 	for v, ok := range synced {
 		if !ok {
-			impl.logger.Errorw("failed to sync secret informer for default cluster", "value", v)
-			return errors.New("failed to sync secret informer for default cluster")
+			impl.logger.Errorw("failed to sync cm informer for default cluster", "value", v)
+			return errors.New("failed to sync cm informer for default cluster")
 		}
 	}
 	impl.logger.Infow("informer started for cluster watcher", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)

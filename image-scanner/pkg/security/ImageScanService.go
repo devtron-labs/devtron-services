@@ -965,6 +965,7 @@ func (impl *ImageScanServiceImpl) HandleProgressingScans() {
 		impl.Logger.Errorw("error in getting all scans by running state", "err", err)
 		return
 	}
+	impl.Logger.Infow("no of scans to be processed on start up", "count", len(scanHistories))
 	if len(scanHistories) > 0 {
 		var executionHistoryDirPath string
 		// Create Folder for output data for execution history only if any pending scans are there due to pod died

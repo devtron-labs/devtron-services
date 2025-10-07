@@ -82,6 +82,15 @@ func isResourceNotFoundErr(err error) bool {
 	return false
 }
 
+// isPodForceDeletedWhileRunning checks if a pod was force deleted based on deletion metadata
+func isPodForceDeletedWhileRunning(pod *coreV1.Pod) bool {
+	//For reference all pod phases that exists :- https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
+	if (pod.Status.Phase == coreV1.PodRunning || pod.Status.Phase == coreV1.PodPending) && pod.DeletionTimestamp != nil && pod.DeletionGracePeriodSeconds != nil && *pod.DeletionGracePeriodSeconds == 0 {
+		return true
+	}
+	return false
+}
+
 func getWorkflowStatus(podObj *coreV1.Pod, nodeStatus v1alpha1.NodeStatus, templateName string) *informerBean.CiCdStatus {
 	workflowStatus := &informerBean.CiCdStatus{
 		WorkflowStatus: &v1alpha1.WorkflowStatus{},

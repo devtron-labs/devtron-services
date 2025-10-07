@@ -19,6 +19,7 @@ package tests
 import (
 	"compress/gzip"
 	"context"
+	"github.com/devtron-labs/common-lib/k8sResource"
 	"github.com/devtron-labs/common-lib/utils"
 	k8sUtils "github.com/devtron-labs/common-lib/utils/k8s"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
@@ -368,7 +369,7 @@ func GetDbConnAndLoggerService(t *testing.T) (*zap.SugaredLogger, *pg.DB) {
 }
 
 func getHelmAppServiceDependencies(t *testing.T) (*zap.SugaredLogger, *k8sInformer2.K8sInformerImpl, *service2.HelmReleaseConfig,
-	*k8sUtils.K8sUtil, *repository.ClusterRepositoryImpl, *service2.K8sServiceImpl) {
+	*k8sUtils.K8sUtil, *repository.ClusterRepositoryImpl, *k8sResource.K8sServiceImpl) {
 	logger, dbConnection := GetDbConnAndLoggerService(t)
 	helmReleaseConfig := &service2.HelmReleaseConfig{
 		EnableHelmReleaseCache:    false,
@@ -380,6 +381,6 @@ func getHelmAppServiceDependencies(t *testing.T) (*zap.SugaredLogger, *k8sInform
 	clusterRepository := repository.NewClusterRepositoryImpl(dbConnection, logger)
 	k8sUtil := k8sUtils.NewK8sUtil(logger, runTimeConfig)
 	k8sInformer := k8sInformer2.Newk8sInformerImpl(logger, clusterRepository, helmReleaseConfig2, k8sUtil)
-	k8sServiceImpl := service2.NewK8sServiceImpl(logger)
+	k8sServiceImpl := k8sResource.NewK8sServiceImpl(logger)
 	return logger, k8sInformer, helmReleaseConfig, k8sUtil, clusterRepository, k8sServiceImpl
 }

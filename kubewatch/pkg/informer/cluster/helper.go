@@ -97,7 +97,7 @@ func (impl *InformerImpl) stopInformersForCluster(clusterId int) error {
 func (impl *InformerImpl) startInformerForCluster(clusterInfo *repository.Cluster) error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start informers for cluster", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start informers for cluster", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
 	}()
 	if len(clusterInfo.ErrorInConnecting) > 0 {
 		impl.logger.Debugw("cluster is not reachable", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
@@ -113,13 +113,14 @@ func (impl *InformerImpl) startInformerForCluster(clusterInfo *repository.Cluste
 	return nil
 }
 
-func (impl *InformerImpl) handleClusterChangeEvent(secretObject *coreV1.Secret) error {
-	if secretObject.Type != informerBean.ClusterModifyEventSecretType {
+func (impl *InformerImpl) handleClusterChangeEvent(cmObject *coreV1.ConfigMap) error {
+	if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+		impl.logger.Infow("label value not found in cm, hence ignoring cluster change event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 		return nil
 	}
-	data := secretObject.Data
-	action := data[informerBean.SecretFieldAction]
-	id := string(data[informerBean.SecretFieldClusterId])
+	data := cmObject.Data
+	action := data[informerBean.CmFieldAction]
+	id := string(data[informerBean.CmFieldClusterId])
 	clusterId, convErr := strconv.Atoi(id)
 	if convErr != nil {
 		impl.logger.Errorw("error in converting cluster id to int", "clusterId", id, "err", convErr)
@@ -139,13 +140,14 @@ func (impl *InformerImpl) handleClusterChangeEvent(secretObject *coreV1.Secret) 
 	return nil
 }
 
-func (impl *InformerImpl) handleClusterDeleteEvent(secretObject *coreV1.Secret) error {
-	if secretObject.Type != informerBean.ClusterModifyEventSecretType {
+func (impl *InformerImpl) handleClusterDeleteEvent(cmObject *coreV1.ConfigMap) error {
+	if labelValue, exists := cmObject.Labels[informerBean.ClusterModifyEventSecretTypeKey]; !exists || labelValue != informerBean.ClusterModifyEventCmLabelValue {
+		impl.logger.Infow("label value not found in cm, hence ignoring cluster delete event", "labelKey", informerBean.ClusterModifyEventSecretTypeKey, "labelValue", labelValue)
 		return nil
 	}
-	data := secretObject.Data
-	action := data[informerBean.SecretFieldAction]
-	id := string(data[informerBean.SecretFieldClusterId])
+	data := cmObject.Data
+	action := data[informerBean.CmFieldAction]
+	id := string(data[informerBean.CmFieldClusterId])
 	clusterId, err := strconv.Atoi(id)
 	if err != nil {
 		return err
@@ -203,7 +205,7 @@ func (impl *InformerImpl) syncMultiClusterInformer(clusterId int) error {
 func (impl *InformerImpl) reloadInformerForCluster(clusterId int) error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to reload informer for cluster", "clusterId", clusterId, "time", time.Since(startTime))
+		impl.logger.Infow("time taken to reload informer for cluster", "clusterId", clusterId, "time", time.Since(startTime))
 	}()
 
 	clusterInfo, err := impl.clusterRepository.FindById(clusterId)

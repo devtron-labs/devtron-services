@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/devtron-labs/common-lib/helmLib/registry"
+	k8sResource "github.com/devtron-labs/common-lib/k8sResource"
 	"github.com/devtron-labs/common-lib/utils/k8s/commonBean"
 	"github.com/devtron-labs/common-lib/utils/k8sObjectsUtil"
 	"github.com/devtron-labs/kubelink/converter"
@@ -113,7 +114,7 @@ type HelmAppService interface {
 
 type HelmAppServiceImpl struct {
 	logger              *zap.SugaredLogger
-	k8sService          commonHelmService.K8sService
+	k8sService          k8sResource.K8sService
 	randSource          rand.Source
 	K8sInformer         k8sInformer.K8sInformer
 	helmReleaseConfig   *globalConfig.HelmReleaseConfig
@@ -126,7 +127,7 @@ type HelmAppServiceImpl struct {
 	resourceTreeService commonHelmService.ResourceTreeService
 }
 
-func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService commonHelmService.K8sService,
+func NewHelmAppServiceImpl(logger *zap.SugaredLogger, k8sService k8sResource.K8sService,
 	k8sInformer k8sInformer.K8sInformer, helmReleaseConfig *globalConfig.HelmReleaseConfig,
 	k8sUtil k8sUtils.K8sService, converter converter.ClusterBeanConverter,
 	clusterRepository repository.ClusterRepository, common commonHelmService.CommonHelmService, registrySettings registry.SettingsFactory,
@@ -412,7 +413,7 @@ func (impl *HelmAppServiceImpl) ScaleObjects(ctx context.Context, clusterConfig 
 		// STEP-1 ends
 
 		// initialise patch request bean
-		patchRequest := &bean.KubernetesResourcePatchRequest{
+		patchRequest := &k8sResource.PatchRequest{
 			Name:      object.Name,
 			Namespace: object.Namespace,
 			Gvk:       gvk,
