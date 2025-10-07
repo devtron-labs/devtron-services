@@ -36,6 +36,9 @@ func init() {
 }
 
 func encrypt(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", nil
+	}
 	block, err := aes.NewCipher(encryptionKey)
 	if err != nil {
 		return "", err
