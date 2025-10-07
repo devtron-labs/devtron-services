@@ -20,6 +20,7 @@
 package main
 
 import (
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/git-sensor/app"
 	"github.com/devtron-labs/git-sensor/pkg/git"
 	"github.com/devtron-labs/git-sensor/wireset"
@@ -29,6 +30,7 @@ import (
 func InitializeApp() (*app.App, error) {
 
 	wire.Build(
+		securestore.SecurestoreWireSetNonOrchDbServices,
 		wireset.CommonWireSet,
 		git.NewRepositoryManagerImpl,
 		wire.Bind(new(git.RepositoryManager), new(*git.RepositoryManagerImpl)),

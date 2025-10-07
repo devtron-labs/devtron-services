@@ -24,6 +24,7 @@ import (
 	constants "github.com/devtron-labs/common-lib/constants"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/git-sensor/api"
 	"github.com/devtron-labs/git-sensor/bean"
 	"github.com/devtron-labs/git-sensor/internals/middleware"
@@ -56,9 +57,11 @@ type App struct {
 	pubSubClient       *pubsub.PubSubClientServiceImpl
 	GrpcControllerImpl *api.GrpcHandlerImpl
 	StartupConfig      *bean.StartupConfig
+	encryptionService  securestore.EncryptionKeyService
 }
 
-func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWatcherImpl, db *pg.DB, pubSubClient *pubsub.PubSubClientServiceImpl, GrpcControllerImpl *api.GrpcHandlerImpl) *App {
+func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWatcherImpl, db *pg.DB, pubSubClient *pubsub.PubSubClientServiceImpl, GrpcControllerImpl *api.GrpcHandlerImpl,
+	encryptionService securestore.EncryptionKeyService) *App {
 	return &App{
 		MuxRouter:          MuxRouter,
 		Logger:             Logger,
@@ -66,6 +69,7 @@ func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWa
 		db:                 db,
 		pubSubClient:       pubSubClient,
 		GrpcControllerImpl: GrpcControllerImpl,
+		encryptionService:  encryptionService,
 	}
 }
 
