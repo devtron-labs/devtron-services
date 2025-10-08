@@ -25,7 +25,7 @@ import (
 type TimeRangeRequest struct {
 	From       *time.Time   `json:"from" schema:"from"`
 	To         *time.Time   `json:"to" schema:"to"`
-	TimeWindow *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty,oneof=today yesterday week month quarter lastWeek lastMonth lastQuarter last7Days last30Days last90Days"`
+	TimeWindow *TimeWindows `json:"timeWindow" schema:"timeWindow" validate:"omitempty,oneof=today yesterday week month quarter lastWeek lastMonth lastQuarter last24Hours last7Days last30Days last90Days"`
 }
 
 func NewTimeRangeRequest(from *time.Time, to *time.Time) *TimeRangeRequest {
@@ -59,6 +59,7 @@ const (
 	LastMonth   TimeWindows = "lastMonth"
 	Year        TimeWindows = "year"
 	LastQuarter TimeWindows = "lastQuarter"
+	Last24Hours TimeWindows = "last24Hours"
 	Last7Days   TimeWindows = "last7Days"
 	Last30Days  TimeWindows = "last30Days"
 	Last90Days  TimeWindows = "last90Days"
@@ -142,6 +143,9 @@ func (timeRange *TimeRangeRequest) ParseAndValidateTimeRange() (*TimeRangeReques
 			return NewTimeRangeRequest(&prevQuarterStart, &prevQuarterEnd), nil
 		case Year:
 			start := time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+			return NewTimeRangeRequest(&start, &now), nil
+		case Last24Hours:
+			start := now.Add(-24 * time.Hour)
 			return NewTimeRangeRequest(&start, &now), nil
 		case Last7Days:
 			start := now.AddDate(0, 0, -7)
