@@ -66,9 +66,9 @@ func (impl *EncryptionKeyServiceImpl) CreateAndStoreEncryptionKey() error {
 		impl.logger.Errorw("error checking for existing encryption key", "err", err)
 		return err
 	}
-
+	var encryptionKeyEncoded string
 	if encryptionKeyModel != nil && encryptionKeyModel.Id > 0 && len(encryptionKeyModel.Value) > 0 {
-		encryptionKey = []byte(encryptionKeyModel.Value)
+		encryptionKeyEncoded = encryptionKeyModel.Value
 		impl.logger.Warnw("encryption key already exists", "keyId", encryptionKeyModel.Id)
 	} else {
 		// Generate new encryption key
@@ -82,8 +82,13 @@ func (impl *EncryptionKeyServiceImpl) CreateAndStoreEncryptionKey() error {
 			impl.logger.Errorw("error storing encryption key", "err", err)
 			return fmt.Errorf("failed to store encryption key: %w", err)
 		}
-		encryptionKey = []byte(encryptionKeyNew)
+		encryptionKeyEncoded = encryptionKeyNew
 		impl.logger.Infow("Successfully created and stored encryption key")
+	}
+
+	encryptionKey, err = hex.DecodeString(encryptionKeyEncoded)
+	if err != nil || len(encryptionKey) != 32 {
+		return fmt.Errorf("encryptionKey is incorrect : %v", err)
 	}
 	return nil
 }
