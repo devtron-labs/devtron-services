@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/devtron-labs/chart-sync/internals"
 	"github.com/devtron-labs/chart-sync/pkg"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/go-pg/pg"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
@@ -22,12 +23,17 @@ func NewApp(Logger *zap.SugaredLogger,
 	db *pg.DB,
 	syncService pkg.SyncService,
 	configuration *internals.Configuration) *App {
+	err := securestore.SetEncryptionKey()
+	if err != nil {
+		Logger.Errorw("error in setting encryption key", "err", err)
+	}
 	return &App{
 		Logger:        Logger,
 		db:            db,
 		syncService:   syncService,
 		configuration: configuration,
 	}
+
 }
 
 func (app *App) Start() {

@@ -60,3 +60,11 @@
  | CHILD_OBJECT_LISTING_PAGE_SIZE | int64 |1000 | Resource tree child object listing page size | 100 | false |
  | PARENT_CHILD_GVK_MAPPING | string | | Parent child GVK mapping for resource tree |  | false |
 
+
+## POSTGRES Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CASBIN_DATABASE | string |casbin |  |  | false |
+ | PG_READ_TIMEOUT | int64 |30 |  |  | false |
+ | PG_WRITE_TIMEOUT | int64 |30 |  |  | false |
+
