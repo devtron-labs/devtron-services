@@ -5,8 +5,16 @@ import (
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/go-pg/pg"
-	"go.uber.org/zap"
+	"log"
 )
+
+func NewAttributesRepositoryImplForDatabase(databaseName string) (*AttributesRepositoryImpl, error) {
+	dbConn, err := newDbConnection(databaseName)
+	if err != nil {
+		return nil, err
+	}
+	return NewAttributesRepositoryImpl(dbConn), nil
+}
 
 type config struct {
 	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
@@ -18,7 +26,7 @@ type config struct {
 	bean.PgQueryMonitoringConfig
 }
 
-func getOrchestratorConfig() (*config, error) {
+func getDbConfig(databaseName string) (*config, error) {
 	cfg := &config{}
 	err := env.Parse(cfg)
 	if err != nil {
@@ -29,11 +37,12 @@ func getOrchestratorConfig() (*config, error) {
 		return cfg, err
 	}
 	cfg.PgQueryMonitoringConfig = monitoringCfg
+	cfg.Database = databaseName //overriding database
 	return cfg, err
 }
 
-func newOrchestratorDbConnection(logger *zap.SugaredLogger) (*pg.DB, error) {
-	cfg, err := getOrchestratorConfig()
+func newDbConnection(databaseName string) (*pg.DB, error) {
+	cfg, err := getDbConfig(databaseName)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +50,7 @@ func newOrchestratorDbConnection(logger *zap.SugaredLogger) (*pg.DB, error) {
 		Addr:            cfg.Addr + ":" + cfg.Port,
 		User:            cfg.User,
 		Password:        cfg.Password,
-		Database:        "orchestrator", //hardcoding orchestrator
+		Database:        cfg.Database,
 		ApplicationName: cfg.ApplicationName,
 	}
 	dbConnection := pg.Connect(&options)
@@ -50,22 +59,14 @@ func newOrchestratorDbConnection(logger *zap.SugaredLogger) (*pg.DB, error) {
 	_, err = dbConnection.QueryOne(&test, `SELECT 1`)
 
 	if err != nil {
-		logger.Errorw("error in connecting orchestrator db ", "err", err)
+		log.Println("error in connecting orchestrator db ", "err", err)
 		return nil, err
 	} else {
-		logger.Infow("connected with orchestrator db")
+		log.Println("connected with orchestrator db")
 	}
 	//--------------
 	if cfg.LogSlowQuery {
 		dbConnection.OnQueryProcessed(utils.GetPGPostQueryProcessor(cfg.PgQueryMonitoringConfig))
 	}
 	return dbConnection, err
-}
-
-func NewAttributesRepositoryImplForOrchestrator(logger *zap.SugaredLogger) (*AttributesRepositoryImpl, error) {
-	dbConn, err := newOrchestratorDbConnection(logger)
-	if err != nil {
-		return nil, err
-	}
-	return NewAttributesRepositoryImpl(dbConn), nil
 }
