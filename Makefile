@@ -1,5 +1,5 @@
 
-TARGET_BRANCH?=pwd-db-encryption
+TARGET_BRANCH?=main
 # TARGET_BRANCH=feature-branch make dep-update-oss
 
 all: dep-update-oss build
