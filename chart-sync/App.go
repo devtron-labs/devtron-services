@@ -13,25 +13,27 @@ import (
 )
 
 type App struct {
-	Logger            *zap.SugaredLogger
-	db                *pg.DB
-	syncService       pkg.SyncService
-	configuration     *internals.Configuration
-	encryptionService securestore.EncryptionKeyService
+	Logger        *zap.SugaredLogger
+	db            *pg.DB
+	syncService   pkg.SyncService
+	configuration *internals.Configuration
 }
 
 func NewApp(Logger *zap.SugaredLogger,
 	db *pg.DB,
 	syncService pkg.SyncService,
-	configuration *internals.Configuration,
-	encryptionService securestore.EncryptionKeyService) *App {
-	return &App{
-		Logger:            Logger,
-		db:                db,
-		syncService:       syncService,
-		configuration:     configuration,
-		encryptionService: encryptionService,
+	configuration *internals.Configuration) *App {
+	err := securestore.SetEncryptionKey()
+	if err != nil {
+		Logger.Errorw("error in setting encryption key", "err", err)
 	}
+	return &App{
+		Logger:        Logger,
+		db:            db,
+		syncService:   syncService,
+		configuration: configuration,
+	}
+
 }
 
 func (app *App) Start() {

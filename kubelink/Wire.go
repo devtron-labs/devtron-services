@@ -23,7 +23,6 @@ import (
 	"github.com/devtron-labs/common-lib/helmLib/registry"
 	k8sResource "github.com/devtron-labs/common-lib/k8sResource"
 	"github.com/devtron-labs/common-lib/monitoring"
-	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/common-lib/utils/k8s"
 	k8sCommonBean "github.com/devtron-labs/common-lib/utils/k8s/commonBean"
@@ -45,7 +44,6 @@ import (
 
 func InitializeApp() (*App, error) {
 	wire.Build(
-		securestore.SecurestoreWireSet,
 		NewApp,
 		sql.PgSqlWireSet,
 		logger.NewSugaredLogger,

@@ -9,7 +9,6 @@ package main
 import (
 	"github.com/devtron-labs/common-lib/monitoring"
 	"github.com/devtron-labs/common-lib/pubsub-lib"
-	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/image-scanner/api"
 	"github.com/devtron-labs/image-scanner/pkg/asyncProvider"
 	"github.com/devtron-labs/image-scanner/pkg/clairService"
@@ -83,11 +82,6 @@ func InitializeApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	attributesRepositoryImpl := securestore.NewAttributesRepositoryImpl(db)
-	encryptionKeyServiceImpl, err := securestore.NewEncryptionKeyServiceImpl(sugaredLogger, attributesRepositoryImpl)
-	if err != nil {
-		return nil, err
-	}
-	app := NewApp(router, sugaredLogger, db, natSubscriptionImpl, pubSubClientServiceImpl, encryptionKeyServiceImpl)
+	app := NewApp(router, sugaredLogger, db, natSubscriptionImpl, pubSubClientServiceImpl)
 	return app, nil
 }

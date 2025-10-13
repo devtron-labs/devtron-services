@@ -36,32 +36,33 @@ import (
 )
 
 type App struct {
-	Router            *api.Router
-	Logger            *zap.SugaredLogger
-	server            *http.Server
-	db                *pg.DB
-	natsSubscription  *pubsub.NatSubscriptionImpl
-	pubSubClient      *client.PubSubClientServiceImpl
-	serverConfig      *ServerConfig
-	encryptionService securestore.EncryptionKeyService
+	Router           *api.Router
+	Logger           *zap.SugaredLogger
+	server           *http.Server
+	db               *pg.DB
+	natsSubscription *pubsub.NatSubscriptionImpl
+	pubSubClient     *client.PubSubClientServiceImpl
+	serverConfig     *ServerConfig
 }
 
 func NewApp(Router *api.Router, Logger *zap.SugaredLogger,
 	db *pg.DB, natsSubscription *pubsub.NatSubscriptionImpl,
-	pubSubClient *client.PubSubClientServiceImpl,
-	encryptionService securestore.EncryptionKeyService) *App {
+	pubSubClient *client.PubSubClientServiceImpl) *App {
 	serverConfig, err := GetServerConfig()
 	if err != nil {
 		Logger.Errorw("error in getting server config", "err", err)
 	}
+	err = securestore.SetEncryptionKey()
+	if err != nil {
+		Logger.Errorw("error in setting encryption key", "err", err)
+	}
 	return &App{
-		Router:            Router,
-		Logger:            Logger,
-		db:                db,
-		natsSubscription:  natsSubscription,
-		pubSubClient:      pubSubClient,
-		serverConfig:      serverConfig,
-		encryptionService: encryptionService,
+		Router:           Router,
+		Logger:           Logger,
+		db:               db,
+		natsSubscription: natsSubscription,
+		pubSubClient:     pubSubClient,
+		serverConfig:     serverConfig,
 	}
 }
 

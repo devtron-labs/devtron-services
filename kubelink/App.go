@@ -46,31 +46,32 @@ import (
 )
 
 type App struct {
-	Logger            *zap.SugaredLogger
-	ServerImpl        *service.ApplicationServiceServerImpl
-	router            *router.RouterImpl
-	k8sInformer       k8sInformer.K8sInformer
-	db                *pg.DB
-	server            *http.Server
-	grpcServer        *grpc.Server
-	cfg               *grpcUtil.Configuration
-	encryptionService securestore.EncryptionKeyService
+	Logger      *zap.SugaredLogger
+	ServerImpl  *service.ApplicationServiceServerImpl
+	router      *router.RouterImpl
+	k8sInformer k8sInformer.K8sInformer
+	db          *pg.DB
+	server      *http.Server
+	grpcServer  *grpc.Server
+	cfg         *grpcUtil.Configuration
 }
 
 func NewApp(Logger *zap.SugaredLogger,
 	ServerImpl *service.ApplicationServiceServerImpl,
 	router *router.RouterImpl,
 	k8sInformer k8sInformer.K8sInformer,
-	db *pg.DB, cfg *grpcUtil.Configuration,
-	encryptionService securestore.EncryptionKeyService) *App {
+	db *pg.DB, cfg *grpcUtil.Configuration) *App {
+	err := securestore.SetEncryptionKey()
+	if err != nil {
+		Logger.Errorw("error in setting encryption key", "err", err)
+	}
 	return &App{
-		Logger:            Logger,
-		ServerImpl:        ServerImpl,
-		router:            router,
-		k8sInformer:       k8sInformer,
-		db:                db,
-		cfg:               cfg,
-		encryptionService: encryptionService,
+		Logger:      Logger,
+		ServerImpl:  ServerImpl,
+		router:      router,
+		k8sInformer: k8sInformer,
+		db:          db,
+		cfg:         cfg,
 	}
 }
 

@@ -9,7 +9,6 @@ package main
 import (
 	"github.com/devtron-labs/common-lib/monitoring"
 	"github.com/devtron-labs/common-lib/pubsub-lib"
-	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/git-sensor/api"
 	"github.com/devtron-labs/git-sensor/app"
 	"github.com/devtron-labs/git-sensor/internals"
@@ -63,14 +62,6 @@ func InitializeApp() (*app.App, error) {
 	monitoringRouter := monitoring.NewMonitoringRouter(sugaredLogger)
 	muxRouter := api.NewMuxRouter(sugaredLogger, restHandlerImpl, monitoringRouter)
 	grpcHandlerImpl := api.NewGrpcHandlerImpl(repoManagerImpl, sugaredLogger)
-	attributesRepositoryImpl, err := securestore.NewAttributesRepositoryImplForOrchestrator(sugaredLogger)
-	if err != nil {
-		return nil, err
-	}
-	encryptionKeyServiceImpl, err := securestore.NewEncryptionKeyServiceImpl(sugaredLogger, attributesRepositoryImpl)
-	if err != nil {
-		return nil, err
-	}
-	appApp := app.NewApp(muxRouter, sugaredLogger, gitWatcherImpl, db, pubSubClientServiceImpl, grpcHandlerImpl, encryptionKeyServiceImpl)
+	appApp := app.NewApp(muxRouter, sugaredLogger, gitWatcherImpl, db, pubSubClientServiceImpl, grpcHandlerImpl)
 	return appApp, nil
 }

@@ -57,11 +57,13 @@ type App struct {
 	pubSubClient       *pubsub.PubSubClientServiceImpl
 	GrpcControllerImpl *api.GrpcHandlerImpl
 	StartupConfig      *bean.StartupConfig
-	encryptionService  securestore.EncryptionKeyService
 }
 
-func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWatcherImpl, db *pg.DB, pubSubClient *pubsub.PubSubClientServiceImpl, GrpcControllerImpl *api.GrpcHandlerImpl,
-	encryptionService securestore.EncryptionKeyService) *App {
+func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWatcherImpl, db *pg.DB, pubSubClient *pubsub.PubSubClientServiceImpl, GrpcControllerImpl *api.GrpcHandlerImpl) *App {
+	err := securestore.SetEncryptionKey()
+	if err != nil {
+		Logger.Errorw("error in setting encryption key", "err", err)
+	}
 	return &App{
 		MuxRouter:          MuxRouter,
 		Logger:             Logger,
@@ -69,7 +71,6 @@ func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWa
 		db:                 db,
 		pubSubClient:       pubSubClient,
 		GrpcControllerImpl: GrpcControllerImpl,
-		encryptionService:  encryptionService,
 	}
 }
 
