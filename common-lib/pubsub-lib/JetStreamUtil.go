@@ -127,6 +127,9 @@ const (
 	COST_MODULE_INSTALLATION_TOPIC                     string = "COST_MODULE_INSTALLATION_TOPIC"
 	COST_MODULE_INSTALLATION_GROUP                     string = "COST_MODULE_INSTALLATION_GROUP"
 	COST_MODULE_INSTALLATION_DURABLE                   string = "COST_MODULE_INSTALLATION_DURABLE"
+	STORAGE_MODULE_TOPIC                               string = "STORAGE_MODULE_TOPIC"
+	STORAGE_MODULE_GROUP                               string = "STORAGE_MODULE_GROUP"
+	STORAGE_MODULE_DURABLE                             string = "STORAGE_MODULE_DURABLE"
 )
 
 type NatsTopic struct {
@@ -183,6 +186,7 @@ var natsTopicMapping = map[string]NatsTopic{
 	INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_TOPIC: {topicName: INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_GROUP, consumerName: INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_DURABLE},
 	INFRA_HELM_RELEASE_ACTION_TOPIC:                  {topicName: INFRA_HELM_RELEASE_ACTION_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: INFRA_HELM_RELEASE_ACTION_GROUP, consumerName: INFRA_HELM_RELEASE_ACTION_DURABLE},
 	COST_MODULE_INSTALLATION_TOPIC:                   {topicName: COST_MODULE_INSTALLATION_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: COST_MODULE_INSTALLATION_GROUP, consumerName: COST_MODULE_INSTALLATION_DURABLE},
+	STORAGE_MODULE_TOPIC:                             {topicName: STORAGE_MODULE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: STORAGE_MODULE_GROUP, consumerName: STORAGE_MODULE_DURABLE},
 }
 
 var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
@@ -226,6 +230,7 @@ var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
 	INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_DURABLE: {},
 	INFRA_HELM_RELEASE_ACTION_DURABLE:                  {},
 	COST_MODULE_INSTALLATION_DURABLE:                   {},
+	STORAGE_MODULE_DURABLE:                             {},
 }
 
 // getConsumerConfigMap will fetch the consumer wise config from the json string
