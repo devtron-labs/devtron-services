@@ -16,7 +16,10 @@
 
 package sql
 
-import "github.com/go-pg/pg"
+import (
+	"github.com/devtron-labs/common-lib/securestore"
+	"github.com/go-pg/pg"
+)
 
 type AuthMode string
 
@@ -28,20 +31,20 @@ const (
 )
 
 type GitProvider struct {
-	tableName             struct{} `sql:"git_provider"`
-	Id                    int      `sql:"id,pk"`
-	Name                  string   `sql:"name,notnull"`
-	Url                   string   `sql:"url,notnull"`
-	UserName              string   `sql:"user_name"`
-	Password              string   `sql:"password"`
-	SshPrivateKey         string   `sql:"ssh_private_key"`
-	AccessToken           string   `sql:"access_token"`
-	AuthMode              AuthMode `sql:"auth_mode,notnull"`
-	Active                bool     `sql:"active,notnull"`
-	TlsCert               string   `sql:"tls_cert"`
-	TlsKey                string   `sql:"tls_key"`
-	CaCert                string   `sql:"ca_cert"`
-	EnableTLSVerification bool     `sql:"enable_tls_verification"`
+	tableName             struct{}                    `sql:"git_provider"`
+	Id                    int                         `sql:"id,pk"`
+	Name                  string                      `sql:"name,notnull"`
+	Url                   string                      `sql:"url,notnull"`
+	UserName              string                      `sql:"user_name"`
+	Password              securestore.EncryptedString `sql:"password"`
+	SshPrivateKey         securestore.EncryptedString `sql:"ssh_private_key"`
+	AccessToken           securestore.EncryptedString `sql:"access_token"`
+	AuthMode              AuthMode                    `sql:"auth_mode,notnull"`
+	Active                bool                        `sql:"active,notnull"`
+	TlsCert               string                      `sql:"tls_cert"`
+	TlsKey                string                      `sql:"tls_key"`
+	CaCert                string                      `sql:"ca_cert"`
+	EnableTLSVerification bool                        `sql:"enable_tls_verification"`
 	//models.AuditLog
 }
 
@@ -61,11 +64,13 @@ func NewGitProviderRepositoryImpl(dbConnection *pg.DB) *GitProviderRepositoryImp
 }
 
 func (impl GitProviderRepositoryImpl) Save(provider *GitProvider) error {
+	//not doing encryption here as fields are already encrypted in orch and send as it is here
 	_, err := impl.dbConnection.Model(provider).Insert()
 	return err
 }
 
 func (impl GitProviderRepositoryImpl) Update(provider *GitProvider) error {
+	//not doing encryption here as fields are already encrypted in orch and send as it is here
 	_, err := impl.dbConnection.Model(provider).WherePK().Update()
 	return err
 }

@@ -55,12 +55,12 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 
 func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluster) error {
 	if !impl.appConfig.GetCiConfig().CiInformer {
-		impl.logger.Debugw("ci argo workflow informer is not enabled, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
+		impl.logger.Warnw("ci argo workflow informer is not enabled, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
 		return nil
 	}
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start ci argo workflow informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start ci argo workflow informer", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
 	}()
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
 	ciWfInformer := impl.informerClient.GetSharedInformerClient(resourceBean.CiWorkflowResourceType)

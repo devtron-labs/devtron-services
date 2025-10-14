@@ -72,10 +72,10 @@ func GetCheckoutPath(url string, cloneLocation string) string {
 func GetUserNamePassword(gitProvider *sql.GitProvider) (userName, password string, err error) {
 	switch gitProvider.AuthMode {
 	case sql.AUTH_MODE_USERNAME_PASSWORD:
-		return gitProvider.UserName, gitProvider.Password, nil
+		return gitProvider.UserName, gitProvider.Password.String(), nil
 	case sql.AUTH_MODE_ACCESS_TOKEN:
 
-		return gitProvider.UserName, gitProvider.AccessToken, nil
+		return gitProvider.UserName, gitProvider.AccessToken.String(), nil
 	case sql.AUTH_MODE_ANONYMOUS:
 		return "", "", nil
 	case sql.AUTH_MODE_SSH:

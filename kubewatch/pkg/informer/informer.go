@@ -51,7 +51,7 @@ func NewRunnerImpl(logger *zap.SugaredLogger,
 func (impl *RunnerImpl) Start() error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start informer", "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start informer", "time", time.Since(startTime))
 	}()
 	if impl.appConfig.IsDBAvailable() {
 		err := impl.clusterInformer.StartDevtronClusterWatcher()
@@ -76,7 +76,7 @@ func (impl *RunnerImpl) Start() error {
 func (impl *RunnerImpl) Stop() {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start default cluster informer", "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start default cluster informer", "time", time.Since(startTime))
 	}()
 	impl.clusterInformer.StopAll()
 }

@@ -40,3 +40,11 @@
  | USE_GIT_CLI | bool |false |  |  | false |
  | USE_GIT_CLI_ANALYTICS | bool |false |  |  | false |
 
+
+## POSTGRES Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CASBIN_DATABASE | string |casbin |  |  | false |
+ | PG_READ_TIMEOUT | int64 |30 |  |  | false |
+ | PG_WRITE_TIMEOUT | int64 |30 |  |  | false |
+

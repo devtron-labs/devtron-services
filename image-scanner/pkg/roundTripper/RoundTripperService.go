@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/devtron-labs/common-lib/imageScan/bean"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -79,7 +80,7 @@ func (impl *RoundTripperServiceImpl) GetRoundTripper(scanEvent *bean.ImageScanEv
 	}
 	rtConfig := &RoundTripperConfig{
 		Username: dockerRegistry.Username,
-		Password: dockerRegistry.Password,
+		Password: dockerRegistry.Password.String(),
 		ProxyUrl: proxyUrl,
 	}
 	rt, err := impl.GetRoundTripperTransport(rtConfig)
@@ -104,16 +105,16 @@ func (impl *RoundTripperServiceImpl) GetAuthenticatorByDockerRegistryId(dockerRe
 	if dockerRegistry.Username == "_json_key" {
 		lenPassword := len(dockerRegistry.Password)
 		if lenPassword > 1 {
-			dockerRegistry.Password = strings.TrimPrefix(dockerRegistry.Password, "'")
-			dockerRegistry.Password = strings.TrimSuffix(dockerRegistry.Password, "'")
+			dockerRegistry.Password = securestore.ToEncryptedString(strings.TrimPrefix(dockerRegistry.Password.String(), "'"))
+			dockerRegistry.Password = securestore.ToEncryptedString(strings.TrimSuffix(dockerRegistry.Password.String(), "'"))
 		}
 	}
 	authConfig := authn.AuthConfig{
 		Username: dockerRegistry.Username,
-		Password: dockerRegistry.Password,
+		Password: dockerRegistry.Password.String(),
 	}
 	if dockerRegistry.RegistryType == repository.REGISTRYTYPE_ECR {
-		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey
+		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey.String()
 		var creds *credentials.Credentials
 		if len(dockerRegistry.AWSAccessKeyId) == 0 || len(dockerRegistry.AWSSecretAccessKey) == 0 {
 			sess, err := session.NewSession(&aws.Config{
