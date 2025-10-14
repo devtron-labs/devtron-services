@@ -95,16 +95,18 @@ github.com/containerd/platforms
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250929110950-82972ae5dc6b
+# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251013041509-9d1c5175da2d
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
 github.com/devtron-labs/common-lib/git-manager/util
 github.com/devtron-labs/common-lib/helmLib/registry
+github.com/devtron-labs/common-lib/securestore
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/http
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
+github.com/devtron-labs/common-lib/utils/sql
 # github.com/docker/cli v28.1.1+incompatible
 ## explicit
 github.com/docker/cli/cli/config/types
@@ -967,4 +969,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
 sigs.k8s.io/yaml/goyaml.v3
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250929110950-82972ae5dc6b
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251013041509-9d1c5175da2d

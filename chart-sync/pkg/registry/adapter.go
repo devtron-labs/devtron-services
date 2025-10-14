@@ -19,8 +19,8 @@ func NewToRegistryConfig(store *sql.DockerArtifactStore) (*registry.Configuratio
 			remoteConnectionConfig.SSHTunnelConfig = &bean.SSHTunnelConfig{
 				SSHServerAddress: store.RemoteConnectionConfig.SSHServerAddress,
 				SSHUsername:      store.RemoteConnectionConfig.SSHUsername,
-				SSHPassword:      store.RemoteConnectionConfig.SSHPassword,
-				SSHAuthKey:       store.RemoteConnectionConfig.SSHAuthKey,
+				SSHPassword:      store.RemoteConnectionConfig.SSHPassword.String(),
+				SSHAuthKey:       store.RemoteConnectionConfig.SSHAuthKey.String(),
 			}
 		}
 	}
@@ -36,9 +36,9 @@ func NewToRegistryConfig(store *sql.DockerArtifactStore) (*registry.Configuratio
 		RegistryId:                store.Id,
 		RegistryUrl:               store.RegistryURL,
 		Username:                  store.Username,
-		Password:                  store.Password,
+		Password:                  store.Password.String(),
 		AwsAccessKey:              store.AWSAccessKeyId,
-		AwsSecretKey:              store.AWSSecretAccessKey,
+		AwsSecretKey:              store.AWSSecretAccessKey.String(),
 		AwsRegion:                 store.AWSRegion,
 		RegistryConnectionType:    store.Connection,
 		RegistryCertificateString: store.Cert,
