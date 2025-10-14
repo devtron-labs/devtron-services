@@ -883,6 +883,18 @@ github.com/vmihailenco/msgpack/v5/msgpcode
 github.com/vmihailenco/tagparser/v2
 github.com/vmihailenco/tagparser/v2/internal
 github.com/vmihailenco/tagparser/v2/internal/parser
+# github.com/vmware-tanzu/velero v1.14.1
+## explicit; go 1.22.6
+github.com/vmware-tanzu/velero/pkg/apis/velero/shared
+github.com/vmware-tanzu/velero/pkg/apis/velero/v1
+github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned/scheme
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned/typed/velero/v1
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned/typed/velero/v2alpha1
+github.com/vmware-tanzu/velero/pkg/generated/informers/externalversions/internalinterfaces
+github.com/vmware-tanzu/velero/pkg/generated/informers/externalversions/velero/v1
+github.com/vmware-tanzu/velero/pkg/generated/listers/velero/v1
 # github.com/x448/float16 v0.8.4
 ## explicit; go 1.11
 github.com/x448/float16

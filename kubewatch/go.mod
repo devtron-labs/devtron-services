@@ -18,11 +18,13 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.0
 	github.com/tbruyelle/hipchat-go v0.0.0-20160921153256-749fb9e14beb
+	github.com/vmware-tanzu/velero v1.14.1
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
+	k8s.io/metrics v0.33.0
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979
 )
 
@@ -226,7 +228,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/kubectl v0.33.0 // indirect
 	k8s.io/kubernetes v1.33.1 // indirect
-	k8s.io/metrics v0.33.0 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect
