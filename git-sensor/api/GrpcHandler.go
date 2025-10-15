@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/git-sensor/internals/sql"
 	"github.com/devtron-labs/git-sensor/pkg"
 	"github.com/devtron-labs/git-sensor/pkg/git"
@@ -77,9 +78,9 @@ func (impl *GrpcHandlerImpl) SaveGitProvider(ctx context.Context, req *pb.GitPro
 		Name:                  req.Name,
 		Url:                   req.Url,
 		UserName:              req.UserName,
-		Password:              req.Password,
-		AccessToken:           req.AccessToken,
-		SshPrivateKey:         req.SshPrivateKey,
+		Password:              securestore.ToEncryptedString(req.Password),
+		AccessToken:           securestore.ToEncryptedString(req.AccessToken),
+		SshPrivateKey:         securestore.ToEncryptedString(req.SshPrivateKey),
 		AuthMode:              sql.AuthMode(req.AuthMode),
 		Active:                req.Active,
 		CaCert:                req.CaCert,

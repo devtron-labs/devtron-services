@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/image-scanner/common"
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/bean"
@@ -112,7 +113,7 @@ func (impl *KlarServiceImpl) Process(scanEvent *bean2.ImageScanEvent, executionH
 	tokenData := ""
 	tokenAddr := &tokenData
 	if dockerRegistry.RegistryType == repository.REGISTRYTYPE_ECR {
-		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey
+		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey.String()
 		var creds *credentials.Credentials
 		if len(dockerRegistry.AWSAccessKeyId) == 0 || len(dockerRegistry.AWSSecretAccessKey) == 0 {
 			sess, err := session.NewSession(&aws.Config{
@@ -146,8 +147,8 @@ func (impl *KlarServiceImpl) Process(scanEvent *bean2.ImageScanEvent, executionH
 	} else if dockerRegistry.Username == "_json_key" {
 		lenPassword := len(dockerRegistry.Password)
 		if lenPassword > 1 {
-			dockerRegistry.Password = strings.TrimPrefix(dockerRegistry.Password, "'")
-			dockerRegistry.Password = strings.TrimSuffix(dockerRegistry.Password, "'")
+			dockerRegistry.Password = securestore.ToEncryptedString(strings.TrimPrefix(dockerRegistry.Password.String(), "'"))
+			dockerRegistry.Password = securestore.ToEncryptedString(strings.TrimSuffix(dockerRegistry.Password.String(), "'"))
 		}
 		jwtToken, err := google.JWTAccessTokenSourceWithScope([]byte(dockerRegistry.Password), "")
 		if err != nil {
@@ -164,7 +165,7 @@ func (impl *KlarServiceImpl) Process(scanEvent *bean2.ImageScanEvent, executionH
 	config := &docker.Config{
 		ImageName: scanEvent.Image,
 		User:      dockerRegistry.Username,
-		Password:  dockerRegistry.Password,
+		Password:  dockerRegistry.Password.String(),
 		Token:     *tokenAddr,
 		//InsecureRegistry: true,
 		//InsecureTLS:      true,

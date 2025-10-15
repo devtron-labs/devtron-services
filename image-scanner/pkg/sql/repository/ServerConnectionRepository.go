@@ -17,6 +17,7 @@
 package repository
 
 import (
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
@@ -45,8 +46,8 @@ type RemoteConnectionConfig struct {
 	ProxyUrl         string                      `sql:"proxy_url"`
 	SSHServerAddress string                      `sql:"ssh_server_address"`
 	SSHUsername      string                      `sql:"ssh_username"`
-	SSHPassword      string                      `sql:"ssh_password"`
-	SSHAuthKey       string                      `sql:"ssh_auth_key"`
+	SSHPassword      securestore.EncryptedString `sql:"ssh_password"`
+	SSHAuthKey       securestore.EncryptedString `sql:"ssh_auth_key"`
 	Deleted          bool                        `sql:"deleted,notnull"`
 	AuditLog
 }
