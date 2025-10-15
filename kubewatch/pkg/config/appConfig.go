@@ -25,6 +25,7 @@ type AppConfig struct {
 	CdConfig       *CdConfig
 	AcdConfig      *AcdConfig
 	Timeout        *Timeout
+	VeleroConfig   *VeleroConfig
 }
 
 func (app *AppConfig) GetClusterConfig() *ClusterConfig {
@@ -124,6 +125,10 @@ func GetAppConfig() (*AppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	veleroConfig, err := getVeleroConfig()
+	if err != nil {
+		return nil, err
+	}
 	return &AppConfig{
 		ClusterCfg:     clusterConfig,
 		ExternalConfig: externalConfig,
@@ -131,5 +136,14 @@ func GetAppConfig() (*AppConfig, error) {
 		CdConfig:       cdConfig,
 		AcdConfig:      acdConfig,
 		Timeout:        timeout,
+		VeleroConfig:   veleroConfig,
 	}, nil
+}
+
+func (app *AppConfig) GetVeleroNamespace() string {
+	return app.VeleroConfig.VeleroNamespace
+}
+
+func (app *AppConfig) IsMultiClusterVeleroType() bool {
+	return app.GetClusterConfig().ClusterVeleroBslType == AllClusterType && !app.GetExternalConfig().External
 }

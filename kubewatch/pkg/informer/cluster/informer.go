@@ -27,6 +27,7 @@ import (
 	cdWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/cd"
 	ciWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
+	veleroBslInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
 	resourceBean "github.com/devtron-labs/kubewatch/pkg/resource/bean"
@@ -57,6 +58,7 @@ type InformerImpl struct {
 	ciWfInformer           *ciWf.InformerImpl
 	cdWfInformer           *cdWf.InformerImpl
 	systemExecInformer     *systemExec.InformerImpl
+	veleroBslInformer      *veleroBslInformer.InformerImpl
 }
 
 func NewInformerImpl(logger *zap.SugaredLogger,
@@ -67,7 +69,9 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	argoCdInformer *argoCD.InformerImpl,
 	ciWfInformer *ciWf.InformerImpl,
 	cdWfInformer *cdWf.InformerImpl,
-	systemExecInformer *systemExec.InformerImpl) *InformerImpl {
+	systemExecInformer *systemExec.InformerImpl,
+	veleroBslInformer *veleroBslInformer.InformerImpl,
+) *InformerImpl {
 	return &InformerImpl{
 		logger:             logger,
 		appConfig:          appConfig,
@@ -78,6 +82,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 		ciWfInformer:       ciWfInformer,
 		cdWfInformer:       cdWfInformer,
 		systemExecInformer: systemExecInformer,
+		veleroBslInformer:  veleroBslInformer,
 	}
 }
 

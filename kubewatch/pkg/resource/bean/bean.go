@@ -22,6 +22,7 @@ const (
 	ApplicationResourceType SharedInformerType = "application"
 	CiWorkflowResourceType  SharedInformerType = "ci/workflow"
 	CdWorkflowResourceType  SharedInformerType = "cd/workflow"
+	VeleroBslResourceType   SharedInformerType = "velero/bsl"
 )
 
 type InformerFactoryType string
