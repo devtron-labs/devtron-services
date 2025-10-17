@@ -1,7 +1,6 @@
 package veleroBSL
 
 import (
-	"encoding/json"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/utils/storage"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
@@ -39,12 +38,25 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		AddFunc: func(obj interface{}) {
 			impl.logger.Infow("backup storage location add detected")
 			if bslObj, ok := obj.(*veleroBslBean.BackupStorageLocation); ok {
-				veleroStatusUpdate := &storage.VeleoroBslStatusUpdate{
-					ClusterId: clusterLabels.ClusterId,
-					BslName:   bslObj.Name,
-					Status:    string(bslObj.Status.Phase),
+				bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+					EventType:    storage.EventTypeAdded,
+					ResourceKind: storage.ResourceBackupStorageLocation,
+					ClusterId:    clusterLabels.ClusterId,
+					ResourceName: bslObj.Name,
+					Data: storage.LocationsStatus{
+						Provider: bslObj.Spec.Provider,
+						Status:   bslObj.Status,
+					},
 				}
-				impl.sendBslUpdate(veleroStatusUpdate)
+				//veleroStatusUpdate := &storage.VeleoroBslStatusUpdate{
+				//	ClusterId: clusterLabels.ClusterId,
+				//	BslName:   bslObj.Name,
+				//	Status:    string(bslObj.Status.Phase),
+				//}
+				err := impl.sendBslUpdate(bslChangeObj)
+				if err != nil {
+					impl.logger.Errorw("error in sending backup storage location add event", "err", err)
+				}
 			} else {
 				impl.logger.Errorw("backup storage location object add detected, but could not cast to backup storage location object", "obj", obj)
 			}
@@ -54,16 +66,26 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			//statusTime := time.Now()
 			if oldBslObj, ok := oldObj.(*veleroBslBean.BackupStorageLocation); ok {
 				if newBslObj, ok := newObj.(*veleroBslBean.BackupStorageLocation); ok {
-					if oldBslObj.Status.Phase != newBslObj.Status.Phase {
-						veleroStatusUpdate := &storage.VeleoroBslStatusUpdate{
-							ClusterId: clusterLabels.ClusterId,
-							BslName:   newBslObj.Name,
-							Status:    string(newBslObj.Status.Phase),
-						}
-						impl.sendBslUpdate(veleroStatusUpdate)
+					bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+						EventType:    storage.EventTypeUpdated,
+						ResourceKind: storage.ResourceBackupStorageLocation,
+						ClusterId:    clusterLabels.ClusterId,
+						ResourceName: newBslObj.Name,
 					}
-					impl.logger.Debugw("backup storage location object update detected", "oldObj", oldBslObj, "newObj", newBslObj)
-
+					if isChangeInBslObject(oldBslObj, newBslObj, bslChangeObj) {
+						err := impl.sendBslUpdate(bslChangeObj)
+						if err != nil {
+							impl.logger.Errorw("error in sending backup storage location update event", "err", err)
+						}
+					}
+					//if oldBslObj.Status.Phase != newBslObj.Status.Phase {
+					//	veleroStatusUpdate := &storage.VeleoroBslStatusUpdate{
+					//		ClusterId: clusterLabels.ClusterId,
+					//		BslName:   newBslObj.Name,
+					//		Status:    string(newBslObj.Status.Phase),
+					//	}
+					//	impl.sendBslUpdate(veleroStatusUpdate)
+					//}
 				} else {
 					impl.logger.Errorw("backup storage location object update detected, but could not cast to backup storage location object", "newObj", newObj)
 				}
@@ -71,31 +93,27 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 				impl.logger.Errorw("backup storage location object update detected, but could not cast to backup storage location object", "oldObj", oldObj)
 			}
 		},
-		DeleteFunc: func(obj interface{}) {},
+		DeleteFunc: func(obj interface{}) {
+			impl.logger.Infow("backup storage location delete detected")
+			if bslObj, ok := obj.(*veleroBslBean.BackupStorageLocation); ok {
+				bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+					EventType:    storage.EventTypeDeleted,
+					ResourceKind: storage.ResourceBackupStorageLocation,
+					ClusterId:    clusterLabels.ClusterId,
+					ResourceName: bslObj.Name,
+				}
+				err := impl.sendBslUpdate(bslChangeObj)
+				if err != nil {
+					impl.logger.Errorw("error in sending backup storage location delete event", "err", err)
+				}
+			} else {
+				impl.logger.Errorw("backup storage location object delete detected, but could not cast to backup storage location object", "obj", obj)
+			}
+		},
 	})
 	if err != nil {
 		impl.logger.Errorw("error in creating clientset", "err", err)
 		return nil, err
 	}
 	return bslInformer, nil
-}
-
-func (impl *InformerImpl) sendBslUpdate(veleroStatusUpdate *storage.VeleoroBslStatusUpdate) {
-	if impl.client == nil {
-		impl.logger.Errorw("pubsub client is nil, skipping the publish")
-		return
-	}
-	veleroStatusUpdateJson, err := json.Marshal(veleroStatusUpdate)
-	if err != nil {
-		impl.logger.Errorw("error in marshalling velero status update", "err", err)
-		return
-	}
-	err = impl.client.Publish(pubsub.STORAGE_MODULE_TOPIC, string(veleroStatusUpdateJson))
-	if err != nil {
-		impl.logger.Errorw("error in publishing velero status update", "err", err)
-		return
-	} else {
-		impl.logger.Info("velero status update sent", "veleroStatusUpdate:", string(veleroStatusUpdateJson))
-		return
-	}
 }
