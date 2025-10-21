@@ -35,7 +35,8 @@ func (impl *InformerImpl) checkAndGetStopChannel(clusterLabels *informerBean.Clu
 	stopper, ok := impl.getVeleroBslStopper(clusterLabels.ClusterId)
 	if ok && stopper.HasInformer() {
 		impl.logger.Debug(fmt.Sprintf("velero bsl informer for %s already exist", clusterLabels.ClusterName))
-		return stopChannel, informerErr.AlreadyExists
+		// TODO: should we return the stop channel here?
+		return nil, informerErr.AlreadyExists
 	}
 	stopper = stopper.GetStopper(stopChannel)
 	impl.veleroBslInformerStopper[clusterLabels.ClusterId] = stopper

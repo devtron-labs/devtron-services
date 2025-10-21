@@ -56,6 +56,8 @@ func (impl *InformerImpl) GetClientAdvisor(clientType bean.ClientType) (ClientAd
 		return impl.systemExecInformer, nil
 	case bean.VeleroBslClientType:
 		return impl.veleroBslInformer, nil
+	case bean.VeleroVslClientType:
+		return impl.veleroVslinformer, nil
 	default:
 		return NewUnimplementedAdvisor(), fmt.Errorf("client type %q not supported", clientType)
 	}
@@ -72,6 +74,8 @@ func (impl *InformerImpl) IsMultiClusterMode(clientType bean.ClientType) bool {
 	case bean.SystemExecutorClientType:
 		return impl.appConfig.IsMultiClusterSystemExec()
 	case bean.VeleroBslClientType:
+		return impl.appConfig.IsMultiClusterVeleroType()
+	case bean.VeleroVslClientType:
 		return impl.appConfig.IsMultiClusterVeleroType()
 	default:
 		return false

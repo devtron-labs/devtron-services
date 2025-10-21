@@ -5,7 +5,8 @@ import (
 	cdWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/cd"
 	ciWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
-	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupStorageLocation"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/volumeSnapshotLocation"
 	"github.com/google/wire"
 )
 
@@ -15,6 +16,7 @@ var WireSet = wire.NewSet(
 	ciWf.NewInformerImpl,
 	systemExec.NewInformerImpl,
 	veleroBslInformer.NewInformerImpl,
+	veleroVslInformer.NewInformerImpl,
 
 	NewInformerImpl,
 	wire.Bind(new(Informer), new(*InformerImpl)),

@@ -24,6 +24,7 @@ const (
 	CdArgoWorkflowClientType ClientType = "CdArgoWorkflow"
 	SystemExecutorClientType ClientType = "SystemExecutor"
 	VeleroBslClientType      ClientType = "VeleroBsl"
+	VeleroVslClientType      ClientType = "VeleroVsl"
 )
 
 var SupportedClientMap = map[ClientType]bool{
@@ -32,4 +33,5 @@ var SupportedClientMap = map[ClientType]bool{
 	CdArgoWorkflowClientType: true,
 	SystemExecutorClientType: true,
 	VeleroBslClientType:      true,
+	VeleroVslClientType:      true,
 }

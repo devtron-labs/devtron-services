@@ -19,7 +19,8 @@ import (
 	argoWf2 "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/cd"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
-	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupStorageLocation"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/volumeSnapshotLocation"
 	"github.com/devtron-labs/kubewatch/pkg/logger"
 	"github.com/devtron-labs/kubewatch/pkg/pubsub"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
@@ -63,7 +64,8 @@ func InitializeApp() (*App, error) {
 	informerImpl2 := argoWf2.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
 	systemExecInformerImpl := systemExec.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, pubSubClientServiceImpl, informerClientImpl)
 	veleroBslInformerInformerImpl := veleroBslInformer.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
-	clusterInformerImpl := cluster.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterRepositoryImpl, informerClientImpl, informerImpl, argoWfInformerImpl, informerImpl2, systemExecInformerImpl, veleroBslInformerInformerImpl)
+	veleroVslInformerInformerImpl := veleroVslInformer.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
+	clusterInformerImpl := cluster.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterRepositoryImpl, informerClientImpl, informerImpl, argoWfInformerImpl, informerImpl2, systemExecInformerImpl, veleroBslInformerInformerImpl, veleroVslInformerInformerImpl)
 	runnerImpl := informer.NewRunnerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterInformerImpl)
 	app := NewApp(routerImpl, sugaredLogger, appConfig, db, runnerImpl, runnable)
 	return app, nil
