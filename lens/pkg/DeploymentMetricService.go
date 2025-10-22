@@ -829,12 +829,6 @@ func (impl DeploymentMetricServiceImpl) populateMetricsWithImprovedLogic(appRele
 	releases := impl.transform(appReleases, materials, leadTimes)
 
 	impl.calculateCycleTimeBetweenReleases(releases, lastRelease)
-
-	deploymentFrequency := impl.calculateDeploymentFrequency(releases, fromTime, toTime)
-	averageLeadTime := impl.calculateMeanLeadTimeForChanges(releases)
-	changeFailureRate := impl.calculateChangeFailureRateNew(releases)
-	averageRecoveryTime := impl.calculateMeanTimeToRecovery(releases)
-
 	lastFailedTime := ""
 	recoveryTimeLastFailed := float64(0)
 	for i := 0; i < len(releases); i++ {
@@ -859,10 +853,10 @@ func (impl DeploymentMetricServiceImpl) populateMetricsWithImprovedLogic(appRele
 
 	metrics := &dto.Metrics{
 		Series:                 releases,
-		AverageCycleTime:       deploymentFrequency,
-		AverageLeadTime:        averageLeadTime,
-		ChangeFailureRate:      changeFailureRate,
-		AverageRecoveryTime:    averageRecoveryTime,
+		AverageCycleTime:       impl.calculateDeploymentFrequency(releases, fromTime, toTime),
+		AverageLeadTime:        impl.calculateMeanLeadTimeForChanges(releases),
+		ChangeFailureRate:      impl.calculateChangeFailureRateNew(releases),
+		AverageRecoveryTime:    impl.calculateMeanTimeToRecovery(releases),
 		LastFailedTime:         lastFailedTime,
 		RecoveryTimeLastFailed: recoveryTimeLastFailed,
 	}
