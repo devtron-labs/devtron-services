@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package veleroVslInformer
+package veleroBackupInformer
 
 import (
 	"fmt"
@@ -23,25 +23,27 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func (impl *InformerImpl) getVeleroVslStopper(clusterId int) (*informerBean.SharedStopper, bool) {
-	stopper, ok := impl.veleroVslInformerStopper[clusterId]
+func (impl *InformerImpl) getVeleroBackupStopper(clusterId int) (*informerBean.SharedStopper, bool) {
+	stopper, ok := impl.veleroBackupInformerStopper[clusterId]
 	if ok {
 		return stopper, stopper.HasInformer()
 	}
 	return stopper, false
 }
+
 func (impl *InformerImpl) checkAndGetStopChannel(clusterLabels *informerBean.ClusterLabels) (chan struct{}, error) {
 	stopChannel := make(chan struct{})
-	stopper, ok := impl.getVeleroVslStopper(clusterLabels.ClusterId)
+	stopper, ok := impl.getVeleroBackupStopper(clusterLabels.ClusterId)
 	if ok && stopper.HasInformer() {
-		impl.logger.Debug(fmt.Sprintf("velero vsl informer for %s already exist", clusterLabels.ClusterName))
+		impl.logger.Debug(fmt.Sprintf("velero bsl informer for %s already exist", clusterLabels.ClusterName))
 		// TODO: should we return the stop channel here?
 		return nil, informerErr.AlreadyExists
 	}
 	stopper = stopper.GetStopper(stopChannel)
-	impl.veleroVslInformerStopper[clusterLabels.ClusterId] = stopper
+	impl.veleroBackupInformerStopper[clusterLabels.ClusterId] = stopper
 	return stopChannel, nil
 }
+
 func (impl *InformerImpl) getStoppableClusterIds() []int {
-	return maps.Keys(impl.veleroVslInformerStopper)
+	return maps.Keys(impl.veleroBackupInformerStopper)
 }

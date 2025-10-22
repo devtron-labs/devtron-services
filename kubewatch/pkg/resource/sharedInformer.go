@@ -20,6 +20,7 @@ import (
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/application"
 	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
+	veleroBackup "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/backup"
 	veleroBSL "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/bsl"
 	veleroVSL "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/vsl"
 	"github.com/devtron-labs/kubewatch/pkg/resource/workflow"
@@ -43,6 +44,8 @@ func (impl *InformerClientImpl) GetSharedInformerClient(sharedInformerType bean.
 		return veleroBSL.NewInformerImpl(impl.logger, impl.client)
 	case bean.VeleroVslResourceType:
 		return veleroVSL.NewInformerImpl(impl.logger, impl.client)
+	case bean.VeleroBackupResourceType:
+		return veleroBackup.NewInformerImpl(impl.logger, impl.client)
 	default:
 		return NewUnimplementedImpl()
 	}

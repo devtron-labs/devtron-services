@@ -25,6 +25,7 @@ const (
 	SystemExecutorClientType ClientType = "SystemExecutor"
 	VeleroBslClientType      ClientType = "VeleroBsl"
 	VeleroVslClientType      ClientType = "VeleroVsl"
+	VeleroBackupClientType   ClientType = "VeleroBackup"
 )
 
 var SupportedClientMap = map[ClientType]bool{
@@ -34,4 +35,5 @@ var SupportedClientMap = map[ClientType]bool{
 	SystemExecutorClientType: true,
 	VeleroBslClientType:      true,
 	VeleroVslClientType:      true,
+	VeleroBackupClientType:   true,
 }

@@ -19,11 +19,12 @@ package bean
 type SharedInformerType string
 
 const (
-	ApplicationResourceType SharedInformerType = "application"
-	CiWorkflowResourceType  SharedInformerType = "ci/workflow"
-	CdWorkflowResourceType  SharedInformerType = "cd/workflow"
-	VeleroBslResourceType   SharedInformerType = "velero/bsl"
-	VeleroVslResourceType   SharedInformerType = "velero/vsl"
+	ApplicationResourceType  SharedInformerType = "application"
+	CiWorkflowResourceType   SharedInformerType = "ci/workflow"
+	CdWorkflowResourceType   SharedInformerType = "cd/workflow"
+	VeleroBslResourceType    SharedInformerType = "velero/bsl"
+	VeleroVslResourceType    SharedInformerType = "velero/vsl"
+	VeleroBackupResourceType SharedInformerType = "velero/backup"
 )
 
 type InformerFactoryType string

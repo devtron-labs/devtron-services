@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	veleroBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type EventType string
@@ -29,6 +30,15 @@ type VeleoroBslStatusUpdate struct {
 type LocationsStatus struct {
 	Provider string                                 `json:"provider,omitempty"`
 	Status   veleroBean.BackupStorageLocationStatus `json:"status,omitempty"`
+}
+type BackupStatus struct {
+	Phase               veleroBean.BackupPhase    `json:"phase,omitempty"`
+	CompletionTimestamp *metav1.Time              `json:"completionTimestamp,omitempty"`
+	Expiration          *metav1.Time              `json:"expirationTimestamp,omitempty"`
+	FormatVersion       string                    `json:"formatVersion,omitempty"`
+	Progress            veleroBean.BackupProgress `json:"progress,omitempty"`
+	StartTimestamp      *metav1.Time              `json:"startTimestamp,omitempty"`
+	Version             string                    `json:"version,omitempty"`
 }
 
 type VeleroStorageEvent[T any] struct {
