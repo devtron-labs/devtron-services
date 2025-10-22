@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	veleroBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	"time"
 )
 
 type EventType string
@@ -29,6 +30,15 @@ type VeleoroBslStatusUpdate struct {
 type LocationsStatus struct {
 	Provider string                                 `json:"provider,omitempty"`
 	Status   veleroBean.BackupStorageLocationStatus `json:"status,omitempty"`
+}
+type BackupStatus struct {
+	Phase               veleroBean.BackupPhase    `json:"phase,omitempty"`
+	CompletionTimestamp time.Time                 `json:"completionTimestamp,omitempty"`
+	ExpirationTimestamp time.Time                 `json:"expirationTimestamp,omitempty"`
+	FormatVersion       string                    `json:"formatVersion,omitempty"`
+	Progress            veleroBean.BackupProgress `json:"progress,omitempty"`
+	StartTimestamp      time.Time                 `json:"startTimestamp,omitempty"`
+	Version             int                       `json:"version,omitempty"`
 }
 
 type VeleroStorageEvent[T any] struct {
