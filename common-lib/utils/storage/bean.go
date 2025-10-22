@@ -38,7 +38,7 @@ type BackupStatus struct {
 	FormatVersion       string                    `json:"formatVersion,omitempty"`
 	Progress            veleroBean.BackupProgress `json:"progress,omitempty"`
 	StartTimestamp      *metav1.Time              `json:"startTimestamp,omitempty"`
-	Version             int                       `json:"version,omitempty"`
+	Version             string                    `json:"version,omitempty"`
 }
 
 type VeleroStorageEvent[T any] struct {
