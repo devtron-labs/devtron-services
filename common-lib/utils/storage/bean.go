@@ -18,6 +18,7 @@ const (
 	ResourceRestore                ResourceKind = "Restore"
 	ResourceBackupStorageLocation  ResourceKind = "BackupStorageLocation"
 	ResourceVolumeSnapshotLocation ResourceKind = "VolumeSnapshotLocation"
+	ResourceBackupSchedule         ResourceKind = "BackupSchedule"
 )
 
 type VeleoroBslStatusUpdate struct {
