@@ -28,6 +28,7 @@ import (
 	ciWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
 	veleroBackupInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backup"
+	veleroBackupScheduleInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupSchedule"
 	veleroBslInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupStorageLocation"
 	veleroRestoreInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/restore"
 	veleroVslInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/volumeSnapshotLocation"
@@ -51,20 +52,21 @@ type Informer interface {
 }
 
 type InformerImpl struct {
-	logger                 *zap.SugaredLogger
-	appConfig              *config.AppConfig
-	k8sUtil                utils.K8sUtil
-	informerClient         resource.InformerClient
-	clusterRepository      repository.ClusterRepository
-	clusterInformerStopper *informerBean.FactoryStopper
-	argoCdInformer         *argoCD.InformerImpl
-	ciWfInformer           *ciWf.InformerImpl
-	cdWfInformer           *cdWf.InformerImpl
-	systemExecInformer     *systemExec.InformerImpl
-	veleroBslInformer      *veleroBslInformer.InformerImpl
-	veleroVslinformer      *veleroVslInformer.InformerImpl
-	veleroBackupInformer   *veleroBackupInformer.InformerImpl
-	veleroRestoreInformer  *veleroRestoreInformer.InformerImpl
+	logger                       *zap.SugaredLogger
+	appConfig                    *config.AppConfig
+	k8sUtil                      utils.K8sUtil
+	informerClient               resource.InformerClient
+	clusterRepository            repository.ClusterRepository
+	clusterInformerStopper       *informerBean.FactoryStopper
+	argoCdInformer               *argoCD.InformerImpl
+	ciWfInformer                 *ciWf.InformerImpl
+	cdWfInformer                 *cdWf.InformerImpl
+	systemExecInformer           *systemExec.InformerImpl
+	veleroBslInformer            *veleroBslInformer.InformerImpl
+	veleroVslinformer            *veleroVslInformer.InformerImpl
+	veleroBackupInformer         *veleroBackupInformer.InformerImpl
+	veleroRestoreInformer        *veleroRestoreInformer.InformerImpl
+	veleroBackupScheduleInformer *veleroBackupScheduleInformer.InformerImpl
 }
 
 func NewInformerImpl(logger *zap.SugaredLogger,
@@ -80,21 +82,23 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	veleroVslInformer *veleroVslInformer.InformerImpl,
 	veleroBackupInformer *veleroBackupInformer.InformerImpl,
 	veleroRestoreInformer *veleroRestoreInformer.InformerImpl,
+	veleroBackupScheduleInformer *veleroBackupScheduleInformer.InformerImpl,
 ) *InformerImpl {
 	return &InformerImpl{
-		logger:                logger,
-		appConfig:             appConfig,
-		k8sUtil:               k8sUtil,
-		informerClient:        informerClient,
-		clusterRepository:     clusterRepository,
-		argoCdInformer:        argoCdInformer,
-		ciWfInformer:          ciWfInformer,
-		cdWfInformer:          cdWfInformer,
-		systemExecInformer:    systemExecInformer,
-		veleroBslInformer:     veleroBslInformer,
-		veleroVslinformer:     veleroVslInformer,
-		veleroBackupInformer:  veleroBackupInformer,
-		veleroRestoreInformer: veleroRestoreInformer,
+		logger:                       logger,
+		appConfig:                    appConfig,
+		k8sUtil:                      k8sUtil,
+		informerClient:               informerClient,
+		clusterRepository:            clusterRepository,
+		argoCdInformer:               argoCdInformer,
+		ciWfInformer:                 ciWfInformer,
+		cdWfInformer:                 cdWfInformer,
+		systemExecInformer:           systemExecInformer,
+		veleroBslInformer:            veleroBslInformer,
+		veleroVslinformer:            veleroVslInformer,
+		veleroBackupInformer:         veleroBackupInformer,
+		veleroRestoreInformer:        veleroRestoreInformer,
+		veleroBackupScheduleInformer: veleroBackupScheduleInformer,
 	}
 }
 

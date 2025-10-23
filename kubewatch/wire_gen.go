@@ -20,6 +20,7 @@ import (
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backup"
+	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupSchedule"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupStorageLocation"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/restore"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/volumeSnapshotLocation"
@@ -69,7 +70,8 @@ func InitializeApp() (*App, error) {
 	veleroVslInformerInformerImpl := veleroVslInformer.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, informerClientImpl, runnable)
 	veleroBackupInformerInformerImpl := veleroBackupInformer.NewInformerImpl(sugaredLogger, k8sUtilImpl, appConfig, informerClientImpl, runnable)
 	veleroRestoreInformerInformerImpl := veleroRestoreInformer.NewInformerImpl(sugaredLogger, k8sUtilImpl, appConfig, informerClientImpl, runnable)
-	clusterInformerImpl := cluster.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterRepositoryImpl, informerClientImpl, informerImpl, argoWfInformerImpl, informerImpl2, systemExecInformerImpl, veleroBslInformerInformerImpl, veleroVslInformerInformerImpl, veleroBackupInformerInformerImpl, veleroRestoreInformerInformerImpl)
+	veleroBackupScheduleInformerInformerImpl := veleroBackupScheduleInformer.NewInformerImpl(sugaredLogger, k8sUtilImpl, appConfig, informerClientImpl, runnable)
+	clusterInformerImpl := cluster.NewInformerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterRepositoryImpl, informerClientImpl, informerImpl, argoWfInformerImpl, informerImpl2, systemExecInformerImpl, veleroBslInformerInformerImpl, veleroVslInformerInformerImpl, veleroBackupInformerInformerImpl, veleroRestoreInformerInformerImpl, veleroBackupScheduleInformerInformerImpl)
 	runnerImpl := informer.NewRunnerImpl(sugaredLogger, appConfig, k8sUtilImpl, clusterInformerImpl)
 	app := NewApp(routerImpl, sugaredLogger, appConfig, db, runnerImpl, runnable)
 	return app, nil

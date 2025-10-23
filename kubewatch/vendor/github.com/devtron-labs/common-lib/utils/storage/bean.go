@@ -18,6 +18,7 @@ const (
 	ResourceRestore                ResourceKind = "Restore"
 	ResourceBackupStorageLocation  ResourceKind = "BackupStorageLocation"
 	ResourceVolumeSnapshotLocation ResourceKind = "VolumeSnapshotLocation"
+	ResourceBackupSchedule         ResourceKind = "BackupSchedule"
 )
 
 type VeleoroBslStatusUpdate struct {
@@ -48,6 +49,15 @@ type RestoreStatus struct {
 	Phase          veleroBean.RestorePhase    `json:"phase,omitempty"`
 	Progress       veleroBean.RestoreProgress `json:"progress,omitempty"`
 }
+
+type BackupScheduleStatus struct {
+	Status               bool         `json:"phase,omitempty"`
+	StorageLocation      string       `json:"storageLocation,omitempty"`
+	Cron                 string       `json:"cron,omitempty"`
+	LastBackupTimestamp  *metav1.Time `json:"lastBackupTimestamp,omitempty"`
+	LastSkippedTimestamp *metav1.Time `json:"lastSkippedTimestamp,omitempty"`
+}
+
 type VeleroStorageEvent[T any] struct {
 	EventType    EventType    `json:"eventType"`
 	ResourceKind ResourceKind `json:"kind"`

@@ -6,6 +6,7 @@ import (
 	ciWf "github.com/devtron-labs/kubewatch/pkg/informer/cluster/argoWf/ci"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
 	veleroBackupInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backup"
+	veleroBackupScheduleInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupSchedule"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupStorageLocation"
 	veleroRestoreInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/restore"
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/volumeSnapshotLocation"
@@ -21,6 +22,7 @@ var WireSet = wire.NewSet(
 	veleroVslInformer.NewInformerImpl,
 	veleroBackupInformer.NewInformerImpl,
 	veleroRestoreInformer.NewInformerImpl,
+	veleroBackupScheduleInformer.NewInformerImpl,
 
 	NewInformerImpl,
 	wire.Bind(new(Informer), new(*InformerImpl)),

@@ -19,23 +19,25 @@ package bean
 type ClientType string
 
 const (
-	ArgoCDClientType         ClientType = "ArgoCD"
-	CiArgoWorkflowClientType ClientType = "CiArgoWorkflow"
-	CdArgoWorkflowClientType ClientType = "CdArgoWorkflow"
-	SystemExecutorClientType ClientType = "SystemExecutor"
-	VeleroBslClientType      ClientType = "VeleroBsl"
-	VeleroVslClientType      ClientType = "VeleroVsl"
-	VeleroBackupClientType   ClientType = "VeleroBackup"
-	VeleroRestoreClientType  ClientType = "VeleroRestore"
+	ArgoCDClientType               ClientType = "ArgoCD"
+	CiArgoWorkflowClientType       ClientType = "CiArgoWorkflow"
+	CdArgoWorkflowClientType       ClientType = "CdArgoWorkflow"
+	SystemExecutorClientType       ClientType = "SystemExecutor"
+	VeleroBslClientType            ClientType = "VeleroBsl"
+	VeleroVslClientType            ClientType = "VeleroVsl"
+	VeleroBackupClientType         ClientType = "VeleroBackup"
+	VeleroRestoreClientType        ClientType = "VeleroRestore"
+	VeleroBackupScheduleClientType ClientType = "VeleroBackupSchedule"
 )
 
 var SupportedClientMap = map[ClientType]bool{
-	ArgoCDClientType:         true,
-	CiArgoWorkflowClientType: true,
-	CdArgoWorkflowClientType: true,
-	SystemExecutorClientType: true,
-	VeleroBslClientType:      true,
-	VeleroVslClientType:      true,
-	VeleroBackupClientType:   true,
-	VeleroRestoreClientType:  true,
+	ArgoCDClientType:               true,
+	CiArgoWorkflowClientType:       true,
+	CdArgoWorkflowClientType:       true,
+	SystemExecutorClientType:       true,
+	VeleroBslClientType:            true,
+	VeleroVslClientType:            true,
+	VeleroBackupClientType:         true,
+	VeleroRestoreClientType:        true,
+	VeleroBackupScheduleClientType: true,
 }
