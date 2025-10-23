@@ -29,6 +29,7 @@ import (
 	"github.com/devtron-labs/kubewatch/pkg/informer/cluster/systemExec"
 	veleroBackupInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backup"
 	veleroBslInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/backupStorageLocation"
+	veleroRestoreInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/restore"
 	veleroVslInformer "github.com/devtron-labs/kubewatch/pkg/informer/cluster/velero/volumeSnapshotLocation"
 	"github.com/devtron-labs/kubewatch/pkg/middleware"
 	"github.com/devtron-labs/kubewatch/pkg/resource"
@@ -63,6 +64,7 @@ type InformerImpl struct {
 	veleroBslInformer      *veleroBslInformer.InformerImpl
 	veleroVslinformer      *veleroVslInformer.InformerImpl
 	veleroBackupInformer   *veleroBackupInformer.InformerImpl
+	veleroRestoreInformer  *veleroRestoreInformer.InformerImpl
 }
 
 func NewInformerImpl(logger *zap.SugaredLogger,
@@ -77,20 +79,22 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 	veleroBslInformer *veleroBslInformer.InformerImpl,
 	veleroVslInformer *veleroVslInformer.InformerImpl,
 	veleroBackupInformer *veleroBackupInformer.InformerImpl,
+	veleroRestoreInformer *veleroRestoreInformer.InformerImpl,
 ) *InformerImpl {
 	return &InformerImpl{
-		logger:               logger,
-		appConfig:            appConfig,
-		k8sUtil:              k8sUtil,
-		informerClient:       informerClient,
-		clusterRepository:    clusterRepository,
-		argoCdInformer:       argoCdInformer,
-		ciWfInformer:         ciWfInformer,
-		cdWfInformer:         cdWfInformer,
-		systemExecInformer:   systemExecInformer,
-		veleroBslInformer:    veleroBslInformer,
-		veleroVslinformer:    veleroVslInformer,
-		veleroBackupInformer: veleroBackupInformer,
+		logger:                logger,
+		appConfig:             appConfig,
+		k8sUtil:               k8sUtil,
+		informerClient:        informerClient,
+		clusterRepository:     clusterRepository,
+		argoCdInformer:        argoCdInformer,
+		ciWfInformer:          ciWfInformer,
+		cdWfInformer:          cdWfInformer,
+		systemExecInformer:    systemExecInformer,
+		veleroBslInformer:     veleroBslInformer,
+		veleroVslinformer:     veleroVslInformer,
+		veleroBackupInformer:  veleroBackupInformer,
+		veleroRestoreInformer: veleroRestoreInformer,
 	}
 }
 

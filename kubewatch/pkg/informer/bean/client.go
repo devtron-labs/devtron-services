@@ -26,6 +26,7 @@ const (
 	VeleroBslClientType      ClientType = "VeleroBsl"
 	VeleroVslClientType      ClientType = "VeleroVsl"
 	VeleroBackupClientType   ClientType = "VeleroBackup"
+	VeleroRestoreClientType  ClientType = "VeleroRestore"
 )
 
 var SupportedClientMap = map[ClientType]bool{
@@ -36,4 +37,5 @@ var SupportedClientMap = map[ClientType]bool{
 	VeleroBslClientType:      true,
 	VeleroVslClientType:      true,
 	VeleroBackupClientType:   true,
+	VeleroRestoreClientType:  true,
 }

@@ -15,3 +15,34 @@
  */
 
 package veleroRestoreInformer
+
+import (
+	"fmt"
+	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
+	informerErr "github.com/devtron-labs/kubewatch/pkg/informer/errors"
+	"golang.org/x/exp/maps"
+)
+
+func (impl *InformerImpl) getVeleroRestoreStopper(clusterId int) (*informerBean.SharedStopper, bool) {
+	stopper, ok := impl.veleroRestoreInformerStopper[clusterId]
+	if ok {
+		return stopper, stopper.HasInformer()
+	}
+	return stopper, false
+}
+
+func (impl *InformerImpl) checkAndGetStopChannel(clusterLabels *informerBean.ClusterLabels) (chan struct{}, error) {
+	stopChannel := make(chan struct{})
+	stopper, ok := impl.getVeleroRestoreStopper(clusterLabels.ClusterId)
+	if ok && stopper.HasInformer() {
+		impl.logger.Debug(fmt.Sprintf("velero restore informer for %s already exist", clusterLabels.ClusterName))
+		return nil, informerErr.AlreadyExists
+	}
+	stopper = stopper.GetStopper(stopChannel)
+	impl.veleroRestoreInformerStopper[clusterLabels.ClusterId] = stopper
+	return stopChannel, nil
+}
+
+func (impl *InformerImpl) getStoppableClusterIds() []int {
+	return maps.Keys(impl.veleroRestoreInformerStopper)
+}

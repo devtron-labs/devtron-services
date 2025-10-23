@@ -60,6 +60,8 @@ func (impl *InformerImpl) GetClientAdvisor(clientType bean.ClientType) (ClientAd
 		return impl.veleroVslinformer, nil
 	case bean.VeleroBackupClientType:
 		return impl.veleroBackupInformer, nil
+	case bean.VeleroRestoreClientType:
+		return impl.veleroRestoreInformer, nil
 	default:
 		return NewUnimplementedAdvisor(), fmt.Errorf("client type %q not supported", clientType)
 	}
