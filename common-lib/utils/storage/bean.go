@@ -41,6 +41,13 @@ type BackupStatus struct {
 	Version             string                    `json:"version,omitempty"`
 }
 
+type RestoreStatus struct {
+	BackupName     string                     `json:"backupName,omitempty"`
+	ScheduleName   string                     `json:"scheduleName,omitempty"`
+	StartTimestamp *metav1.Time               `json:"startTimestamp,omitempty"`
+	Phase          veleroBean.RestorePhase    `json:"phase,omitempty"`
+	Progress       veleroBean.RestoreProgress `json:"progress,omitempty"`
+}
 type VeleroStorageEvent[T any] struct {
 	EventType    EventType    `json:"eventType"`
 	ResourceKind ResourceKind `json:"kind"`
