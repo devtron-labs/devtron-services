@@ -23,6 +23,7 @@ import (
 	"github.com/devtron-labs/common-lib/constants"
 	"github.com/devtron-labs/common-lib/middlewares"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
+	"github.com/devtron-labs/common-lib/securestore"
 	grpcUtil "github.com/devtron-labs/common-lib/utils/grpc"
 	"github.com/devtron-labs/kubelink/api/router"
 	client "github.com/devtron-labs/kubelink/grpc"
@@ -60,6 +61,10 @@ func NewApp(Logger *zap.SugaredLogger,
 	router *router.RouterImpl,
 	k8sInformer k8sInformer.K8sInformer,
 	db *pg.DB, cfg *grpcUtil.Configuration) *App {
+	err := securestore.SetEncryptionKey()
+	if err != nil {
+		Logger.Errorw("error in setting encryption key", "err", err)
+	}
 	return &App{
 		Logger:      Logger,
 		ServerImpl:  ServerImpl,

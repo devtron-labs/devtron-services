@@ -17,6 +17,7 @@
 package remoteConnection
 
 import (
+	"github.com/devtron-labs/common-lib/securestore"
 	remoteConnectionBean "github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"github.com/devtron-labs/kubelink/pkg/sql"
 	"github.com/go-pg/pg"
@@ -46,8 +47,8 @@ type RemoteConnectionConfig struct {
 	ProxyUrl         string                                      `sql:"proxy_url"`
 	SSHServerAddress string                                      `sql:"ssh_server_address"`
 	SSHUsername      string                                      `sql:"ssh_username"`
-	SSHPassword      string                                      `sql:"ssh_password"`
-	SSHAuthKey       string                                      `sql:"ssh_auth_key"`
+	SSHPassword      securestore.EncryptedString                 `sql:"ssh_password"`
+	SSHAuthKey       securestore.EncryptedString                 `sql:"ssh_auth_key"`
 	Deleted          bool                                        `sql:"deleted,notnull"`
 	sql.AuditLog
 }

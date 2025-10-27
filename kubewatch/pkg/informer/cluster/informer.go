@@ -84,7 +84,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 func (impl *InformerImpl) StartDevtronClusterWatcher() error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start default cluster informer", "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start default cluster informer", "time", time.Since(startTime))
 	}()
 	clusterInfo, err := impl.clusterRepository.FindByName(commonBean.DEFAULT_CLUSTER)
 	if err != nil && !errors.Is(err, pg.ErrNoRows) {

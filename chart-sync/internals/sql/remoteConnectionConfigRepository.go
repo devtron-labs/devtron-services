@@ -1,20 +1,21 @@
 package sql
 
 import (
+	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
 )
 
 type RemoteConnectionConfig struct {
-	tableName        struct{} `sql:"remote_connection_config" pg:",discard_unknown_columns"`
-	Id               int      `sql:"id,pk"`
-	ConnectionMethod string   `sql:"connection_method"`
-	ProxyUrl         string   `sql:"proxy_url"`
-	SSHServerAddress string   `sql:"ssh_server_address"`
-	SSHUsername      string   `sql:"ssh_username"`
-	SSHPassword      string   `sql:"ssh_password"`
-	SSHAuthKey       string   `sql:"ssh_auth_key"`
-	Deleted          bool     `sql:"deleted,notnull"`
+	tableName        struct{}                    `sql:"remote_connection_config" pg:",discard_unknown_columns"`
+	Id               int                         `sql:"id,pk"`
+	ConnectionMethod string                      `sql:"connection_method"`
+	ProxyUrl         string                      `sql:"proxy_url"`
+	SSHServerAddress string                      `sql:"ssh_server_address"`
+	SSHUsername      string                      `sql:"ssh_username"`
+	SSHPassword      securestore.EncryptedString `sql:"ssh_password"`
+	SSHAuthKey       securestore.EncryptedString `sql:"ssh_auth_key"`
+	Deleted          bool                        `sql:"deleted,notnull"`
 	AuditLog
 }
 
