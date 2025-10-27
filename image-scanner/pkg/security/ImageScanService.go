@@ -246,9 +246,9 @@ func (impl *ImageScanServiceImpl) GetImageScanRenderDto(registryId string, scanE
 	imageScanRenderDto := &common.ImageScanRenderDto{
 		RegistryType:       dockerRegistry.RegistryType,
 		Username:           dockerRegistry.Username,
-		Password:           dockerRegistry.Password,
+		Password:           dockerRegistry.Password.String(),
 		AWSAccessKeyId:     dockerRegistry.AWSAccessKeyId,
-		AWSSecretAccessKey: dockerRegistry.AWSSecretAccessKey,
+		AWSSecretAccessKey: dockerRegistry.AWSSecretAccessKey.String(),
 		AWSRegion:          dockerRegistry.AWSRegion,
 		Image:              scanEvent.Image,
 		DockerConnection:   scanEvent.DockerConnection,

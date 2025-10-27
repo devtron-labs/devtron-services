@@ -37,3 +37,11 @@
  | SERVER_SHUTDOWN_TIMEOUT |  |5m |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |
 
+
+## POSTGRES Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CASBIN_DATABASE | string |casbin |  |  | false |
+ | PG_READ_TIMEOUT | int64 |30 |  |  | false |
+ | PG_WRITE_TIMEOUT | int64 |30 |  |  | false |
+

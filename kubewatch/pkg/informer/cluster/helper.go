@@ -97,7 +97,7 @@ func (impl *InformerImpl) stopInformersForCluster(clusterId int) error {
 func (impl *InformerImpl) startInformerForCluster(clusterInfo *repository.Cluster) error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to start informers for cluster", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
+		impl.logger.Infow("time taken to start informers for cluster", "clusterId", clusterInfo.Id, "time", time.Since(startTime))
 	}()
 	if len(clusterInfo.ErrorInConnecting) > 0 {
 		impl.logger.Debugw("cluster is not reachable", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName)
@@ -205,7 +205,7 @@ func (impl *InformerImpl) syncMultiClusterInformer(clusterId int) error {
 func (impl *InformerImpl) reloadInformerForCluster(clusterId int) error {
 	startTime := time.Now()
 	defer func() {
-		impl.logger.Debugw("time taken to reload informer for cluster", "clusterId", clusterId, "time", time.Since(startTime))
+		impl.logger.Infow("time taken to reload informer for cluster", "clusterId", clusterId, "time", time.Since(startTime))
 	}()
 
 	clusterInfo, err := impl.clusterRepository.FindById(clusterId)

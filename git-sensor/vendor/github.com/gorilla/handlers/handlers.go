@@ -35,7 +35,7 @@ func (h MethodHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		sort.Strings(allow)
 		w.Header().Set("Allow", strings.Join(allow, ", "))
-		if req.Method == http.MethodOptions {
+		if req.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -44,11 +44,15 @@ func (h MethodHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 // responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP
-// status code and body size.
+// status code and body size
 type responseLogger struct {
 	w      http.ResponseWriter
 	status int
 	size   int
+}
+
+func (l *responseLogger) Header() http.Header {
+	return l.w.Header()
 }
 
 func (l *responseLogger) Write(b []byte) (int, error) {
@@ -70,14 +74,37 @@ func (l *responseLogger) Size() int {
 	return l.size
 }
 
-func (l *responseLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	conn, rw, err := l.w.(http.Hijacker).Hijack()
-	if err == nil && l.status == 0 {
+func (l *responseLogger) Flush() {
+	f, ok := l.w.(http.Flusher)
+	if ok {
+		f.Flush()
+	}
+}
+
+type hijackLogger struct {
+	responseLogger
+}
+
+func (l *hijackLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h := l.responseLogger.w.(http.Hijacker)
+	conn, rw, err := h.Hijack()
+	if err == nil && l.responseLogger.status == 0 {
 		// The status will be StatusSwitchingProtocols if there was no error and
 		// WriteHeader has not been called yet
-		l.status = http.StatusSwitchingProtocols
+		l.responseLogger.status = http.StatusSwitchingProtocols
 	}
 	return conn, rw, err
+}
+
+type closeNotifyWriter struct {
+	loggingResponseWriter
+	http.CloseNotifier
+}
+
+type hijackCloseNotifier struct {
+	loggingResponseWriter
+	http.Hijacker
+	http.CloseNotifier
 }
 
 // isContentType validates the Content-Type header matches the supplied
@@ -97,7 +124,7 @@ func isContentType(h http.Header, contentType string) bool {
 // Only PUT, POST, and PATCH requests are considered.
 func ContentTypeHandler(h http.Handler, contentTypes ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !(r.Method == http.MethodPut || r.Method == http.MethodPost || r.Method == http.MethodPatch) {
+		if !(r.Method == "PUT" || r.Method == "POST" || r.Method == "PATCH") {
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -108,10 +135,7 @@ func ContentTypeHandler(h http.Handler, contentTypes ...string) http.Handler {
 				return
 			}
 		}
-		http.Error(w, fmt.Sprintf("Unsupported content type %q; expected one of %q",
-			r.Header.Get("Content-Type"),
-			contentTypes),
-			http.StatusUnsupportedMediaType)
+		http.Error(w, fmt.Sprintf("Unsupported content type %q; expected one of %q", r.Header.Get("Content-Type"), contentTypes), http.StatusUnsupportedMediaType)
 	})
 }
 
@@ -136,12 +160,12 @@ const (
 // Form method takes precedence over header method.
 func HTTPMethodOverrideHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		if r.Method == "POST" {
 			om := r.FormValue(HTTPMethodOverrideFormKey)
 			if om == "" {
 				om = r.Header.Get(HTTPMethodOverrideHeader)
 			}
-			if om == http.MethodPut || om == http.MethodPatch || om == http.MethodDelete {
+			if om == "PUT" || om == "PATCH" || om == "DELETE" {
 				r.Method = om
 			}
 		}

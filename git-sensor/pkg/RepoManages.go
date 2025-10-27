@@ -182,7 +182,7 @@ func (impl RepoManagerImpl) InactivateWebhookDataMappingForPipelineMaterials(old
 func (impl RepoManagerImpl) updateCommitsInPipelineMaterial(gitCtx git.GitContext,
 	material *sql.GitMaterial, pipelineMaterial *sql.CiPipelineMaterial) *sql.CiPipelineMaterial {
 
-	gitCtx = gitCtx.WithCredentials(material.GitProvider.UserName, material.GitProvider.Password).
+	gitCtx = gitCtx.WithCredentials(material.GitProvider.UserName, material.GitProvider.Password.String()).
 		WithTLSData(material.GitProvider.CaCert, material.GitProvider.TlsKey, material.GitProvider.TlsCert, material.GitProvider.EnableTLSVerification)
 
 	fetchCount := impl.configuration.GitHistoryCount
@@ -248,7 +248,7 @@ func (impl RepoManagerImpl) SaveGitProvider(provider *sql.GitProvider) (*sql.Git
 	}
 
 	if (err == nil) && (provider.AuthMode == sql.AUTH_MODE_SSH) {
-		err = git.CreateOrUpdateSshPrivateKeyOnDisk(provider.Id, provider.SshPrivateKey)
+		err = git.CreateOrUpdateSshPrivateKeyOnDisk(provider.Id, provider.SshPrivateKey.String())
 		if err != nil {
 			impl.logger.Errorw("error in creating/updating ssh private key ", "err", err)
 		}
@@ -393,7 +393,7 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 
 	checkoutLocationForFetching := impl.repositoryManager.GetCheckoutLocation(gitCtx, material, gitProvider.Url, checkoutPath)
 
-	errMsg, err := impl.repositoryManager.Add(gitCtx, material.GitProviderId, checkoutPath, material.Url, gitProvider.AuthMode, gitProvider.SshPrivateKey)
+	errMsg, err := impl.repositoryManager.Add(gitCtx, material.GitProviderId, checkoutPath, material.Url, gitProvider.AuthMode, gitProvider.SshPrivateKey.String())
 	if err != nil {
 		impl.logger.Errorw("error encountered in adding git repo", "materialId", material.Id, "err", err, "errMsg", errMsg)
 		material.CheckoutStatus = false
@@ -407,6 +407,7 @@ func (impl RepoManagerImpl) checkoutMaterial(gitCtx git.GitContext, material *sq
 	} else {
 		material.CheckoutLocation = checkoutLocationForFetching
 		material.CheckoutStatus = true
+		material.CheckoutMsgAny = ""
 		material.FetchStatus = true
 	}
 	err = impl.materialRepository.Update(material)
@@ -799,7 +800,7 @@ func (impl RepoManagerImpl) GetCommitMetadataForPipelineMaterial(gitCtx git.GitC
 		return nil, err
 	}
 
-	gitCtx = gitCtx.WithCredentials(gitMaterial.GitProvider.UserName, gitMaterial.GitProvider.Password).
+	gitCtx = gitCtx.WithCredentials(gitMaterial.GitProvider.UserName, gitMaterial.GitProvider.Password.String()).
 		WithTLSData(gitMaterial.GitProvider.CaCert, gitMaterial.GitProvider.TlsKey, gitMaterial.GitProvider.TlsCert, gitMaterial.GitProvider.EnableTLSVerification) // validate checkout status of gitMaterial
 	if !gitMaterial.CheckoutStatus {
 		impl.logger.Errorw("checkout not success", "gitMaterialId", gitMaterialId)
@@ -858,7 +859,7 @@ func (impl RepoManagerImpl) GetReleaseChanges(gitCtx git.GitContext, request *Re
 		impl.locker.ReturnLocker(gitMaterial.Id)
 	}()
 
-	gitCtx = gitCtx.WithCredentials(gitMaterial.GitProvider.UserName, gitMaterial.GitProvider.Password).
+	gitCtx = gitCtx.WithCredentials(gitMaterial.GitProvider.UserName, gitMaterial.GitProvider.Password.String()).
 		WithTLSData(gitMaterial.GitProvider.CaCert, gitMaterial.GitProvider.TlsKey, gitMaterial.GitProvider.TlsCert, gitMaterial.GitProvider.EnableTLSVerification)
 
 	gitChanges, err := impl.repositoryManagerAnalytics.ChangesSinceByRepositoryForAnalytics(gitCtx, gitMaterial.CheckoutLocation, request.OldCommit, request.NewCommit)

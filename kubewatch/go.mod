@@ -1,11 +1,11 @@
 module github.com/devtron-labs/kubewatch
 
-go 1.24.6
+go 1.24.2
 
-toolchain go1.24.7
+toolchain go1.24.3
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.14.17
+	github.com/argoproj/argo-cd/v2 v2.14.13
 	github.com/argoproj/argo-workflows/v3 v3.6.7
 	github.com/argoproj/gitops-engine v0.7.1-0.20250521000818-c08b0a72c1f1
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -240,5 +240,5 @@ require (
 
 replace (
 	github.com/cyphar/filepath-securejoin v0.4.1 => github.com/cyphar/filepath-securejoin v0.3.6 // indirect
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20250902142718-f85a365e9266
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251027065956-5bef98e39711
 )
