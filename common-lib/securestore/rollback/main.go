@@ -15,11 +15,11 @@ import (
 func main() {
 	// Command line flags
 	var (
-		databaseName = flag.String("database", "orchestrator", "Database name to connect to")
-		table        = flag.String("table", "all", "Table to rollback (cluster, gitops_config, docker_artifact_store, git_provider, remote_connection_config, all)")
-		recordId     = flag.String("id", "", "Specific record ID to rollback (optional)")
-		validate     = flag.Bool("validate", false, "Validate rollback results")
-		help         = flag.Bool("help", false, "Show help message")
+		//databaseName = flag.String("database", "orchestrator", "Database name to connect to")
+		table    = flag.String("table", "all", "Table to rollback (cluster, gitops_config, docker_artifact_store, git_provider, remote_connection_config, all)")
+		recordId = flag.String("id", "", "Specific record ID to rollback (optional)")
+		validate = flag.Bool("validate", false, "Validate rollback results")
+		help     = flag.Bool("help", false, "Show help message")
 	)
 	flag.Parse()
 
@@ -37,7 +37,7 @@ func main() {
 	log.Info("Starting cluster config rollback utility")
 
 	// Create rollback service
-	service, err := NewRollbackService(*databaseName)
+	service, err := NewRollbackService()
 	if err != nil {
 		log.Fatalf("Failed to create rollback service: %v", err)
 	}

@@ -119,8 +119,8 @@ type RollbackServiceImpl struct {
 	dbConnection *pg.DB
 }
 
-func NewRollbackService(databaseName string) (*RollbackServiceImpl, error) {
-	dbConn, err := newDbConnection(databaseName)
+func NewRollbackService() (*RollbackServiceImpl, error) {
+	dbConn, err := newDbConnection()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create database connection: %w", err)
 	}
@@ -147,7 +147,6 @@ func (impl *RollbackServiceImpl) RollbackEncryptedConfig() error {
 	var clusters []Cluster
 	err = impl.dbConnection.Model(&clusters).
 		Where("config IS NOT NULL").
-		Where("config != ''").
 		Select()
 	if err != nil {
 		return fmt.Errorf("failed to fetch clusters: %w", err)
@@ -287,27 +286,24 @@ func (impl *RollbackServiceImpl) ValidateRollback() error {
 type config struct {
 	Addr            string `env:"PG_ADDR" envDefault:"127.0.0.1"`
 	Port            string `env:"PG_PORT" envDefault:"5432"`
-	User            string `env:"PG_USER" envDefault:""`
+	User            string `env:"PG_USER" envDefault:"postgres"`
 	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
 	Database        string `env:"PG_DATABASE" envDefault:"orchestrator"`
 	ApplicationName string `env:"APP" envDefault:"orchestrator"`
 	LocalDev        bool   `env:"RUNTIME_CONFIG_LOCAL_DEV" envDefault:"false"`
 }
 
-func getDbConfig(databaseName string) (*config, error) {
+func getDbConfig() (*config, error) {
 	cfg := &config{}
 	err := env.Parse(cfg)
 	if err != nil {
 		return cfg, err
 	}
-	if !cfg.LocalDev {
-		cfg.Database = databaseName //overriding database
-	}
 	return cfg, err
 }
 
-func newDbConnection(databaseName string) (*pg.DB, error) {
-	cfg, err := getDbConfig(databaseName)
+func newDbConnection() (*pg.DB, error) {
+	cfg, err := getDbConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -324,10 +320,10 @@ func newDbConnection(databaseName string) (*pg.DB, error) {
 	_, err = dbConnection.QueryOne(&test, `SELECT 1`)
 
 	if err != nil {
-		log.Errorf("error in connecting to database %s: %v", databaseName, err)
+		log.Errorf("error in connecting to database %s: %v", cfg.Database, err)
 		return nil, err
 	} else {
-		log.Infof("connected with database %s", databaseName)
+		log.Infof("connected with database %s", cfg.Database)
 	}
 	return dbConnection, err
 }
