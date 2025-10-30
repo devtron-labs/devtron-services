@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/caarlos0/env"
-	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/image-scanner/pkg/middleware"
 	"net/http"
 	"os"
@@ -51,10 +50,6 @@ func NewApp(Router *api.Router, Logger *zap.SugaredLogger,
 	serverConfig, err := GetServerConfig()
 	if err != nil {
 		Logger.Errorw("error in getting server config", "err", err)
-	}
-	err = securestore.SetEncryptionKey()
-	if err != nil {
-		Logger.Errorw("error in setting encryption key", "err", err)
 	}
 	return &App{
 		Router:           Router,
