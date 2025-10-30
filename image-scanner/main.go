@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/devtron-labs/common-lib/securestore"
 	"log"
 	"os"
 	"os/signal"
@@ -25,6 +26,10 @@ import (
 )
 
 func main() {
+	err := securestore.SetEncryptionKey()
+	if err != nil {
+		log.Println("error in setting encryption key", "err", err)
+	}
 	fmt.Println("hello")
 	app, err := InitializeApp()
 	if err != nil {
