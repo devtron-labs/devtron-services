@@ -32,6 +32,7 @@
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string | |  |  | false |
  | PROJECT_ID | string |projects/devtron-project-id |  |  | false |
+ | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
  | SCANNER_TYPE | string | |  |  | false |
  | SERVER_HTTP_PORT | int |8080 |  |  | false |
  | SERVER_SHUTDOWN_TIMEOUT |  |5m |  |  | false |
