@@ -32,7 +32,7 @@ type DeploymentMetricService interface {
 	GetBulkDeploymentMetrics(request *dto.BulkMetricRequest) (*dto.BulkMetricsResponse, error)
 
 	// New DORA metrics functions
-	ProcessSingleDoraMetrics(request *dto.MetricRequest) (*DoraMetrics, error)
+	ProcessSingleDoraMetrics(request *dto.MetricRequest) (*dto.Metrics, error)
 	ProcessBulkDoraMetrics(request *dto.BulkMetricRequest) ([]DoraMetrics, error)
 	CalculateDoraMetrics(appId, envId int, releases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime, fromTime, toTime time.Time) *DoraMetrics
 	GetDoraMetricsSummary(doraMetrics *DoraMetrics) *DoraMetricsSummary
@@ -805,8 +805,72 @@ func (impl DeploymentMetricServiceImpl) ProcessBulkDoraMetrics(request *dto.Bulk
 	return impl.CalculateDoraMetricsForBulk(request.AppEnvPairs, releasesByAppEnv, allLeadTimes, *request.From, *request.To), nil
 }
 
+// calculateCycleTimeBetweenReleases calculates the time between consecutive releases
+func (impl DeploymentMetricServiceImpl) calculateCycleTimeBetweenReleases(releases []*dto.Metric, lastRelease *sql.AppRelease) {
+	if len(releases) == 0 {
+		return
+	}
+
+	// Calculate cycle time between consecutive releases
+	for i := 0; i < len(releases)-1; i++ {
+		releases[i].CycleTime = releases[i].ReleaseTime.Sub(releases[i+1].ReleaseTime).Minutes()
+	}
+
+	// Handle the last release
+	if lastRelease != nil {
+		releases[len(releases)-1].CycleTime = releases[len(releases)-1].ReleaseTime.Sub(lastRelease.TriggerTime).Minutes()
+	} else if len(releases) > 0 {
+		releases[len(releases)-1].CycleTime = 0
+	}
+}
+
+// populateMetricsWithImprovedLogic populates dto.Metrics using DORA calculation helper functions
+func (impl DeploymentMetricServiceImpl) populateMetricsWithImprovedLogic(appReleases []sql.AppRelease, materials []*sql.PipelineMaterial, leadTimes []sql.LeadTime, lastRelease *sql.AppRelease, fromTime, toTime time.Time) (*dto.Metrics, error) {
+	releases := impl.transform(appReleases, materials, leadTimes)
+
+	impl.calculateCycleTimeBetweenReleases(releases, lastRelease)
+	lastFailedTime := ""
+	recoveryTimeLastFailed := float64(0)
+	for i := 0; i < len(releases); i++ {
+		if releases[i].ReleaseStatus == dto.Failure {
+			if lastFailedTime == "" {
+				lastFailedTime = releases[i].ReleaseTime.Format(constants.Layout)
+			}
+			if i < len(releases)-1 && releases[i+1].ReleaseStatus == dto.Failure {
+				continue
+			}
+			for j := i - 1; j >= 0; j-- {
+				if releases[j].ReleaseStatus == dto.Success {
+					releases[i].RecoveryTime = releases[j].ReleaseTime.Sub(releases[i].ReleaseTime).Minutes()
+					if recoveryTimeLastFailed == 0 {
+						recoveryTimeLastFailed = releases[i].RecoveryTime
+					}
+					break
+				}
+			}
+		}
+	}
+
+	metrics := &dto.Metrics{
+		Series:                 releases,
+		AverageCycleTime:       impl.calculateDeploymentFrequency(releases, fromTime, toTime),
+		AverageLeadTime:        impl.calculateMeanLeadTimeForChanges(releases),
+		ChangeFailureRate:      impl.calculateChangeFailureRateNew(releases),
+		AverageRecoveryTime:    impl.calculateMeanTimeToRecovery(releases),
+		LastFailedTime:         lastFailedTime,
+		RecoveryTimeLastFailed: recoveryTimeLastFailed,
+	}
+
+	// Calculate change size metrics
+	if len(metrics.Series) > 0 {
+		impl.calculateChangeSize(metrics)
+	}
+
+	return metrics, nil
+}
+
 // ProcessSingleDoraMetrics processes DORA metrics for a single app-env pair
-func (impl DeploymentMetricServiceImpl) ProcessSingleDoraMetrics(request *dto.MetricRequest) (*DoraMetrics, error) {
+func (impl DeploymentMetricServiceImpl) ProcessSingleDoraMetrics(request *dto.MetricRequest) (*dto.Metrics, error) {
 	from, to, err := utils2.ParseDateRange(request.From, request.To)
 	if err != nil {
 		return nil, err
@@ -819,10 +883,7 @@ func (impl DeploymentMetricServiceImpl) ProcessSingleDoraMetrics(request *dto.Me
 	}
 
 	if len(releases) == 0 {
-		return &DoraMetrics{
-			AppId: request.AppId,
-			EnvId: request.EnvId,
-		}, nil
+		return utils2.CreateEmptyMetrics(), nil
 	}
 
 	var releaseIds []int
@@ -842,66 +903,19 @@ func (impl DeploymentMetricServiceImpl) ProcessSingleDoraMetrics(request *dto.Me
 		return nil, err
 	}
 
-	return impl.CalculateDoraMetrics(request.AppId, request.EnvId, releases, materials, leadTimes, from, to), nil
+	// Get previous release with bounds checking
+	var lastRelease *sql.AppRelease
+	if len(releases) > 0 {
+		lastId := releases[len(releases)-1].Id
+		lastRelease, err = impl.appReleaseRepository.GetPreviousRelease(request.AppId, request.EnvId, lastId)
+		if err != nil && !utils.IsErrNoRows(err) {
+			impl.logger.Errorw("error getting previous release from db ", "err", err)
+			// Don't return error, just continue without previous release
+		}
+		if utils.IsErrNoRows(err) {
+			lastRelease = nil
+		}
+	}
+
+	return impl.populateMetricsWithImprovedLogic(releases, materials, leadTimes, lastRelease, from, to)
 }
-
-/*
-USAGE EXAMPLES:
-
-1. Calculate DORA metrics for a single app-environment pair (includes materials data):
-   doraMetrics, err := deploymentService.ProcessSingleDoraMetrics(&dto.MetricRequest{
-       AppId: 123,
-       EnvId: 456,
-       From:  "2024-01-01T00:00:00Z",
-       To:    "2024-01-31T23:59:59Z",
-   })
-
-2. Calculate DORA metrics for multiple app-environment pairs (bulk - optimized without materials):
-   doraMetricsArray, err := deploymentService.ProcessBulkDoraMetrics(&dto.BulkMetricRequest{
-       AppEnvPairs: []dto.AppEnvPair{
-           {AppId: 123, EnvId: 456},
-           {AppId: 789, EnvId: 101},
-       },
-       From: &fromTime,
-       To:   &toTime,
-   })
-
-3. Get DORA metrics with performance classification:
-   summary := deploymentService.GetDoraMetricsSummary(doraMetrics)
-
-4. Use within existing getBulkDeploymentMetricsWithBulkQueries function:
-   After fetching all releases and leadTimes (materials not needed for bulk), you can calculate DORA metrics:
-
-   doraMetricsArray := impl.CalculateDoraMetricsForBulk(request.AppEnvPairs, releasesByAppEnv, allLeadTimes, *request.From, *request.To)
-
-   // Access DORA metrics for each app-env pair:
-   for _, doraMetrics := range doraMetricsArray {
-       fmt.Printf("App-Env %d-%d: Deployment Frequency: %.2f/day, CFR: %.2f%%, Lead Time: %.2f min, MTTR: %.2f min\n",
-           doraMetrics.AppId, doraMetrics.EnvId, doraMetrics.DeploymentFrequency, doraMetrics.ChangeFailureRate,
-           doraMetrics.MeanLeadTimeForChanges, doraMetrics.MeanTimeToRecovery)
-   }
-
-DORA METRICS FORMULAS IMPLEMENTED:
-
-1. Deployment Frequency: Successful Deployments ÷ Time Period (in days)
-   - Measures how often successful deployments occur
-   - Result: deployments per day
-
-2. Change Failure Rate: (Failed Deployments ÷ Total Deployments) × 100
-   - Measures percentage of deployments that cause failures
-   - Result: percentage
-
-3. Mean Lead Time for Changes: Σ(Deployment Time - Commit Time) ÷ Number of Changes
-   - Measures average time from commit to successful deployment
-   - Result: minutes
-
-4. Mean Time to Recovery: Σ(Recovery Time - Failure Time) ÷ Number of Incidents
-   - Measures average time to recover from failed deployments
-   - Result: minutes
-
-PERFORMANCE CLASSIFICATION:
-- Elite: Top performers (e.g., >1 deployment/day, <15% CFR, <1 day lead time, <1 hour MTTR)
-- High: High performers
-- Medium: Medium performers
-- Low: Low performers
-*/

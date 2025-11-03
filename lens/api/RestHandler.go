@@ -134,13 +134,7 @@ func (impl *RestHandlerImpl) GetDeploymentMetrics(w http.ResponseWriter, r *http
 		metricRequest.To = to
 	}
 
-	//err := decoder.Decode(metricRequest)
-	//if err != nil {
-	//	impl.logger.Error(err)
-	//	impl.writeJsonResp(w, err, nil, http.StatusBadRequest)
-	//	return
-	//}
-	metrics, err := impl.deploymentMetricService.GetDeploymentMetrics(metricRequest)
+	metrics, err := impl.deploymentMetricService.ProcessSingleDoraMetrics(metricRequest)
 	impl.logger.Infof("metrics %+v", metrics)
 	impl.writeJsonResp(w, err, metrics, 200)
 }
