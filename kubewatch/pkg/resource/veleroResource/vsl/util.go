@@ -5,7 +5,6 @@ import (
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/utils/storage"
 	"github.com/pkg/errors"
-	veleroVslBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 )
 
 func (impl *InformerImpl) sendVslUpdate(vslChangeObj *storage.VeleroStorageEvent[storage.LocationsStatus]) error {
@@ -26,12 +25,4 @@ func (impl *InformerImpl) sendVslUpdate(vslChangeObj *storage.VeleroStorageEvent
 		impl.logger.Info("velero status update sent", "veleroStatusUpdate:", string(vslChangeObjByte))
 		return nil
 	}
-}
-
-func isChangeInVslObject(oldObj, newObj *veleroVslBean.VolumeSnapshotLocation, vslChangeObj *storage.VeleroStorageEvent[storage.LocationsStatus]) bool {
-	if oldObj.Spec.Provider == newObj.Spec.Provider {
-		return false
-	}
-	vslChangeObj.Data.Provider = newObj.Spec.Provider
-	return true
 }

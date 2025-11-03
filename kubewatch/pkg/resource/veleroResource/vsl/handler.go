@@ -43,9 +43,6 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 					ResourceKind: storage.ResourceVolumeSnapshotLocation,
 					ClusterId:    clusterLabels.ClusterId,
 					ResourceName: vslObj.Name,
-					Data: storage.LocationsStatus{
-						Provider: vslObj.Spec.Provider,
-					},
 				}
 				err := impl.sendVslUpdate(vslChangeObj)
 				if err != nil {
@@ -55,31 +52,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 				impl.logger.Errorw("velero vsl object add detected, but could not cast to velero vsl object", "obj", obj)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			impl.logger.Debugw("velero vsl update event received")
-			if oldVslObj, ok := oldObj.(*veleroVslBean.VolumeSnapshotLocation); ok {
-				if newVslObj, ok := newObj.(*veleroVslBean.VolumeSnapshotLocation); ok {
-					vslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
-						EventType:    storage.EventTypeUpdated,
-						ResourceKind: storage.ResourceVolumeSnapshotLocation,
-						ClusterId:    clusterLabels.ClusterId,
-						ResourceName: newVslObj.Name,
-					}
-					if isChangeInVslObject(oldVslObj, newVslObj, vslChangeObj) {
-						err := impl.sendVslUpdate(vslChangeObj)
-						if err != nil {
-							impl.logger.Errorw("error in sending velero vsl update event", "err", err)
-						}
-					} else {
-						impl.logger.Debugw("no change in velero vsl object", "oldObj", oldVslObj, "newObj", newVslObj)
-					}
-				} else {
-					impl.logger.Errorw("velero vsl object update detected, but could not cast to velero vsl object", "newObj", newObj)
-				}
-			} else {
-				impl.logger.Errorw("velero vsl object update detected, but could not cast to velero vsl object", "oldObj", oldObj)
-			}
-		},
+		UpdateFunc: func(oldObj, newObj interface{}) {},
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero vsl delete event received")
 			if vslObj, ok := obj.(*veleroVslBean.VolumeSnapshotLocation); ok {

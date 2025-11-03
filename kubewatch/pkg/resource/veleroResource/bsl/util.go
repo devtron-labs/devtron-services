@@ -13,7 +13,6 @@ func (impl *InformerImpl) sendBslUpdate(bslChangeObj *storage.VeleroStorageEvent
 		impl.logger.Errorw("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
 		return errors.New("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
 	}
-	//bslChangeobjJson, err := json.Marshal(veleroStatusUpdate)
 	bslChangeObjByte, err := json.Marshal(bslChangeObj)
 	if err != nil {
 		impl.logger.Errorw("error in marshalling velero status update", "err", err)
@@ -29,15 +28,14 @@ func (impl *InformerImpl) sendBslUpdate(bslChangeObj *storage.VeleroStorageEvent
 	}
 }
 
-func isChangeInBslObject(oldObj, newObj *veleroBslBean.BackupStorageLocation, bslChangeObj *storage.VeleroStorageEvent[storage.LocationsStatus]) bool {
-	if oldObj.Spec.Provider == newObj.Spec.Provider && oldObj.Status.Phase == newObj.Status.Phase {
-		return false
+func isChangeInBslStatusObject(oldObj, newObj *veleroBslBean.BackupStorageLocationStatus) bool {
+	if oldObj != nil && newObj != nil {
+		return oldObj.Phase != newObj.Phase ||
+			oldObj.Message != newObj.Message ||
+			!oldObj.LastSyncedTime.Equal(newObj.LastSyncedTime) ||
+			!oldObj.LastValidationTime.Equal(newObj.LastValidationTime)
+	} else if oldObj == nil && newObj != nil {
+		return true
 	}
-	if oldObj.Spec.Provider != newObj.Spec.Provider {
-		bslChangeObj.Data.Provider = newObj.Spec.Provider
-	}
-	if oldObj.Status.Phase != newObj.Status.Phase {
-		bslChangeObj.Data.Status = newObj.Status
-	}
-	return true
+	return false
 }

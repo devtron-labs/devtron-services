@@ -60,26 +60,21 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 					ClusterId:    clusterLabels.ClusterId,
 					ResourceName: bslObj.Name,
 					Data: storage.LocationsStatus{
-						Provider: bslObj.Spec.Provider,
-						Status:   bslObj.Status,
+						Status: bslObj.Status,
 					},
 				}
-				//veleroStatusUpdate := &storage.VeleoroBslStatusUpdate{
-				//	ClusterId: clusterLabels.ClusterId,
-				//	BslName:   bslObj.Name,
-				//	Status:    string(bslObj.Status.Phase),
-				//}
 				err := impl.sendBslUpdate(bslChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending backup storage location add event", "err", err)
+					return
 				}
 			} else {
 				impl.logger.Errorw("backup storage location object add detected, but could not cast to backup storage location object", "obj", obj)
+				return
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			impl.logger.Infow("backup storage location update detected")
-			//statusTime := time.Now()
 			if oldBslObj, ok := oldObj.(*veleroBslBean.BackupStorageLocation); ok {
 				if newBslObj, ok := newObj.(*veleroBslBean.BackupStorageLocation); ok {
 					bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
@@ -88,20 +83,15 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 						ClusterId:    clusterLabels.ClusterId,
 						ResourceName: newBslObj.Name,
 					}
-					if isChangeInBslObject(oldBslObj, newBslObj, bslChangeObj) {
+					if isChangeInBslStatusObject(&oldBslObj.Status, &newBslObj.Status) {
+						bslChangeObj.Data = storage.LocationsStatus{
+							Status: newBslObj.Status,
+						}
 						err := impl.sendBslUpdate(bslChangeObj)
 						if err != nil {
 							impl.logger.Errorw("error in sending backup storage location update event", "err", err)
 						}
 					}
-					//if oldBslObj.Status.Phase != newBslObj.Status.Phase {
-					//	veleroStatusUpdate := &storage.VeleoroBslStatusUpdate{
-					//		ClusterId: clusterLabels.ClusterId,
-					//		BslName:   newBslObj.Name,
-					//		Status:    string(newBslObj.Status.Phase),
-					//	}
-					//	impl.sendBslUpdate(veleroStatusUpdate)
-					//}
 				} else {
 					impl.logger.Errorw("backup storage location object update detected, but could not cast to backup storage location object", "newObj", newObj)
 				}
