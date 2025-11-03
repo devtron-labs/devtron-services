@@ -54,12 +54,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero backup add event received")
 			if backupObj, ok := obj.(*veleroBackupBean.Backup); ok {
 				impl.logger.Debugw("velero backup add event received", "backupObj", backupObj)
-				backupChangeObj := &storage.VeleroStorageEvent[storage.BackupStatus]{
+				backupChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeAdded,
 					ResourceKind: storage.ResourceBackup,
 					ClusterId:    clusterLabels.ClusterId,
 					ResourceName: backupObj.Name,
-					// Skipping Progress, as it is needed during update event only
 					Data: storage.BackupStatus{
 						CompletionTimestamp: backupObj.Status.CompletionTimestamp,
 						Expiration:          backupObj.Status.Expiration,
@@ -67,6 +66,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 						StartTimestamp:      backupObj.Status.StartTimestamp,
 						Version:             backupObj.Status.FormatVersion,
 						Phase:               backupObj.Status.Phase,
+						ValidationErrors:    backupObj.Status.ValidationErrors,
 					},
 				}
 				err := impl.sendBackupUpdate(backupChangeObj)
@@ -81,7 +81,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero backup update event received")
 			if oldBackupObj, ok := oldObj.(*veleroBackupBean.Backup); ok {
 				if newBackupObj, ok := newObj.(*veleroBackupBean.Backup); ok {
-					backupChangeObj := &storage.VeleroStorageEvent[storage.BackupStatus]{
+					backupChangeObj := &storage.VeleroResourceEvent{
 						EventType:    storage.EventTypeUpdated,
 						ResourceKind: storage.ResourceBackup,
 						ClusterId:    clusterLabels.ClusterId,
@@ -105,7 +105,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero backup delete event received")
 			if backupObj, ok := obj.(*veleroBackupBean.Backup); ok {
-				backupChangeObj := &storage.VeleroStorageEvent[storage.BackupStatus]{
+				backupChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeDeleted,
 					ResourceKind: storage.ResourceBackup,
 					ClusterId:    clusterLabels.ClusterId,

@@ -73,29 +73,39 @@ type LocationsStatus struct {
 
 // BackupStatus represents the status of a backup
 type BackupStatus struct {
-	Phase               veleroBean.BackupPhase    `json:"phase,omitempty"`
-	CompletionTimestamp *metav1.Time              `json:"completionTimestamp,omitempty"`
-	Expiration          *metav1.Time              `json:"expirationTimestamp,omitempty"`
-	FormatVersion       string                    `json:"formatVersion,omitempty"`
-	Progress            veleroBean.BackupProgress `json:"progress,omitempty"`
-	StartTimestamp      *metav1.Time              `json:"startTimestamp,omitempty"`
-	Version             string                    `json:"version,omitempty"`
+	Phase                    veleroBean.BackupPhase `json:"phase,omitempty"`
+	StartTimestamp           *metav1.Time           `json:"startTimestamp,omitempty"`
+	CompletionTimestamp      *metav1.Time           `json:"completionTimestamp,omitempty"`
+	Expiration               *metav1.Time           `json:"expiration,omitempty"`
+	FormatVersion            string                 `json:"formatVersion,omitempty"`
+	Version                  int                    `json:"version,omitempty"`
+	ValidationErrors         []string               `json:"validationErrors,omitempty"`
+	Warnings                 int                    `json:"warnings,omitempty"`
+	Errors                   int                    `json:"errors,omitempty"`
+	Progress                 interface{}            `json:"progress,omitempty"`
+	VolumeSnapshotsAttempted int                    `json:"volumeSnapshotsAttempted,omitempty"`
+	VolumeSnapshotsCompleted int                    `json:"volumeSnapshotsCompleted,omitempty"`
+	FailureReason            string                 `json:"failureReason,omitempty"`
+	LastSyncedTime           *metav1.Time           `json:"lastSyncedTime,omitempty"`
 }
 
 // RestoreStatus represents the status of a restore
 type RestoreStatus struct {
-	BackupName     string                     `json:"backupName,omitempty"`
-	ScheduleName   string                     `json:"scheduleName,omitempty"`
-	StartTimestamp *metav1.Time               `json:"startTimestamp,omitempty"`
-	Phase          veleroBean.RestorePhase    `json:"phase,omitempty"`
-	Progress       veleroBean.RestoreProgress `json:"progress,omitempty"`
+	Phase               veleroBean.RestorePhase    `json:"phase,omitempty"`
+	Progress            veleroBean.RestoreProgress `json:"progress,omitempty"`
+	StartTimestamp      *metav1.Time               `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time               `json:"completionTimestamp,omitempty"`
+	ValidationErrors    []string                   `json:"validationErrors,omitempty"`
+	Warnings            int                        `json:"warnings,omitempty"`
+	Errors              int                        `json:"errors,omitempty"`
+	FailureReason       string                     `json:"failureReason,omitempty"`
+	LastSyncedTime      *metav1.Time               `json:"lastSyncedTime,omitempty"`
 }
 
 // BackupScheduleStatus represents the status of a backup schedule
 type BackupScheduleStatus struct {
-	Status               bool         `json:"phase,omitempty"`
-	StorageLocation      string       `json:"storageLocation,omitempty"`
-	Cron                 string       `json:"cron,omitempty"`
+	IsPaused             bool         `json:"phase,omitempty"`
+	ValidationErrors     []string     `json:"validationErrors,omitempty"`
 	LastBackupTimestamp  *metav1.Time `json:"lastBackupTimestamp,omitempty"`
 	LastSkippedTimestamp *metav1.Time `json:"lastSkippedTimestamp,omitempty"`
 }

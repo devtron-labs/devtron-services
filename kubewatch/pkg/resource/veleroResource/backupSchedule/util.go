@@ -24,7 +24,7 @@ import (
 	veleroBackupScheduleBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 )
 
-func (impl *InformerImpl) sendBackupScheduleUpdate(backupScheduleChangeObj *storage.VeleroStorageEvent[storage.BackupScheduleStatus]) error {
+func (impl *InformerImpl) sendBackupScheduleUpdate(backupScheduleChangeObj *storage.VeleroResourceEvent) error {
 	if impl.client == nil {
 		impl.logger.Errorw("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
 		return errors.New("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
@@ -44,7 +44,7 @@ func (impl *InformerImpl) sendBackupScheduleUpdate(backupScheduleChangeObj *stor
 	}
 }
 
-func isChangeInBackupScheduleObject(oldObj, newObj *veleroBackupScheduleBean.Schedule, backupScheduleChangeObj *storage.VeleroStorageEvent[storage.BackupScheduleStatus]) bool {
+func isChangeInBackupScheduleObject(oldObj, newObj *veleroBackupScheduleBean.Schedule, backupScheduleChangeObj *storage.VeleroResourceEvent) bool {
 	if oldObj.Spec.Paused != newObj.Spec.Paused &&
 		oldObj.Spec.Template.StorageLocation == newObj.Spec.Template.StorageLocation &&
 		oldObj.Spec.Schedule == newObj.Spec.Schedule &&

@@ -54,7 +54,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero restore add event received")
 			if restoreObj, ok := obj.(*veleroRestoreBean.Restore); ok {
 				impl.logger.Debugw("velero restore add event received", "restoreObj", restoreObj)
-				restoreChangeObj := &storage.VeleroStorageEvent[storage.RestoreStatus]{
+				restoreChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeAdded,
 					ResourceKind: storage.ResourceRestore,
 					ClusterId:    clusterLabels.ClusterId,
@@ -79,7 +79,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero restore update event received")
 			if oldRestoreObj, ok := oldObj.(*veleroRestoreBean.Restore); ok {
 				if newRestoreObj, ok := newObj.(*veleroRestoreBean.Restore); ok {
-					restoreChangeObj := &storage.VeleroStorageEvent[storage.RestoreStatus]{
+					restoreChangeObj := &storage.VeleroResourceEvent{
 						EventType:    storage.EventTypeUpdated,
 						ResourceKind: storage.ResourceRestore,
 						ClusterId:    clusterLabels.ClusterId,
@@ -103,7 +103,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero restore delete event received")
 			if restoreObj, ok := obj.(*veleroRestoreBean.Restore); ok {
-				restoreChangeObj := &storage.VeleroStorageEvent[storage.RestoreStatus]{
+				restoreChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeDeleted,
 					ResourceKind: storage.ResourceRestore,
 					ClusterId:    clusterLabels.ClusterId,

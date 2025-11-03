@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (impl *InformerImpl) sendVslUpdate(vslChangeObj *storage.VeleroStorageEvent[storage.LocationsStatus]) error {
+func (impl *InformerImpl) sendVslUpdate(vslChangeObj *storage.VeleroResourceEvent) error {
 	if impl.client == nil {
 		impl.logger.Errorw("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
 		return errors.New("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")

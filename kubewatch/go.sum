@@ -129,8 +129,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/denisenkom/go-mssqldb v0.12.3/go.mod h1:k0mtMFOnU+AihqFxPMiF05rtiDrorD1Vrm1KEz5hxDo=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251023094043-fc7018433d52 h1:vgnlw6i6JuYwwmOpetS59uYPfaOxDNK3CxQ9fs0IUfI=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251023094043-fc7018433d52/go.mod h1:VvGYWTeBYqbbW5DqpjJoaSvkULaeQmcVc4n4Ip5FA9o=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251103195238-e0c9ab5a8cf1 h1:cEJitstgs6S3W9KMINL1uNR0qFRCorpeSypgbxeFjuI=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251103195238-e0c9ab5a8cf1/go.mod h1:VvGYWTeBYqbbW5DqpjJoaSvkULaeQmcVc4n4Ip5FA9o=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=

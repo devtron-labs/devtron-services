@@ -54,7 +54,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		AddFunc: func(obj interface{}) {
 			impl.logger.Infow("backup storage location add detected")
 			if bslObj, ok := obj.(*veleroBslBean.BackupStorageLocation); ok {
-				bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+				bslChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeAdded,
 					ResourceKind: storage.ResourceBackupStorageLocation,
 					ClusterId:    clusterLabels.ClusterId,
@@ -77,7 +77,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Infow("backup storage location update detected")
 			if oldBslObj, ok := oldObj.(*veleroBslBean.BackupStorageLocation); ok {
 				if newBslObj, ok := newObj.(*veleroBslBean.BackupStorageLocation); ok {
-					bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+					bslChangeObj := &storage.VeleroResourceEvent{
 						EventType:    storage.EventTypeUpdated,
 						ResourceKind: storage.ResourceBackupStorageLocation,
 						ClusterId:    clusterLabels.ClusterId,
@@ -102,7 +102,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Infow("backup storage location delete detected")
 			if bslObj, ok := obj.(*veleroBslBean.BackupStorageLocation); ok {
-				bslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+				bslChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeDeleted,
 					ResourceKind: storage.ResourceBackupStorageLocation,
 					ClusterId:    clusterLabels.ClusterId,

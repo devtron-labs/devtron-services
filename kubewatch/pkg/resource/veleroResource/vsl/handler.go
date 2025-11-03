@@ -38,7 +38,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero vsl add event received")
 			if vslObj, ok := obj.(*veleroVslBean.VolumeSnapshotLocation); ok {
 				impl.logger.Infow("velero vsl add event received", "vslObj", vslObj)
-				vslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+				vslChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeAdded,
 					ResourceKind: storage.ResourceVolumeSnapshotLocation,
 					ClusterId:    clusterLabels.ClusterId,
@@ -56,7 +56,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero vsl delete event received")
 			if vslObj, ok := obj.(*veleroVslBean.VolumeSnapshotLocation); ok {
-				vslChangeObj := &storage.VeleroStorageEvent[storage.LocationsStatus]{
+				vslChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeDeleted,
 					ResourceKind: storage.ResourceVolumeSnapshotLocation,
 					ClusterId:    clusterLabels.ClusterId,

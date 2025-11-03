@@ -8,7 +8,7 @@ import (
 	veleroBslBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 )
 
-func (impl *InformerImpl) sendBslUpdate(bslChangeObj *storage.VeleroStorageEvent[storage.LocationsStatus]) error {
+func (impl *InformerImpl) sendBslUpdate(bslChangeObj *storage.VeleroResourceEvent) error {
 	if impl.client == nil {
 		impl.logger.Errorw("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
 		return errors.New("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")

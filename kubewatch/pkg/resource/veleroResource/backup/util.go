@@ -24,7 +24,7 @@ import (
 	veleroBackupBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 )
 
-func (impl *InformerImpl) sendBackupUpdate(backupChangeObj *storage.VeleroStorageEvent[storage.BackupStatus]) error {
+func (impl *InformerImpl) sendBackupUpdate(backupChangeObj *storage.VeleroResourceEvent) error {
 	if impl.client == nil {
 		impl.logger.Errorw("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
 		return errors.New("pubsub client is nil - STORAGE_MODULE_TOPIC, skipping the publish")
@@ -45,7 +45,7 @@ func (impl *InformerImpl) sendBackupUpdate(backupChangeObj *storage.VeleroStorag
 }
 
 // TODO: Currently we are only intercepting changes of the status section, but do we nee to also to intercept the specs section
-func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup, backupChangeObj *storage.VeleroStorageEvent[storage.BackupStatus]) bool {
+func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup, backupChangeObj *storage.VeleroResourceEvent) bool {
 	if oldObj.Status.Progress == newObj.Status.Progress && oldObj.Status.Phase == newObj.Status.Phase &&
 		oldObj.Status.CompletionTimestamp.Equal(newObj.Status.CompletionTimestamp) && oldObj.Status.Expiration.Equal(newObj.Status.Expiration) &&
 		oldObj.Status.FormatVersion == newObj.Status.FormatVersion && oldObj.Status.StartTimestamp.Equal(newObj.Status.StartTimestamp) &&

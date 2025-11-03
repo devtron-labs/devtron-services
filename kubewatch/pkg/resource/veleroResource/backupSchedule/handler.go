@@ -54,7 +54,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero backup schedule added", "obj", obj)
 			if backupSchedule, ok := obj.(*veleroBackupScheduleBean.Schedule); ok {
 				impl.logger.Debugw("velero backup schedule added", "backupSchedule", backupSchedule)
-				backupScheduleChangeObj := &storage.VeleroStorageEvent[storage.BackupScheduleStatus]{
+				backupScheduleChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeAdded,
 					ResourceKind: storage.ResourceBackupSchedule,
 					ClusterId:    clusterLabels.ClusterId,
@@ -79,7 +79,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero backup schedule updated", "oldObj", oldObj, "newObj", newObj)
 			if oldBackupSchedule, ok := oldObj.(*veleroBackupScheduleBean.Schedule); ok {
 				if newBackupSchedule, ok := newObj.(*veleroBackupScheduleBean.Schedule); ok {
-					backupScheduleChangeObj := &storage.VeleroStorageEvent[storage.BackupScheduleStatus]{
+					backupScheduleChangeObj := &storage.VeleroResourceEvent{
 						EventType:    storage.EventTypeUpdated,
 						ResourceKind: storage.ResourceBackupSchedule,
 						ClusterId:    clusterLabels.ClusterId,
@@ -103,7 +103,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero backup schedule deleted", "obj", obj)
 			if backupSchedule, ok := obj.(*veleroBackupScheduleBean.Schedule); ok {
-				backupScheduleChangeObj := &storage.VeleroStorageEvent[storage.BackupScheduleStatus]{
+				backupScheduleChangeObj := &storage.VeleroResourceEvent{
 					EventType:    storage.EventTypeDeleted,
 					ResourceKind: storage.ResourceBackupSchedule,
 					ClusterId:    clusterLabels.ClusterId,
