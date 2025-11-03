@@ -2,7 +2,6 @@ package storage
 
 import (
 	veleroBean "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EventType represents the type of event
@@ -68,46 +67,22 @@ const (
 // LocationsStatus represents the status of a location
 // NOTE: status is only available in case of BSL
 type LocationsStatus struct {
-	Status veleroBean.BackupStorageLocationStatus `json:"status,omitempty"`
+	*veleroBean.BackupStorageLocationStatus
 }
 
 // BackupStatus represents the status of a backup
 type BackupStatus struct {
-	Phase                    veleroBean.BackupPhase `json:"phase,omitempty"`
-	StartTimestamp           *metav1.Time           `json:"startTimestamp,omitempty"`
-	CompletionTimestamp      *metav1.Time           `json:"completionTimestamp,omitempty"`
-	Expiration               *metav1.Time           `json:"expiration,omitempty"`
-	FormatVersion            string                 `json:"formatVersion,omitempty"`
-	Version                  int                    `json:"version,omitempty"`
-	ValidationErrors         []string               `json:"validationErrors,omitempty"`
-	Warnings                 int                    `json:"warnings,omitempty"`
-	Errors                   int                    `json:"errors,omitempty"`
-	Progress                 interface{}            `json:"progress,omitempty"`
-	VolumeSnapshotsAttempted int                    `json:"volumeSnapshotsAttempted,omitempty"`
-	VolumeSnapshotsCompleted int                    `json:"volumeSnapshotsCompleted,omitempty"`
-	FailureReason            string                 `json:"failureReason,omitempty"`
-	LastSyncedTime           *metav1.Time           `json:"lastSyncedTime,omitempty"`
+	*veleroBean.BackupStatus
 }
 
 // RestoreStatus represents the status of a restore
 type RestoreStatus struct {
-	Phase               veleroBean.RestorePhase    `json:"phase,omitempty"`
-	Progress            veleroBean.RestoreProgress `json:"progress,omitempty"`
-	StartTimestamp      *metav1.Time               `json:"startTimestamp,omitempty"`
-	CompletionTimestamp *metav1.Time               `json:"completionTimestamp,omitempty"`
-	ValidationErrors    []string                   `json:"validationErrors,omitempty"`
-	Warnings            int                        `json:"warnings,omitempty"`
-	Errors              int                        `json:"errors,omitempty"`
-	FailureReason       string                     `json:"failureReason,omitempty"`
-	LastSyncedTime      *metav1.Time               `json:"lastSyncedTime,omitempty"`
+	*veleroBean.RestoreStatus
 }
 
 // BackupScheduleStatus represents the status of a backup schedule
 type BackupScheduleStatus struct {
-	IsPaused             bool         `json:"phase,omitempty"`
-	ValidationErrors     []string     `json:"validationErrors,omitempty"`
-	LastBackupTimestamp  *metav1.Time `json:"lastBackupTimestamp,omitempty"`
-	LastSkippedTimestamp *metav1.Time `json:"lastSkippedTimestamp,omitempty"`
+	*veleroBean.ScheduleStatus
 }
 
 // VeleroResourceEvent represents the event sent by velero
@@ -117,6 +92,10 @@ type VeleroResourceEvent struct {
 	ClusterId    int          `json:"clusterId"`
 	ResourceName string       `json:"resourceName"`
 	Data         any          `json:"data,omitempty"`
+}
+
+func NewVeleroResourceEvent() *VeleroResourceEvent {
+	return &VeleroResourceEvent{}
 }
 
 // Getters
@@ -192,6 +171,12 @@ func (e *VeleroResourceEvent) SetClusterId(clusterId int) *VeleroResourceEvent {
 	return e
 }
 
+// SetResourceKind sets the ResourceKind
+func (e *VeleroResourceEvent) SetResourceKind(resourceKind ResourceKind) *VeleroResourceEvent {
+	e.ResourceKind = resourceKind
+	return e
+}
+
 // SetResourceName sets the ResourceName
 func (e *VeleroResourceEvent) SetResourceName(resourceName string) *VeleroResourceEvent {
 	e.ResourceName = resourceName
@@ -222,11 +207,5 @@ func (e *VeleroResourceEvent) SetDataAsBackupScheduleStatus(data *BackupSchedule
 // SetDataAsLocationsStatus sets the Data as LocationsStatus
 func (e *VeleroResourceEvent) SetDataAsLocationsStatus(data *LocationsStatus) *VeleroResourceEvent {
 	e.Data = data
-	return e
-}
-
-// SetResourceKind sets the ResourceKind
-func (e *VeleroResourceEvent) SetResourceKind(resourceKind ResourceKind) *VeleroResourceEvent {
-	e.ResourceKind = resourceKind
 	return e
 }
