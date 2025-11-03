@@ -130,6 +130,9 @@ const (
 	STORAGE_MODULE_TOPIC                               string = "STORAGE_MODULE_TOPIC"
 	STORAGE_MODULE_GROUP                               string = "STORAGE_MODULE_GROUP"
 	STORAGE_MODULE_DURABLE                             string = "STORAGE_MODULE_DURABLE"
+	STORAGE_VELERO_INSTALL_TOPIC                       string = "STORAGE_VELERO_INSTALL_TOPIC"
+	STORAGE_VELERO_INSTALL_GROUP                       string = "STORAGE_VELERO_INSTALL_GROUP"
+	STORAGE_VELERO_INSTALL_DURABLE                     string = "STORAGE_VELERO_INSTALL_DURABLE"
 )
 
 type NatsTopic struct {
@@ -187,6 +190,7 @@ var natsTopicMapping = map[string]NatsTopic{
 	INFRA_HELM_RELEASE_ACTION_TOPIC:                  {topicName: INFRA_HELM_RELEASE_ACTION_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: INFRA_HELM_RELEASE_ACTION_GROUP, consumerName: INFRA_HELM_RELEASE_ACTION_DURABLE},
 	COST_MODULE_INSTALLATION_TOPIC:                   {topicName: COST_MODULE_INSTALLATION_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: COST_MODULE_INSTALLATION_GROUP, consumerName: COST_MODULE_INSTALLATION_DURABLE},
 	STORAGE_MODULE_TOPIC:                             {topicName: STORAGE_MODULE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: STORAGE_MODULE_GROUP, consumerName: STORAGE_MODULE_DURABLE},
+	STORAGE_VELERO_INSTALL_TOPIC:                     {topicName: STORAGE_VELERO_INSTALL_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: STORAGE_VELERO_INSTALL_GROUP, consumerName: STORAGE_VELERO_INSTALL_DURABLE},
 }
 
 var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
