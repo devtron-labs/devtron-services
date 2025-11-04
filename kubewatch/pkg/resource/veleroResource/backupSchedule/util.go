@@ -44,21 +44,9 @@ func (impl *InformerImpl) sendBackupScheduleUpdate(backupScheduleChangeObj *stor
 	}
 }
 
-func isChangeInBackupScheduleObject(oldObj, newObj *veleroBackupScheduleBean.Schedule, backupScheduleChangeObj *storage.VeleroResourceEvent) bool {
-	if oldObj.Spec.Paused != newObj.Spec.Paused &&
-		oldObj.Spec.Template.StorageLocation == newObj.Spec.Template.StorageLocation &&
-		oldObj.Spec.Schedule == newObj.Spec.Schedule &&
-		oldObj.Status.LastBackup == newObj.Status.LastBackup &&
-		oldObj.Status.LastSkipped == newObj.Status.LastSkipped {
-		return false
-	} else {
-		backupScheduleChangeObj.Data = storage.BackupScheduleStatus{
-			Status:               newObj.Spec.Paused,
-			StorageLocation:      newObj.Spec.Template.StorageLocation,
-			Cron:                 newObj.Spec.Schedule,
-			LastBackupTimestamp:  newObj.Status.LastBackup,
-			LastSkippedTimestamp: newObj.Status.LastSkipped,
-		}
-	}
-	return true
+func isChangeInBackupScheduleObject(oldObj, newObj *veleroBackupScheduleBean.Schedule) bool {
+	return oldObj.Status.Phase != newObj.Status.Phase ||
+		!oldObj.Status.LastBackup.Equal(newObj.Status.LastBackup) ||
+		oldObj.Status.LastSkipped.Equal(newObj.Status.LastSkipped) ||
+		len(oldObj.Status.ValidationErrors) != len(newObj.Status.ValidationErrors)
 }

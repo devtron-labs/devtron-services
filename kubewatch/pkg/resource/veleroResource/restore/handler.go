@@ -54,19 +54,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero restore add event received")
 			if restoreObj, ok := obj.(*veleroRestoreBean.Restore); ok {
 				impl.logger.Debugw("velero restore add event received", "restoreObj", restoreObj)
-				restoreChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeAdded,
-					ResourceKind: storage.ResourceRestore,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: restoreObj.Name,
-					Data: storage.RestoreStatus{
-						BackupName:     restoreObj.Spec.BackupName,
-						ScheduleName:   restoreObj.Spec.ScheduleName,
-						StartTimestamp: restoreObj.Status.StartTimestamp,
-						Phase:          restoreObj.Status.Phase,
-						Progress:       *restoreObj.Status.Progress,
-					},
-				}
+				restoreChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeAdded).
+					SetResourceKind(storage.ResourceRestore).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(restoreObj.Name)
 				err := impl.sendRestoreUpdate(restoreChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending velero restore add event", "err", err)
@@ -79,13 +71,15 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero restore update event received")
 			if oldRestoreObj, ok := oldObj.(*veleroRestoreBean.Restore); ok {
 				if newRestoreObj, ok := newObj.(*veleroRestoreBean.Restore); ok {
-					restoreChangeObj := &storage.VeleroResourceEvent{
-						EventType:    storage.EventTypeUpdated,
-						ResourceKind: storage.ResourceRestore,
-						ClusterId:    clusterLabels.ClusterId,
-						ResourceName: newRestoreObj.Name,
-					}
-					if isChangeInRestoreObject(oldRestoreObj, newRestoreObj, restoreChangeObj) {
+					if isChangeInRestoreObject(oldRestoreObj, newRestoreObj) {
+						restoreChangeObj := storage.NewVeleroResourceEvent().
+							SetEventType(storage.EventTypeUpdated).
+							SetResourceKind(storage.ResourceRestore).
+							SetClusterId(clusterLabels.ClusterId).
+							SetResourceName(newRestoreObj.Name).
+							SetDataAsRestoreStatus(&storage.RestoreStatus{
+								RestoreStatus: &newRestoreObj.Status,
+							})
 						err := impl.sendRestoreUpdate(restoreChangeObj)
 						if err != nil {
 							impl.logger.Errorw("error in sending velero restore update event", "err", err)
@@ -103,12 +97,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero restore delete event received")
 			if restoreObj, ok := obj.(*veleroRestoreBean.Restore); ok {
-				restoreChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeDeleted,
-					ResourceKind: storage.ResourceRestore,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: restoreObj.Name,
-				}
+				restoreChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeDeleted).
+					SetResourceKind(storage.ResourceRestore).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(restoreObj.Name)
 				err := impl.sendRestoreUpdate(restoreChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending velero restore delete event", "err", err)

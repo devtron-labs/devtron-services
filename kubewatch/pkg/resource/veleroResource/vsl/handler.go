@@ -38,12 +38,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero vsl add event received")
 			if vslObj, ok := obj.(*veleroVslBean.VolumeSnapshotLocation); ok {
 				impl.logger.Infow("velero vsl add event received", "vslObj", vslObj)
-				vslChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeAdded,
-					ResourceKind: storage.ResourceVolumeSnapshotLocation,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: vslObj.Name,
-				}
+				vslChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeAdded).
+					SetResourceKind(storage.ResourceVolumeSnapshotLocation).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(vslObj.Name)
 				err := impl.sendVslUpdate(vslChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending velero vsl add event", "err", err)
@@ -56,12 +55,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero vsl delete event received")
 			if vslObj, ok := obj.(*veleroVslBean.VolumeSnapshotLocation); ok {
-				vslChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeDeleted,
-					ResourceKind: storage.ResourceVolumeSnapshotLocation,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: vslObj.Name,
-				}
+				vslChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeDeleted).
+					SetResourceKind(storage.ResourceVolumeSnapshotLocation).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(vslObj.Name)
 				err := impl.sendVslUpdate(vslChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending velero vsl delete event", "err", err)

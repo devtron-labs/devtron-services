@@ -44,23 +44,28 @@ func (impl *InformerImpl) sendBackupUpdate(backupChangeObj *storage.VeleroResour
 	}
 }
 
-// TODO: Currently we are only intercepting changes of the status section, but do we nee to also to intercept the specs section
-func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup, backupChangeObj *storage.VeleroResourceEvent) bool {
-	if oldObj.Status.Progress == newObj.Status.Progress && oldObj.Status.Phase == newObj.Status.Phase &&
-		oldObj.Status.CompletionTimestamp.Equal(newObj.Status.CompletionTimestamp) && oldObj.Status.Expiration.Equal(newObj.Status.Expiration) &&
-		oldObj.Status.FormatVersion == newObj.Status.FormatVersion && oldObj.Status.StartTimestamp.Equal(newObj.Status.StartTimestamp) &&
-		oldObj.Status.FormatVersion == newObj.Status.FormatVersion {
-		return false
-	} else {
-		backupChangeObj.Data = storage.BackupStatus{
-			Phase:               newObj.Status.Phase,
-			CompletionTimestamp: newObj.Status.CompletionTimestamp,
-			Expiration:          newObj.Status.Expiration,
-			FormatVersion:       newObj.Status.FormatVersion,
-			Progress:            *newObj.Status.Progress,
-			StartTimestamp:      newObj.Status.StartTimestamp,
-			Version:             newObj.Status.FormatVersion,
-		}
-	}
-	return true
+func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup) bool {
+	return oldObj.Status.Version != newObj.Status.Version ||
+		oldObj.Status.FormatVersion != newObj.Status.FormatVersion ||
+		!oldObj.Status.Expiration.Equal(newObj.Status.Expiration) ||
+		oldObj.Status.Phase != newObj.Status.Phase ||
+		len(oldObj.Status.ValidationErrors) != len(newObj.Status.ValidationErrors) ||
+		!oldObj.Status.StartTimestamp.Equal(newObj.Status.StartTimestamp) ||
+		!oldObj.Status.CompletionTimestamp.Equal(newObj.Status.CompletionTimestamp) ||
+		oldObj.Status.VolumeSnapshotsAttempted != newObj.Status.VolumeSnapshotsAttempted ||
+		oldObj.Status.VolumeSnapshotsCompleted != newObj.Status.VolumeSnapshotsCompleted ||
+		oldObj.Status.FailureReason != newObj.Status.FailureReason ||
+		oldObj.Status.Warnings != newObj.Status.Warnings ||
+		oldObj.Status.Errors != newObj.Status.Errors ||
+		(oldObj.Status.Progress != nil && newObj.Status.Progress != nil &&
+			oldObj.Status.Progress.ItemsBackedUp != newObj.Status.Progress.ItemsBackedUp ||
+			oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems) ||
+		oldObj.Status.CSIVolumeSnapshotsAttempted != newObj.Status.CSIVolumeSnapshotsAttempted ||
+		oldObj.Status.CSIVolumeSnapshotsCompleted != newObj.Status.CSIVolumeSnapshotsCompleted ||
+		oldObj.Status.BackupItemOperationsAttempted != newObj.Status.BackupItemOperationsAttempted ||
+		oldObj.Status.BackupItemOperationsCompleted != newObj.Status.BackupItemOperationsCompleted ||
+		oldObj.Status.BackupItemOperationsFailed != newObj.Status.BackupItemOperationsFailed ||
+		(oldObj.Status.HookStatus != nil && newObj.Status.HookStatus != nil &&
+			oldObj.Status.HookStatus.HooksAttempted != newObj.Status.HookStatus.HooksAttempted ||
+			oldObj.Status.HookStatus.HooksFailed != newObj.Status.HookStatus.HooksFailed)
 }

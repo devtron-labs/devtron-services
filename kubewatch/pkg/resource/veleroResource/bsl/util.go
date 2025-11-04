@@ -28,14 +28,11 @@ func (impl *InformerImpl) sendBslUpdate(bslChangeObj *storage.VeleroResourceEven
 	}
 }
 
-func isChangeInBslStatusObject(oldObj, newObj *veleroBslBean.BackupStorageLocationStatus) bool {
-	if oldObj != nil && newObj != nil {
-		return oldObj.Phase != newObj.Phase ||
-			oldObj.Message != newObj.Message ||
-			!oldObj.LastSyncedTime.Equal(newObj.LastSyncedTime) ||
-			!oldObj.LastValidationTime.Equal(newObj.LastValidationTime)
-	} else if oldObj == nil && newObj != nil {
-		return true
-	}
-	return false
+func isChangeInBslObject(oldObj, newObj *veleroBslBean.BackupStorageLocation) bool {
+	return oldObj.Status.Phase != newObj.Status.Phase ||
+		!oldObj.Status.LastSyncedTime.Equal(newObj.Status.LastSyncedTime) ||
+		!oldObj.Status.LastValidationTime.Equal(newObj.Status.LastValidationTime) ||
+		oldObj.Status.Message != newObj.Status.Message ||
+		oldObj.Status.LastSyncedRevision != newObj.Status.LastSyncedRevision ||
+		oldObj.Status.AccessMode != newObj.Status.AccessMode
 }

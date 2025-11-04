@@ -54,15 +54,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		AddFunc: func(obj interface{}) {
 			impl.logger.Infow("backup storage location add detected")
 			if bslObj, ok := obj.(*veleroBslBean.BackupStorageLocation); ok {
-				bslChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeAdded,
-					ResourceKind: storage.ResourceBackupStorageLocation,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: bslObj.Name,
-					Data: storage.LocationsStatus{
-						Status: bslObj.Status,
-					},
-				}
+				bslChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeAdded).
+					SetResourceKind(storage.ResourceBackupStorageLocation).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(bslObj.Name)
 				err := impl.sendBslUpdate(bslChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending backup storage location add event", "err", err)
@@ -77,16 +73,15 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Infow("backup storage location update detected")
 			if oldBslObj, ok := oldObj.(*veleroBslBean.BackupStorageLocation); ok {
 				if newBslObj, ok := newObj.(*veleroBslBean.BackupStorageLocation); ok {
-					bslChangeObj := &storage.VeleroResourceEvent{
-						EventType:    storage.EventTypeUpdated,
-						ResourceKind: storage.ResourceBackupStorageLocation,
-						ClusterId:    clusterLabels.ClusterId,
-						ResourceName: newBslObj.Name,
-					}
-					if isChangeInBslStatusObject(&oldBslObj.Status, &newBslObj.Status) {
-						bslChangeObj.Data = storage.LocationsStatus{
-							Status: newBslObj.Status,
-						}
+					if isChangeInBslObject(oldBslObj, newBslObj) {
+						bslChangeObj := storage.NewVeleroResourceEvent().
+							SetEventType(storage.EventTypeUpdated).
+							SetResourceKind(storage.ResourceBackupStorageLocation).
+							SetClusterId(clusterLabels.ClusterId).
+							SetResourceName(newBslObj.Name).
+							SetDataAsLocationsStatus(&storage.LocationsStatus{
+								BackupStorageLocationStatus: &newBslObj.Status,
+							})
 						err := impl.sendBslUpdate(bslChangeObj)
 						if err != nil {
 							impl.logger.Errorw("error in sending backup storage location update event", "err", err)

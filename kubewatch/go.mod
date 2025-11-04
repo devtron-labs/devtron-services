@@ -239,5 +239,5 @@ require (
 
 replace (
 	github.com/cyphar/filepath-securejoin v0.4.1 => github.com/cyphar/filepath-securejoin v0.3.6 // indirect
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251103201516-d6e8e9bf7449
+	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251103203236-ff9ed1d665fd
 )

@@ -54,27 +54,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero backup add event received")
 			if backupObj, ok := obj.(*veleroBackupBean.Backup); ok {
 				impl.logger.Debugw("velero backup add event received", "backupObj", backupObj)
-				backupChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeAdded,
-					ResourceKind: storage.ResourceBackup,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: backupObj.Name,
-					Data: storage.BackupStatus{
-						Phase:                    backupObj.Status.Phase,
-						StartTimestamp:           backupObj.Status.StartTimestamp,
-						CompletionTimestamp:      backupObj.Status.CompletionTimestamp,
-						Expiration:               backupObj.Status.Expiration,
-						FormatVersion:            backupObj.Status.FormatVersion,
-						Version:                  backupObj.Status.Version,
-						ValidationErrors:         backupObj.Status.ValidationErrors,
-						Warnings:                 backupObj.Status.Warnings,
-						Errors:                   backupObj.Status.Errors,
-						Progress:                 *backupObj.Status.Progress,
-						VolumeSnapshotsAttempted: backupObj.Status.VolumeSnapshotsAttempted,
-						VolumeSnapshotsCompleted: backupObj.Status.VolumeSnapshotsCompleted,
-						FailureReason:            backupObj.Status.FailureReason,
-					},
-				}
+				backupChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeAdded).
+					SetResourceKind(storage.ResourceBackup).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(backupObj.Name)
 				err := impl.sendBackupUpdate(backupChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending velero backup add event", "err", err)
@@ -87,13 +71,15 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 			impl.logger.Debugw("velero backup update event received")
 			if oldBackupObj, ok := oldObj.(*veleroBackupBean.Backup); ok {
 				if newBackupObj, ok := newObj.(*veleroBackupBean.Backup); ok {
-					backupChangeObj := &storage.VeleroResourceEvent{
-						EventType:    storage.EventTypeUpdated,
-						ResourceKind: storage.ResourceBackup,
-						ClusterId:    clusterLabels.ClusterId,
-						ResourceName: newBackupObj.Name,
-					}
-					if isChangeInBackupObject(oldBackupObj, newBackupObj, backupChangeObj) {
+					if isChangeInBackupObject(oldBackupObj, newBackupObj) {
+						backupChangeObj := storage.NewVeleroResourceEvent().
+							SetEventType(storage.EventTypeUpdated).
+							SetResourceKind(storage.ResourceBackup).
+							SetClusterId(clusterLabels.ClusterId).
+							SetResourceName(newBackupObj.Name).
+							SetDataAsBackupStatus(&storage.BackupStatus{
+								BackupStatus: &newBackupObj.Status,
+							})
 						err := impl.sendBackupUpdate(backupChangeObj)
 						if err != nil {
 							impl.logger.Errorw("error in sending velero backup update event", "err", err)
@@ -111,12 +97,11 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 		DeleteFunc: func(obj interface{}) {
 			impl.logger.Debugw("velero backup delete event received")
 			if backupObj, ok := obj.(*veleroBackupBean.Backup); ok {
-				backupChangeObj := &storage.VeleroResourceEvent{
-					EventType:    storage.EventTypeDeleted,
-					ResourceKind: storage.ResourceBackup,
-					ClusterId:    clusterLabels.ClusterId,
-					ResourceName: backupObj.Name,
-				}
+				backupChangeObj := storage.NewVeleroResourceEvent().
+					SetEventType(storage.EventTypeDeleted).
+					SetResourceKind(storage.ResourceBackup).
+					SetClusterId(clusterLabels.ClusterId).
+					SetResourceName(backupObj.Name)
 				err := impl.sendBackupUpdate(backupChangeObj)
 				if err != nil {
 					impl.logger.Errorw("error in sending velero backup delete event", "err", err)

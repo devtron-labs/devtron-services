@@ -44,18 +44,21 @@ func (impl *InformerImpl) sendRestoreUpdate(restoreChangeObj *storage.VeleroReso
 	}
 }
 
-func isChangeInRestoreObject(oldObj, newObj *veleroRestoreBean.Restore, restoreChangeObj *storage.VeleroResourceEvent) bool {
-	if oldObj.Status.Progress == newObj.Status.Progress && oldObj.Status.Phase == newObj.Status.Phase &&
-		oldObj.Spec.BackupName == newObj.Spec.BackupName && oldObj.Spec.ScheduleName == newObj.Spec.ScheduleName {
-		return false
-	} else {
-		restoreChangeObj.Data = storage.RestoreStatus{
-			BackupName:     newObj.Spec.BackupName,
-			ScheduleName:   newObj.Spec.ScheduleName,
-			StartTimestamp: newObj.Status.StartTimestamp,
-			Phase:          newObj.Status.Phase,
-			Progress:       *newObj.Status.Progress,
-		}
-	}
-	return true
+func isChangeInRestoreObject(oldObj, newObj *veleroRestoreBean.Restore) bool {
+	return oldObj.Status.Phase != newObj.Status.Phase ||
+		len(oldObj.Status.ValidationErrors) != len(newObj.Status.ValidationErrors) ||
+		oldObj.Status.Warnings != newObj.Status.Warnings ||
+		oldObj.Status.Errors != newObj.Status.Errors ||
+		oldObj.Status.FailureReason != newObj.Status.FailureReason ||
+		!oldObj.Status.StartTimestamp.Equal(newObj.Status.StartTimestamp) ||
+		!oldObj.Status.CompletionTimestamp.Equal(newObj.Status.CompletionTimestamp) ||
+		(oldObj.Status.Progress != nil && newObj.Status.Progress != nil &&
+			oldObj.Status.Progress.ItemsRestored != newObj.Status.Progress.ItemsRestored ||
+			oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems) ||
+		oldObj.Status.RestoreItemOperationsAttempted != newObj.Status.RestoreItemOperationsAttempted ||
+		oldObj.Status.RestoreItemOperationsCompleted != newObj.Status.RestoreItemOperationsCompleted ||
+		oldObj.Status.RestoreItemOperationsFailed != newObj.Status.RestoreItemOperationsFailed ||
+		(oldObj.Status.HookStatus != nil && newObj.Status.HookStatus != nil &&
+			oldObj.Status.HookStatus.HooksAttempted != newObj.Status.HookStatus.HooksAttempted ||
+			oldObj.Status.HookStatus.HooksFailed != newObj.Status.HookStatus.HooksFailed)
 }
