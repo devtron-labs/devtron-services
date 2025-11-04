@@ -24,7 +24,6 @@ import (
 	constants "github.com/devtron-labs/common-lib/constants"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	"github.com/devtron-labs/common-lib/pubsub-lib/metrics"
-	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/git-sensor/api"
 	"github.com/devtron-labs/git-sensor/bean"
 	"github.com/devtron-labs/git-sensor/internals/middleware"
@@ -60,10 +59,6 @@ type App struct {
 }
 
 func NewApp(MuxRouter *api.MuxRouter, Logger *zap.SugaredLogger, impl *git.GitWatcherImpl, db *pg.DB, pubSubClient *pubsub.PubSubClientServiceImpl, GrpcControllerImpl *api.GrpcHandlerImpl) *App {
-	err := securestore.SetEncryptionKey()
-	if err != nil {
-		Logger.Errorw("error in setting encryption key", "err", err)
-	}
 	return &App{
 		MuxRouter:          MuxRouter,
 		Logger:             Logger,
