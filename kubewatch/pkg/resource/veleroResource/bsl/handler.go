@@ -78,10 +78,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 							SetEventType(storage.EventTypeUpdated).
 							SetResourceKind(storage.ResourceBackupStorageLocation).
 							SetClusterId(clusterLabels.ClusterId).
-							SetResourceName(newBslObj.Name).
-							SetDataAsLocationsStatus(&storage.LocationsStatus{
-								BackupStorageLocationStatus: &newBslObj.Status,
-							})
+							SetResourceName(newBslObj.Name)
 						err := impl.sendBslUpdate(bslChangeObj)
 						if err != nil {
 							impl.logger.Errorw("error in sending backup storage location update event", "err", err)

@@ -76,10 +76,7 @@ func (impl *InformerImpl) GetSharedInformer(clusterLabels *informerBean.ClusterL
 							SetEventType(storage.EventTypeUpdated).
 							SetResourceKind(storage.ResourceBackup).
 							SetClusterId(clusterLabels.ClusterId).
-							SetResourceName(newBackupObj.Name).
-							SetDataAsBackupStatus(&storage.BackupStatus{
-								BackupStatus: &newBackupObj.Status,
-							})
+							SetResourceName(newBackupObj.Name)
 						err := impl.sendBackupUpdate(backupChangeObj)
 						if err != nil {
 							impl.logger.Errorw("error in sending velero backup update event", "err", err)
