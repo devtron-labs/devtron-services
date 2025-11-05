@@ -91,7 +91,6 @@ type VeleroResourceEvent struct {
 	ResourceKind ResourceKind `json:"kind"`
 	ClusterId    int          `json:"clusterId"`
 	ResourceName string       `json:"resourceName"`
-	Data         any          `json:"data,omitempty"`
 }
 
 func NewVeleroResourceEvent() *VeleroResourceEvent {
@@ -120,43 +119,6 @@ func (e *VeleroResourceEvent) GetResourceName() string {
 	return e.ResourceName
 }
 
-// GetDataAsBackupStatus returns the Data as BackupStatus
-func (e *VeleroResourceEvent) GetDataAsBackupStatus() (*BackupStatus, bool) {
-	if e.Data == nil || !e.ResourceKind.IsBackup() {
-		return nil, false
-	}
-	_data, ok := e.Data.(*BackupStatus)
-	return _data, ok
-}
-
-// GetDataAsRestoreStatus returns the Data as RestoreStatus
-func (e *VeleroResourceEvent) GetDataAsRestoreStatus() (*RestoreStatus, bool) {
-	if e.Data == nil || !e.ResourceKind.IsRestore() {
-		return nil, false
-	}
-	_data, ok := e.Data.(*RestoreStatus)
-	return _data, ok
-}
-
-// GetDataAsBackupScheduleStatus returns the Data as BackupScheduleStatus
-func (e *VeleroResourceEvent) GetDataAsBackupScheduleStatus() (*BackupScheduleStatus, bool) {
-	if e.Data == nil || !e.ResourceKind.IsBackupSchedule() {
-		return nil, false
-	}
-	_data, ok := e.Data.(*BackupScheduleStatus)
-	return _data, ok
-}
-
-// GetDataAsLocationsStatus returns the Data as LocationsStatus
-func (e *VeleroResourceEvent) GetDataAsLocationsStatus() (*LocationsStatus, bool) {
-	if e.Data == nil ||
-		!(e.ResourceKind.IsBackupStorageLocation() || e.ResourceKind.IsVolumeSnapshotLocation()) {
-		return nil, false
-	}
-	_data, ok := e.Data.(*LocationsStatus)
-	return _data, ok
-}
-
 // Setters
 
 // SetEventType sets the EventType
@@ -180,32 +142,5 @@ func (e *VeleroResourceEvent) SetResourceKind(resourceKind ResourceKind) *Velero
 // SetResourceName sets the ResourceName
 func (e *VeleroResourceEvent) SetResourceName(resourceName string) *VeleroResourceEvent {
 	e.ResourceName = resourceName
-	return e
-}
-
-// SetDataAsBackupStatus sets the Data as BackupStatus
-func (e *VeleroResourceEvent) SetDataAsBackupStatus(data *BackupStatus) *VeleroResourceEvent {
-	if data == nil {
-		return e
-	}
-	e.Data = data
-	return e
-}
-
-// SetDataAsRestoreStatus sets the Data as RestoreStatus
-func (e *VeleroResourceEvent) SetDataAsRestoreStatus(data *RestoreStatus) *VeleroResourceEvent {
-	e.Data = data
-	return e
-}
-
-// SetDataAsBackupScheduleStatus sets the Data as BackupScheduleStatus
-func (e *VeleroResourceEvent) SetDataAsBackupScheduleStatus(data *BackupScheduleStatus) *VeleroResourceEvent {
-	e.Data = data
-	return e
-}
-
-// SetDataAsLocationsStatus sets the Data as LocationsStatus
-func (e *VeleroResourceEvent) SetDataAsLocationsStatus(data *LocationsStatus) *VeleroResourceEvent {
-	e.Data = data
 	return e
 }
