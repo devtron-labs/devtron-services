@@ -21,6 +21,7 @@
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string |user |  |  | false |
  | PROMETHEUS_MATRIX_PORT | int |8080 |  |  | false |
+ | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
 
 
 ## POSTGRES Related Environment Variables

@@ -29,7 +29,7 @@
  | PG_PORT | string |5432 |  |  | false |
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string | |  |  | false |
- | RUNTIME_CONFIG_LOCAL_DEV | LocalDevMode |false |  |  | false |
+ | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |
  | USE_CUSTOM_HTTP_TRANSPORT | bool |false |  |  | false |
 

@@ -34,6 +34,7 @@
  | PG_USER | string | |  |  | false |
  | POLL_DURATION | int |2 |  |  | false |
  | POLL_WORKER | int |5 |  |  | false |
+ | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
  | SERVER_GRPC_PORT | int |8081 |  |  | false |
  | SERVER_REST_PORT | int |8080 |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |
