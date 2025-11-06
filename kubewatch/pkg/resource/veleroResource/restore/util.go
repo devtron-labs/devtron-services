@@ -45,7 +45,8 @@ func (impl *InformerImpl) sendRestoreUpdate(restoreChangeObj *storage.VeleroReso
 }
 
 func isChangeInRestoreObject(oldObj, newObj *veleroRestoreBean.Restore) bool {
-	return oldObj.Status.Phase != newObj.Status.Phase ||
+	return oldObj.Spec.BackupName != newObj.Spec.BackupName ||
+		oldObj.Status.Phase != newObj.Status.Phase ||
 		len(oldObj.Status.ValidationErrors) != len(newObj.Status.ValidationErrors) ||
 		oldObj.Status.Warnings != newObj.Status.Warnings ||
 		oldObj.Status.Errors != newObj.Status.Errors ||
