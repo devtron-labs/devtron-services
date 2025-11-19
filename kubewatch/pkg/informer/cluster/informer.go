@@ -63,7 +63,7 @@ type InformerImpl struct {
 	cdWfInformer                 *cdWf.InformerImpl
 	systemExecInformer           *systemExec.InformerImpl
 	veleroBslInformer            *veleroBslInformer.InformerImpl
-	veleroVslinformer            *veleroVslInformer.InformerImpl
+	veleroVslInformer            *veleroVslInformer.InformerImpl
 	veleroBackupInformer         *veleroBackupInformer.InformerImpl
 	veleroRestoreInformer        *veleroRestoreInformer.InformerImpl
 	veleroBackupScheduleInformer *veleroBackupScheduleInformer.InformerImpl
@@ -95,7 +95,7 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 		cdWfInformer:                 cdWfInformer,
 		systemExecInformer:           systemExecInformer,
 		veleroBslInformer:            veleroBslInformer,
-		veleroVslinformer:            veleroVslInformer,
+		veleroVslInformer:            veleroVslInformer,
 		veleroBackupInformer:         veleroBackupInformer,
 		veleroRestoreInformer:        veleroRestoreInformer,
 		veleroBackupScheduleInformer: veleroBackupScheduleInformer,

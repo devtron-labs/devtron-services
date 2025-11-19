@@ -57,7 +57,7 @@ func (impl *InformerImpl) GetClientAdvisor(clientType bean.ClientType) (ClientAd
 	case bean.VeleroBslClientType:
 		return impl.veleroBslInformer, nil
 	case bean.VeleroVslClientType:
-		return impl.veleroVslinformer, nil
+		return impl.veleroVslInformer, nil
 	case bean.VeleroBackupClientType:
 		return impl.veleroBackupInformer, nil
 	case bean.VeleroRestoreClientType:
