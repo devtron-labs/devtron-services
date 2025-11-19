@@ -39,10 +39,10 @@ type ClusterConfig struct {
 	//	- AllClusterType: All clusters are enabled for CD ArgoWorkflow informer
 	//	- InClusterType: Only default cluster is enabled for CD ArgoWorkflow informer
 	ClusterCdArgoWfType string `env:"CLUSTER_CD_ARGO_WF_TYPE" envDefault:"IN_CLUSTER" description:"Determines cluster mode for CD ArgoWorkflow informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER" deprecated:"false"`
-	// ClusterVeleroBslType defines whether all clusters are enabled for Velero BSL informer
-	//	- AllClusterType: All clusters are enabled for Velero BSL informer
-	//	- InClusterType: Only default cluster is enabled for Velero BSL informer
-	ClusterVeleroBslType string `env:"CLUSTER_VELERO_BSL_TYPE" envDefault:"IN_CLUSTER" description:"Determines cluster mode for Velero BSL informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER" deprecated:"false"`
+	// ClusterStorageModuleType defines whether all clusters are enabled for Velero informer
+	//	- AllClusterType: All clusters are enabled for Velero informer
+	//	- InClusterType: Only default cluster is enabled for Velero informer
+	ClusterStorageModuleType string `env:"CLUSTER_STORAGE_MODULE_TYPE" envDefault:"IN_CLUSTER" description:"Determines cluster mode for Velero BSL informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER" deprecated:"false"`
 }
 
 func getClusterConfig() (*ClusterConfig, error) {

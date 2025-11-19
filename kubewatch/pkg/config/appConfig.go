@@ -145,5 +145,5 @@ func (app *AppConfig) GetVeleroNamespace() string {
 }
 
 func (app *AppConfig) IsMultiClusterVeleroType() bool {
-	return app.GetClusterConfig().ClusterVeleroBslType == AllClusterType && !app.GetExternalConfig().External
+	return app.GetClusterConfig().ClusterStorageModuleType == AllClusterType && !app.GetExternalConfig().External
 }
