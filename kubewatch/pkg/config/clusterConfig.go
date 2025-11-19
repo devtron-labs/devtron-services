@@ -42,7 +42,7 @@ type ClusterConfig struct {
 	// ClusterStorageModuleType defines whether all clusters are enabled for Velero informer
 	//	- AllClusterType: All clusters are enabled for Velero informer
 	//	- InClusterType: Only default cluster is enabled for Velero informer
-	ClusterStorageModuleType string `env:"CLUSTER_STORAGE_MODULE_TYPE" envDefault:"IN_CLUSTER" description:"Determines cluster mode for Velero BSL informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER" deprecated:"false"`
+	ClusterStorageModuleType string `env:"CLUSTER_STORAGE_MODULE_TYPE" envDefault:"ALL_CLUSTER" description:"Determines cluster mode for Velero BSL informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER" deprecated:"false"`
 }
 
 func getClusterConfig() (*ClusterConfig, error) {
