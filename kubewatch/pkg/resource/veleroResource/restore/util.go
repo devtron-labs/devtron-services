@@ -55,8 +55,8 @@ func isChangeInRestoreObject(oldObj, newObj *veleroRestoreBean.Restore) bool {
 		!oldObj.Status.CompletionTimestamp.Equal(newObj.Status.CompletionTimestamp) ||
 		(oldObj.Status.Progress == nil && newObj.Status.Progress != nil) ||
 		(oldObj.Status.Progress != nil && newObj.Status.Progress != nil &&
-			oldObj.Status.Progress.ItemsRestored != newObj.Status.Progress.ItemsRestored ||
-			oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems) ||
+			(oldObj.Status.Progress.ItemsRestored != newObj.Status.Progress.ItemsRestored ||
+				oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems)) ||
 		oldObj.Status.RestoreItemOperationsAttempted != newObj.Status.RestoreItemOperationsAttempted ||
 		oldObj.Status.RestoreItemOperationsCompleted != newObj.Status.RestoreItemOperationsCompleted ||
 		oldObj.Status.RestoreItemOperationsFailed != newObj.Status.RestoreItemOperationsFailed ||

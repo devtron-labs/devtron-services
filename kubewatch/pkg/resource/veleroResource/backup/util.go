@@ -59,8 +59,8 @@ func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup) bool {
 		oldObj.Status.Errors != newObj.Status.Errors ||
 		(oldObj.Status.Progress == nil && newObj.Status.Progress != nil) ||
 		(oldObj.Status.Progress != nil && newObj.Status.Progress != nil &&
-			oldObj.Status.Progress.ItemsBackedUp != newObj.Status.Progress.ItemsBackedUp ||
-			oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems) ||
+			(oldObj.Status.Progress.ItemsBackedUp != newObj.Status.Progress.ItemsBackedUp ||
+				oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems)) ||
 		oldObj.Status.CSIVolumeSnapshotsAttempted != newObj.Status.CSIVolumeSnapshotsAttempted ||
 		oldObj.Status.CSIVolumeSnapshotsCompleted != newObj.Status.CSIVolumeSnapshotsCompleted ||
 		oldObj.Status.BackupItemOperationsAttempted != newObj.Status.BackupItemOperationsAttempted ||
