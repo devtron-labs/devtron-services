@@ -53,12 +53,14 @@ func isChangeInRestoreObject(oldObj, newObj *veleroRestoreBean.Restore) bool {
 		oldObj.Status.FailureReason != newObj.Status.FailureReason ||
 		!oldObj.Status.StartTimestamp.Equal(newObj.Status.StartTimestamp) ||
 		!oldObj.Status.CompletionTimestamp.Equal(newObj.Status.CompletionTimestamp) ||
+		(oldObj.Status.Progress == nil && newObj.Status.Progress != nil) ||
 		(oldObj.Status.Progress != nil && newObj.Status.Progress != nil &&
 			oldObj.Status.Progress.ItemsRestored != newObj.Status.Progress.ItemsRestored ||
 			oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems) ||
 		oldObj.Status.RestoreItemOperationsAttempted != newObj.Status.RestoreItemOperationsAttempted ||
 		oldObj.Status.RestoreItemOperationsCompleted != newObj.Status.RestoreItemOperationsCompleted ||
 		oldObj.Status.RestoreItemOperationsFailed != newObj.Status.RestoreItemOperationsFailed ||
+		(oldObj.Status.HookStatus == nil && newObj.Status.HookStatus != nil) ||
 		(oldObj.Status.HookStatus != nil && newObj.Status.HookStatus != nil &&
 			oldObj.Status.HookStatus.HooksAttempted != newObj.Status.HookStatus.HooksAttempted ||
 			oldObj.Status.HookStatus.HooksFailed != newObj.Status.HookStatus.HooksFailed)

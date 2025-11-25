@@ -57,6 +57,7 @@ func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup) bool {
 		oldObj.Status.FailureReason != newObj.Status.FailureReason ||
 		oldObj.Status.Warnings != newObj.Status.Warnings ||
 		oldObj.Status.Errors != newObj.Status.Errors ||
+		(oldObj.Status.Progress == nil && newObj.Status.Progress != nil) ||
 		(oldObj.Status.Progress != nil && newObj.Status.Progress != nil &&
 			oldObj.Status.Progress.ItemsBackedUp != newObj.Status.Progress.ItemsBackedUp ||
 			oldObj.Status.Progress.TotalItems != newObj.Status.Progress.TotalItems) ||
@@ -65,6 +66,7 @@ func isChangeInBackupObject(oldObj, newObj *veleroBackupBean.Backup) bool {
 		oldObj.Status.BackupItemOperationsAttempted != newObj.Status.BackupItemOperationsAttempted ||
 		oldObj.Status.BackupItemOperationsCompleted != newObj.Status.BackupItemOperationsCompleted ||
 		oldObj.Status.BackupItemOperationsFailed != newObj.Status.BackupItemOperationsFailed ||
+		(oldObj.Status.HookStatus == nil && newObj.Status.HookStatus != nil) ||
 		(oldObj.Status.HookStatus != nil && newObj.Status.HookStatus != nil &&
 			oldObj.Status.HookStatus.HooksAttempted != newObj.Status.HookStatus.HooksAttempted ||
 			oldObj.Status.HookStatus.HooksFailed != newObj.Status.HookStatus.HooksFailed)
