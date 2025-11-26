@@ -54,8 +54,8 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 }
 
 func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluster) error {
-	if impl.appConfig.GetExternalConfig().External {
-		impl.logger.Warnw("external mode is enabled, skipping the informer start for velero backup", "cluster", clusterInfo)
+	if !impl.appConfig.GetVeleroConfig().VeleroInformer || impl.appConfig.GetExternalConfig().External {
+		impl.logger.Warnw("velero informer is not enabled, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)
 		return nil
 	}
 	startTime := time.Now()
@@ -71,7 +71,7 @@ func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluste
 	impl.logger.Infow("starting velero informer for cluster", "clusterId", clusterInfo.Id)
 	restConfig := impl.k8sUtil.GetK8sConfigForCluster(clusterInfo)
 	backupInformerClient := impl.informerClient.GetSharedInformerClient(resourceBean.VeleroBackupResourceType)
-	backupInformer, err := backupInformerClient.GetSharedInformer(clusterLabels, impl.appConfig.GetVeleroNamespace(), restConfig)
+	backupInformer, err := backupInformerClient.GetSharedInformer(clusterLabels, impl.appConfig.GetVeleroConfig().GetVeleroNamespace(), restConfig)
 	if err != nil {
 		impl.logger.Errorw("error in getting velero backup informer", "clusterId", clusterInfo.Id, "err", err)
 		return err

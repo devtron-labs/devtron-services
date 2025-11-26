@@ -68,6 +68,10 @@ func (app *AppConfig) GetAcdConfig() *AcdConfig {
 	return app.AcdConfig
 }
 
+func (app *AppConfig) GetVeleroConfig() *VeleroConfig {
+	return app.VeleroConfig
+}
+
 func (app *AppConfig) GetACDNamespace() string {
 	if app.IsMultiClusterArgoCD() {
 		return metav1.NamespaceAll
@@ -98,6 +102,10 @@ func (app *AppConfig) IsMultiClusterCiArgoWfType() bool {
 
 func (app *AppConfig) IsMultiClusterSystemExec() bool {
 	return app.GetClusterConfig().SystemExecClusterType == AllClusterType && !app.GetExternalConfig().External
+}
+
+func (app *AppConfig) IsMultiClusterVeleroType() bool {
+	return app.GetClusterConfig().ClusterStorageModuleType == AllClusterType && !app.GetExternalConfig().External
 }
 
 func GetAppConfig() (*AppConfig, error) {
@@ -138,12 +146,4 @@ func GetAppConfig() (*AppConfig, error) {
 		Timeout:        timeout,
 		VeleroConfig:   veleroConfig,
 	}, nil
-}
-
-func (app *AppConfig) GetVeleroNamespace() string {
-	return app.VeleroConfig.VeleroNamespace
-}
-
-func (app *AppConfig) IsMultiClusterVeleroType() bool {
-	return app.GetClusterConfig().ClusterStorageModuleType == AllClusterType && !app.GetExternalConfig().External
 }
