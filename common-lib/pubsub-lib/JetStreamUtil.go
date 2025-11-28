@@ -230,6 +230,7 @@ var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
 	INFRASTRACTURE_INSTALLATION_DELETE_SUCCESS_DURABLE: {},
 	INFRA_HELM_RELEASE_ACTION_DURABLE:                  {},
 	COST_MODULE_INSTALLATION_DURABLE:                   {},
+	COST_MODULE_GPU_INSTALLATION_DURABLE:               {},
 }
 
 // getConsumerConfigMap will fetch the consumer wise config from the json string
