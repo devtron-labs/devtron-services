@@ -66,7 +66,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251128092645-ea8533f2b8c2
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251130063045-9be3566113e5
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
@@ -469,4 +469,4 @@ gopkg.in/yaml.v3
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251128092645-ea8533f2b8c2
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251130063045-9be3566113e5
