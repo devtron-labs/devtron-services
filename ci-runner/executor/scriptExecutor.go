@@ -121,6 +121,10 @@ func (impl *ScriptExecutorImpl) RunScripts(ciContext cictx.CiContext, workDirect
 	for k, v := range envInputVars {
 		inputEnvironmentVariable = append(inputEnvironmentVariable, fmt.Sprintf("%s=%s", k, v))
 	}
+	log.Println(util.DEVTRON, "Input environment variables: ")
+	for _, envVar := range inputEnvironmentVariable {
+		log.Println(util.DEVTRON, envVar, ", ")
+	}
 	runScriptCMD := exec.Command("/bin/sh", scriptPath)
 	runScriptCMD.Env = inputEnvironmentVariable
 	err = impl.cmdExecutor.RunCommand(ciContext, runScriptCMD)

@@ -116,6 +116,7 @@ func getScriptVariables(step *helper.StepObject, scriptEnvVariables *util2.Scrip
 		if v.Format == commonBean.FormatTypeFile {
 			variableFileMount[v.Value] = v.Value
 		}
+		// todo ask asutosh what previously used to happen did this v.value come as resolved previously or it used to get resolved later on
 		scriptEnvs[v.Name] = v.Value
 		if len(v.Value) == 0 {
 			emptyVariableList = append(emptyVariableList, v.Name)
@@ -167,6 +168,10 @@ func (impl *StageExecutorImpl) RunCiCdStep(stepType helper.StepType, ciCdRequest
 	}
 	step.InputVars = vars
 	emptyVariableList, scriptEnvs, variableFileMount := getScriptVariables(step, scriptEnvVariables)
+	log.Println(util.DEVTRON, "Script environment variables:")
+	for k, v := range scriptEnvs {
+		log.Println(util.DEVTRON, fmt.Sprintf("%s=%s", k, v))
+	}
 	// set the script env variables to the existing script env variables
 	// this is required to pass the existing script env variables to the next recursive call
 	scriptEnvVariables.ExistingScriptEnv = scriptEnvs
