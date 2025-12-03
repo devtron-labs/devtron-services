@@ -421,6 +421,7 @@ message HelmInstallCustomRequest {
   ReleaseIdentifier releaseIdentifier = 3;
   bool RunInCtx = 4;
   string K8sVersion = 5;
+  bool TakeOwnership = 6;
 }
 
 message HelmInstallCustomResponse {

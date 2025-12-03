@@ -378,6 +378,7 @@ func copyInstallOptions(chartSpec *ChartSpec, installOptions *action.Install) {
 	installOptions.SkipCRDs = chartSpec.SkipCRDs
 	installOptions.DryRun = chartSpec.DryRun
 	installOptions.SubNotes = chartSpec.SubNotes
+	installOptions.TakeOwnership = chartSpec.TakeOwnership
 }
 
 // getChart returns a chart matching the provided chart name and options.
