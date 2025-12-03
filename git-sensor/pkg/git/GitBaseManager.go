@@ -410,7 +410,7 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 		}
 
 		// Run git gc --prune=now to clean up temp.pack files left by killed git commands
-		if impl.conf.EnableManualGitGc && name == "git" && command == "fetch" {
+		if impl.conf.EnableManualGitGc && command == "fetch" {
 			if rootDir := impl.extractRootDirFromArgs(arg); rootDir != "" {
 				impl.runGitGcWithTimeout(rootDir, 5*time.Minute)
 			}
