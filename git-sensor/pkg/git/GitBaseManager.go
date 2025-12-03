@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -387,9 +388,7 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 	//TODO: how to make it generic, currently works because the
 	// git command is placed at index 2 for current implementations
 	timeout := 0
-	command := ""
 	if len(arg) > 2 {
-		command = arg[2]
 		timeout = impl.getCommandTimeout(arg[2])
 	}
 	if timeout > 0 {
@@ -410,9 +409,9 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 		}
 
 		// Run git gc --prune=now to clean up temp.pack files left by killed git commands
-		if impl.conf.EnableManualGitGc && command == "fetch" {
+		if impl.conf.EnableManualGitGc && slices.Contains(arg, "fetch") {
 			if rootDir := impl.extractRootDirFromArgs(arg); rootDir != "" {
-				impl.runGitGcWithTimeout(rootDir, 5*time.Minute)
+				impl.runGitGcWithTimeout(rootDir, time.Duration(impl.conf.ManualGitGcTimeout)*time.Second)
 			}
 		}
 		return err

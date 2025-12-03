@@ -30,6 +30,7 @@ type Configuration struct {
 	CliCmdTimeoutJson       string `env:"CLI_CMD_TIMEOUT_JSON" envDefault:""`
 	GoGitTimeout            int    `env:"GOGIT_TIMEOUT_SECONDS" envDefault:"10" `
 	EnableManualGitGc       bool   `env:"ENABLE_MANUAL_GIT_GC" envDefault:"false"`
+	ManualGitGcTimeout      int    `env:"MANUAL_GIT_GC_TIMEOUT_SECONDS" envDefault:"300"`
 }
 
 func ParseConfiguration() (*Configuration, error) {
