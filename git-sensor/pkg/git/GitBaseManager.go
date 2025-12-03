@@ -387,7 +387,9 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 	//TODO: how to make it generic, currently works because the
 	// git command is placed at index 2 for current implementations
 	timeout := 0
+	command := ""
 	if len(arg) > 2 {
+		command = arg[2]
 		timeout = impl.getCommandTimeout(arg[2])
 	}
 	if timeout > 0 {
@@ -405,6 +407,13 @@ func (impl *GitManagerBaseImpl) createCmdWithContext(ctx GitContext, name string
 			impl.logger.Errorw("error killing command", "name", name, "arg", arg, "err", err)
 		} else {
 			impl.logger.Infow("sucess cancel command", "name", name, "arg", arg)
+		}
+
+		// Run git gc --prune=now to clean up temp.pack files left by killed git commands
+		if impl.conf.EnableManualGitGc && name == "git" && command == "fetch" {
+			if rootDir := impl.extractRootDirFromArgs(arg); rootDir != "" {
+				impl.runGitGcWithTimeout(rootDir, 5*time.Minute)
+			}
 		}
 		return err
 	}
@@ -430,4 +439,36 @@ func (impl *GitManagerBaseImpl) ExecuteCustomCommand(gitContext GitContext, name
 	defer commonLibGitManager.DeleteTlsFiles(tlsPathInfo)
 	output, errMsg, err := impl.runCommandWithCred(cmd, newGitCtx, gitContext.Username, gitContext.Password, tlsPathInfo)
 	return output, errMsg, err
+}
+
+// extractRootDirFromArgs extracts the root directory from git command arguments.
+// It looks for the -C flag which specifies the directory to run git commands in.
+func (impl *GitManagerBaseImpl) extractRootDirFromArgs(args []string) string {
+	for i, arg := range args {
+		if arg == "-C" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
+// runGitGcWithTimeout runs git gc --prune=now with a timeout to clean up
+// temporary pack files left behind when git commands are killed/cancelled.
+func (impl *GitManagerBaseImpl) runGitGcWithTimeout(rootDir string, timeout time.Duration) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	impl.logger.Infow("running git gc --prune=now", "rootDir", rootDir, "timeout", timeout)
+	cmd := exec.CommandContext(ctx, "git", "-C", rootDir, "gc", "--prune=now")
+	cmd.Env = append(os.Environ(), "HOME=/dev/null")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			impl.logger.Warnw("git gc timed out", "rootDir", rootDir, "timeout", timeout)
+		} else {
+			impl.logger.Errorw("error running git gc", "rootDir", rootDir, "err", err, "output", string(output))
+		}
+	} else {
+		impl.logger.Infow("git gc completed successfully", "rootDir", rootDir)
+	}
 }
