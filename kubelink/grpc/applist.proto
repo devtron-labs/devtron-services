@@ -344,6 +344,7 @@ message UpgradeReleaseRequest {
   ChartContent chartContent = 4;
   bool RunInCtx = 5;
   string K8sVersion = 6;
+  bool TakeOwnership = 7;
 }
 
 message UpgradeReleaseResponse {

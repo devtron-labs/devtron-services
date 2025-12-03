@@ -2834,6 +2834,7 @@ type UpgradeReleaseRequest struct {
 	ChartContent      *ChartContent          `protobuf:"bytes,4,opt,name=chartContent,proto3" json:"chartContent,omitempty"`
 	RunInCtx          bool                   `protobuf:"varint,5,opt,name=RunInCtx,proto3" json:"RunInCtx,omitempty"`
 	K8SVersion        string                 `protobuf:"bytes,6,opt,name=K8sVersion,proto3" json:"K8sVersion,omitempty"`
+	TakeOwnership     bool                   `protobuf:"varint,7,opt,name=TakeOwnership,proto3" json:"TakeOwnership,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -2908,6 +2909,13 @@ func (x *UpgradeReleaseRequest) GetK8SVersion() string {
 		return x.K8SVersion
 	}
 	return ""
+}
+
+func (x *UpgradeReleaseRequest) GetTakeOwnership() bool {
+	if x != nil {
+		return x.TakeOwnership
+	}
+	return false
 }
 
 type UpgradeReleaseResponse struct {
@@ -4757,7 +4765,7 @@ const file_grpc_applist_proto_rawDesc = "" +
 	"\x11ReleaseIdentifier\x124\n" +
 	"\rclusterConfig\x18\x01 \x01(\v2\x0e.ClusterConfigR\rclusterConfig\x12 \n" +
 	"\vreleaseName\x18\x02 \x01(\tR\vreleaseName\x12*\n" +
-	"\x10releaseNamespace\x18\x03 \x01(\tR\x10releaseNamespace\"\x88\x02\n" +
+	"\x10releaseNamespace\x18\x03 \x01(\tR\x10releaseNamespace\"\xae\x02\n" +
 	"\x15UpgradeReleaseRequest\x12@\n" +
 	"\x11releaseIdentifier\x18\x01 \x01(\v2\x12.ReleaseIdentifierR\x11releaseIdentifier\x12\x1e\n" +
 	"\n" +
@@ -4770,7 +4778,8 @@ const file_grpc_applist_proto_rawDesc = "" +
 	"\bRunInCtx\x18\x05 \x01(\bR\bRunInCtx\x12\x1e\n" +
 	"\n" +
 	"K8sVersion\x18\x06 \x01(\tR\n" +
-	"K8sVersion\"2\n" +
+	"K8sVersion\x12$\n" +
+	"\rTakeOwnership\x18\a \x01(\bR\rTakeOwnership\"2\n" +
 	"\x16UpgradeReleaseResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x89\x01\n" +
 	"\x17DeploymentDetailRequest\x12@\n" +
