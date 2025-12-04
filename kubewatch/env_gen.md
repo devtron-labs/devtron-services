@@ -59,7 +59,7 @@
  | PG_PORT | string |5432 |  |  | false |
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string | |  |  | false |
- | RUNTIME_CONFIG_LOCAL_DEV | LocalDevMode |false |  |  | false |
+ | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |
  | USE_CUSTOM_HTTP_TRANSPORT | bool |false |  |  | false |
 
@@ -77,4 +77,12 @@
 | Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
 |-------|----------|-------------------|-------------------|-----------------------|------------------|
  | SLEEP_TIMEOUT | int |5 | Graceful shutdown timeout in seconds |  | false |
+
+
+## POSTGRES Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CASBIN_DATABASE | string |casbin |  |  | false |
+ | PG_READ_TIMEOUT | int64 |30 |  |  | false |
+ | PG_WRITE_TIMEOUT | int64 |30 |  |  | false |
 
