@@ -11,10 +11,12 @@
  | CONSUMER_CONFIG_JSON | string | |  |  | false |
  | DEFAULT_LOG_TIME_LIMIT | int64 |1 |  |  | false |
  | ENABLE_FILE_STATS | bool |false |  |  | false |
+ | ENABLE_MANUAL_GIT_GC | bool |false |  |  | false |
  | ENABLE_STATSVIZ | bool |false |  |  | false |
  | GIT_HISTORY_COUNT | int |15 |  |  | false |
  | GOGIT_TIMEOUT_SECONDS | int |10 |  |  | false |
  | LOG_LEVEL | int |0 |  |  | false |
+ | MANUAL_GIT_GC_TIMEOUT_SECONDS | int |300 |  |  | false |
  | MIN_LIMIT_FOR_PVC | int |1 |  |  | false |
  | NATS_MSG_ACK_WAIT_IN_SECS | int |120 |  |  | false |
  | NATS_MSG_BUFFER_SIZE | int |-1 |  |  | false |

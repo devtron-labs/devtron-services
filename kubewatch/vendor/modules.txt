@@ -251,7 +251,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251130063045-9be3566113e5
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205084952-33d5b5ea8232
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -264,6 +264,7 @@ github.com/devtron-labs/common-lib/monitoring/statsViz
 github.com/devtron-labs/common-lib/pubsub-lib
 github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
+github.com/devtron-labs/common-lib/securestore
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/http
@@ -274,6 +275,7 @@ github.com/devtron-labs/common-lib/utils/k8s/health
 github.com/devtron-labs/common-lib/utils/k8sObjectsUtil
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
 github.com/devtron-labs/common-lib/utils/runTime
+github.com/devtron-labs/common-lib/utils/sql
 github.com/devtron-labs/common-lib/utils/yaml
 # github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
 ## explicit
@@ -1987,4 +1989,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
 sigs.k8s.io/yaml/goyaml.v3
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251130063045-9be3566113e5
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205084952-33d5b5ea8232
