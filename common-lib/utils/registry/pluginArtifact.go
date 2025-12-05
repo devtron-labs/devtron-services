@@ -36,6 +36,7 @@ type GenericImageDetail struct {
 	Image         string    `json:"image"`
 	ImageDigest   string    `json:"imageDigest"`
 	LastUpdatedOn time.Time `json:"imagePushedAt"`
+	Tag           string    `json:"tag"`
 }
 
 func (g *GenericImageDetail) SetImage(image *string) *GenericImageDetail {
@@ -59,6 +60,11 @@ func (g *GenericImageDetail) SetLastUpdatedOn(imagePushedAt *time.Time) *Generic
 		return g
 	}
 	g.LastUpdatedOn = *imagePushedAt
+	return g
+}
+
+func (g *GenericImageDetail) SetTag(tag string) *GenericImageDetail {
+	g.Tag = tag
 	return g
 }
 
