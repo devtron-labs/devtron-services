@@ -129,8 +129,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/denisenkom/go-mssqldb v0.12.3/go.mod h1:k0mtMFOnU+AihqFxPMiF05rtiDrorD1Vrm1KEz5hxDo=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205084952-33d5b5ea8232 h1:6eggXHuRQOWaqmmuxW5mQSIXLZhB4irR/GJ59MixkKY=
-github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205084952-33d5b5ea8232/go.mod h1:+CUhxuWB8uMYIoiXwofuLIXPyiNnwmoZlH90KWAE5Ew=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205120949-62ef158e4713 h1:xDbz5etX5h6foQDgpT9ukTo2I65b6q32Nu9do5nBPk8=
+github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205120949-62ef158e4713/go.mod h1:CqHnvltrng2O40hNGVl56qcAhv7tiXK3SKx47LKyE/A=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
@@ -660,6 +660,8 @@ github.com/vmihailenco/msgpack/v5 v5.3.4 h1:qMKAwOV+meBw2Y8k9cVwAy7qErtYCwBzZ2el
 github.com/vmihailenco/msgpack/v5 v5.3.4/go.mod h1:7xyJ9e+0+9SaZT0Wt1RGleJXzli6Q/V5KbhBonMG9jc=
 github.com/vmihailenco/tagparser/v2 v2.0.0 h1:y09buUbR+b5aycVFQs/g70pqKVZNBmxwAhO7/IwNM9g=
 github.com/vmihailenco/tagparser/v2 v2.0.0/go.mod h1:Wri+At7QHww0WTrCBeu4J6bNtoV6mEfg5OIWRZA9qds=
+github.com/vmware-tanzu/velero v1.14.1 h1:HYj73scn7ZqtfTanjW/X4W0Hn3w/qcfoRbrHCWM52iI=
+github.com/vmware-tanzu/velero v1.14.1/go.mod h1:/OzHzTvbevkkX+bK/BS4AgYMv6nKuOgsybuuvLWkSS0=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM=
