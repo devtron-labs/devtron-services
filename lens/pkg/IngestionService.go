@@ -18,10 +18,12 @@ package pkg
 
 import (
 	"context"
+	"time"
+
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/lens/bean"
+	"github.com/devtron-labs/lens/internal/dto"
 	pb "github.com/devtron-labs/protos/gitSensor"
-	"time"
 
 	"github.com/devtron-labs/lens/client/gitSensor"
 	"github.com/devtron-labs/lens/internal/sql"
@@ -103,7 +105,7 @@ func (impl *IngestionServiceImpl) ProcessDeploymentEvent(deploymentEvent *Deploy
 	if err != nil {
 		return nil, err
 	}
-	if appRelease.ReleaseType == sql.RollBack {
+	if appRelease.ReleaseType == dto.RollBack {
 		//no need to fetch git detail return
 		return appRelease, nil //FIXME
 	}
@@ -134,7 +136,7 @@ func (impl *IngestionServiceImpl) markPreviousTriggerFail(release *sql.AppReleas
 	}
 	if previousAppRelease != nil {
 		impl.logger.Infow("pipeline failure detected", "PreviousappRelease", previousAppRelease)
-		previousAppRelease.ReleaseStatus = sql.Failure
+		previousAppRelease.ReleaseStatus = dto.Failure
 		previousAppRelease.UpdatedTime = time.Now()
 		_, err = impl.appReleaseRepository.Update(previousAppRelease)
 		if err != nil {
@@ -142,7 +144,7 @@ func (impl *IngestionServiceImpl) markPreviousTriggerFail(release *sql.AppReleas
 			return err
 		}
 		//mark this release as patch
-		release.ReleaseType = sql.Patch
+		release.ReleaseType = dto.Patch
 		release.UpdatedTime = time.Now()
 		_, err = impl.appReleaseRepository.Update(release)
 		if err != nil {
@@ -242,7 +244,7 @@ func (impl *IngestionServiceImpl) fetchAndSaveChangesFromGit(appRelease *sql.App
 	}
 
 	appRelease.UpdatedTime = time.Now()
-	appRelease.ProcessStage = sql.LeadTimeFetch
+	appRelease.ProcessStage = dto.LeadTimeFetch
 	appRelease.ChangeSizeLineAdded = lineAdded
 	appRelease.ChangeSizeLineDeleted = lineRemoved
 	appRelease, err = impl.appReleaseRepository.Update(appRelease)
@@ -264,8 +266,8 @@ func (impl *IngestionServiceImpl) saveAppRelease(deploymentEvent *DeploymentEven
 		UpdatedTime:        time.Now(),
 		PipelineOverrideId: deploymentEvent.PipelineOverrideId,
 		ReleaseId:          deploymentEvent.ReleaseId,
-		ProcessStage:       sql.Init,
-		ReleaseType:        sql.Unknown,
+		ProcessStage:       dto.Init,
+		ReleaseType:        dto.Unknown,
 	}
 	appRelease, err := impl.appReleaseRepository.Save(appRelease)
 	if err != nil {
@@ -301,11 +303,11 @@ func (impl *IngestionServiceImpl) checkAndUpdateReleaseType(appRelease *sql.AppR
 		return appRelease, err
 	}
 	if duplicate {
-		appRelease.ReleaseType = sql.RollBack
+		appRelease.ReleaseType = dto.RollBack
 	} else {
-		appRelease.ReleaseType = sql.RollForward
+		appRelease.ReleaseType = dto.RollForward
 	}
-	appRelease.ProcessStage = sql.ReleaseTypeDetermined
+	appRelease.ProcessStage = dto.ReleaseTypeDetermined
 	appRelease.UpdatedTime = time.Now()
 	appRelease, err = impl.appReleaseRepository.Update(appRelease)
 

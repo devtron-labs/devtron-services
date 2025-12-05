@@ -18,14 +18,18 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/devtron-labs/lens/pkg"
-	"go.uber.org/zap"
+	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/devtron-labs/lens/internal/dto"
+	"github.com/devtron-labs/lens/pkg"
+	"go.uber.org/zap"
 )
 
 type RestHandler interface {
 	GetDeploymentMetrics(w http.ResponseWriter, r *http.Request)
+	GetBulkDeploymentMetrics(w http.ResponseWriter, r *http.Request)
 	ProcessDeploymentEvent(w http.ResponseWriter, r *http.Request)
 	ResetApplication(w http.ResponseWriter, r *http.Request)
 }
@@ -104,7 +108,7 @@ func (impl *RestHandlerImpl) GetDeploymentMetrics(w http.ResponseWriter, r *http
 	//decoder := json.NewDecoder(r.Body)
 	v := r.URL.Query()
 	impl.logger.Infow("metrics request", "req", v)
-	metricRequest := &pkg.MetricRequest{}
+	metricRequest := &dto.MetricRequest{}
 	if v.Get("env_id") != "" {
 		envId, err := strconv.Atoi(v.Get("env_id"))
 		if err != nil {
@@ -130,15 +134,38 @@ func (impl *RestHandlerImpl) GetDeploymentMetrics(w http.ResponseWriter, r *http
 		metricRequest.To = to
 	}
 
-	//err := decoder.Decode(metricRequest)
-	//if err != nil {
-	//	impl.logger.Error(err)
-	//	impl.writeJsonResp(w, err, nil, http.StatusBadRequest)
-	//	return
-	//}
-	metrics, err := impl.deploymentMetricService.GetDeploymentMetrics(metricRequest)
+	metrics, err := impl.deploymentMetricService.ProcessSingleDoraMetrics(metricRequest)
 	impl.logger.Infof("metrics %+v", metrics)
 	impl.writeJsonResp(w, err, metrics, 200)
+}
+
+func (impl *RestHandlerImpl) GetBulkDeploymentMetrics(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	bulkRequest := &dto.BulkMetricRequest{}
+
+	err := decoder.Decode(bulkRequest)
+	if err != nil {
+		impl.logger.Error("error decoding bulk request", "err", err)
+		impl.writeJsonResp(w, err, nil, http.StatusBadRequest)
+		return
+	}
+
+	impl.logger.Infow("bulk metrics request", "req", bulkRequest)
+
+	// Validate request
+	if len(bulkRequest.AppEnvPairs) == 0 {
+		impl.writeJsonResp(w, fmt.Errorf("app_env_pairs cannot be empty"), nil, http.StatusBadRequest)
+		return
+	}
+
+	if bulkRequest.From == nil || bulkRequest.To == nil {
+		impl.writeJsonResp(w, fmt.Errorf("from and to dates are required"), nil, http.StatusBadRequest)
+		return
+	}
+
+	bulkMetrics, err := impl.deploymentMetricService.ProcessBulkDoraMetrics(bulkRequest)
+	impl.logger.Infof("bulk metrics response: %+v", bulkMetrics)
+	impl.writeJsonResp(w, err, bulkMetrics, 200)
 }
 
 func (impl *RestHandlerImpl) ProcessDeploymentEvent(w http.ResponseWriter, r *http.Request) {

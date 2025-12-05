@@ -17,11 +17,13 @@
 package pkg
 
 import (
-	"github.com/devtron-labs/lens/internal/sql"
-	"go.uber.org/zap"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/devtron-labs/lens/internal/dto"
+	"github.com/devtron-labs/lens/internal/sql"
+	"go.uber.org/zap"
 )
 
 func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
@@ -48,8 +50,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   10,
 			ChangeSizeLineDeleted: 10,
 			TriggerTime:           currentTime.AddDate(0, 0, -1),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -65,8 +67,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   11,
 			ChangeSizeLineDeleted: 11,
 			TriggerTime:           currentTime.AddDate(0, 0, -2),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -82,8 +84,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   12,
 			ChangeSizeLineDeleted: 12,
 			TriggerTime:           currentTime.AddDate(0, 0, -3),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -118,8 +120,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   10,
 			ChangeSizeLineDeleted: 10,
 			TriggerTime:           currentTime.AddDate(0, 0, -1),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -135,8 +137,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   11,
 			ChangeSizeLineDeleted: 11,
 			TriggerTime:           currentTime.AddDate(0, 0, -2),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -152,8 +154,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   12,
 			ChangeSizeLineDeleted: 12,
 			TriggerTime:           currentTime.AddDate(0, 0, -3),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -170,8 +172,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 		ChangeSizeLineAdded:   12,
 		ChangeSizeLineDeleted: 12,
 		TriggerTime:           currentTime.AddDate(0, 0, -4),
-		ReleaseType:           sql.RollForward,
-		ReleaseStatus:         sql.Success,
+		ReleaseType:           dto.RollForward,
+		ReleaseStatus:         dto.Success,
 		ProcessStage:          0,
 		CreatedTime:           time.Time{},
 		UpdatedTime:           time.Time{},
@@ -188,8 +190,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   10,
 			ChangeSizeLineDeleted: 10,
 			TriggerTime:           currentTime.AddDate(0, 0, -1),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -205,8 +207,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   11,
 			ChangeSizeLineDeleted: 11,
 			TriggerTime:           currentTime.AddDate(0, 0, -2),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -222,8 +224,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   12,
 			ChangeSizeLineDeleted: 12,
 			TriggerTime:           currentTime.AddDate(0, 0, -3),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -240,8 +242,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 		ChangeSizeLineAdded:   12,
 		ChangeSizeLineDeleted: 12,
 		TriggerTime:           currentTime.AddDate(0, 0, -4),
-		ReleaseType:           sql.RollForward,
-		ReleaseStatus:         sql.Success,
+		ReleaseType:           dto.RollForward,
+		ReleaseStatus:         dto.Success,
 		ProcessStage:          0,
 		CreatedTime:           time.Time{},
 		UpdatedTime:           time.Time{},
@@ -258,8 +260,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   10,
 			ChangeSizeLineDeleted: 10,
 			TriggerTime:           currentTime.AddDate(0, 0, -1),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -275,8 +277,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   11,
 			ChangeSizeLineDeleted: 11,
 			TriggerTime:           currentTime.AddDate(0, 0, -2),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -292,8 +294,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   12,
 			ChangeSizeLineDeleted: 12,
 			TriggerTime:           currentTime.AddDate(0, 0, -3),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -310,8 +312,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 		ChangeSizeLineAdded:   12,
 		ChangeSizeLineDeleted: 12,
 		TriggerTime:           currentTime.AddDate(0, 0, -4),
-		ReleaseType:           sql.RollForward,
-		ReleaseStatus:         sql.Success,
+		ReleaseType:           dto.RollForward,
+		ReleaseStatus:         dto.Success,
 		ProcessStage:          0,
 		CreatedTime:           time.Time{},
 		UpdatedTime:           time.Time{},
@@ -328,8 +330,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   10,
 			ChangeSizeLineDeleted: 10,
 			TriggerTime:           currentTime.AddDate(0, 0, -1),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -345,8 +347,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   11,
 			ChangeSizeLineDeleted: 11,
 			TriggerTime:           currentTime.AddDate(0, 0, -2),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Failure,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Failure,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -362,8 +364,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   12,
 			ChangeSizeLineDeleted: 12,
 			TriggerTime:           currentTime.AddDate(0, 0, -3),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -380,8 +382,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 		ChangeSizeLineAdded:   12,
 		ChangeSizeLineDeleted: 12,
 		TriggerTime:           currentTime.AddDate(0, 0, -4),
-		ReleaseType:           sql.RollForward,
-		ReleaseStatus:         sql.Success,
+		ReleaseType:           dto.RollForward,
+		ReleaseStatus:         dto.Success,
 		ProcessStage:          0,
 		CreatedTime:           time.Time{},
 		UpdatedTime:           time.Time{},
@@ -398,8 +400,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   10,
 			ChangeSizeLineDeleted: 10,
 			TriggerTime:           currentTime.AddDate(0, 0, -1),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -415,8 +417,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   11,
 			ChangeSizeLineDeleted: 11,
 			TriggerTime:           currentTime.AddDate(0, 0, -2),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -432,8 +434,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 			ChangeSizeLineAdded:   12,
 			ChangeSizeLineDeleted: 12,
 			TriggerTime:           currentTime.AddDate(0, 0, -3),
-			ReleaseType:           sql.RollForward,
-			ReleaseStatus:         sql.Success,
+			ReleaseType:           dto.RollForward,
+			ReleaseStatus:         dto.Success,
 			ProcessStage:          0,
 			CreatedTime:           time.Time{},
 			UpdatedTime:           time.Time{},
@@ -450,8 +452,8 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 		ChangeSizeLineAdded:   12,
 		ChangeSizeLineDeleted: 12,
 		TriggerTime:           currentTime.AddDate(0, 0, -4),
-		ReleaseType:           sql.RollForward,
-		ReleaseStatus:         sql.Success,
+		ReleaseType:           dto.RollForward,
+		ReleaseStatus:         dto.Success,
 		ProcessStage:          0,
 		CreatedTime:           time.Time{},
 		UpdatedTime:           time.Time{},
@@ -461,7 +463,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *Metrics
+		want    *dto.Metrics
 		wantErr bool
 	}{
 		{
@@ -478,7 +480,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: nil,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      0,
 				AverageLeadTime:       0,
@@ -503,7 +505,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: nil,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      24,
 				AverageLeadTime:       0,
@@ -528,7 +530,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: &lastReleaseS,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      24,
 				AverageLeadTime:       0,
@@ -553,7 +555,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: &lastReleaseF,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      24,
 				AverageLeadTime:       0,
@@ -578,7 +580,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: &lastReleaseF1,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      24,
 				AverageLeadTime:       0,
@@ -603,7 +605,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: &lastReleaseF2,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      24,
 				AverageLeadTime:       0,
@@ -628,7 +630,7 @@ func TestDeploymentMetricServiceImpl_populateMetrics(t *testing.T) {
 				leadTimes:   []sql.LeadTime{},
 				lastRelease: &lastReleaseF3,
 			},
-			want: &Metrics{
+			want: &dto.Metrics{
 				Series:                nil,
 				AverageCycleTime:      24,
 				AverageLeadTime:       0,

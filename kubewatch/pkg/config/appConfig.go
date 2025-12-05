@@ -25,6 +25,7 @@ type AppConfig struct {
 	CdConfig       *CdConfig
 	AcdConfig      *AcdConfig
 	Timeout        *Timeout
+	VeleroConfig   *VeleroConfig
 }
 
 func (app *AppConfig) GetClusterConfig() *ClusterConfig {
@@ -67,6 +68,10 @@ func (app *AppConfig) GetAcdConfig() *AcdConfig {
 	return app.AcdConfig
 }
 
+func (app *AppConfig) GetVeleroConfig() *VeleroConfig {
+	return app.VeleroConfig
+}
+
 func (app *AppConfig) GetACDNamespace() string {
 	if app.IsMultiClusterArgoCD() {
 		return metav1.NamespaceAll
@@ -99,6 +104,10 @@ func (app *AppConfig) IsMultiClusterSystemExec() bool {
 	return app.GetClusterConfig().SystemExecClusterType == AllClusterType && !app.GetExternalConfig().External
 }
 
+func (app *AppConfig) IsMultiClusterVeleroType() bool {
+	return app.GetClusterConfig().ClusterStorageModuleType == AllClusterType && !app.GetExternalConfig().External
+}
+
 func GetAppConfig() (*AppConfig, error) {
 	clusterConfig, err := getClusterConfig()
 	if err != nil {
@@ -124,6 +133,10 @@ func GetAppConfig() (*AppConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	veleroConfig, err := getVeleroConfig()
+	if err != nil {
+		return nil, err
+	}
 	return &AppConfig{
 		ClusterCfg:     clusterConfig,
 		ExternalConfig: externalConfig,
@@ -131,5 +144,6 @@ func GetAppConfig() (*AppConfig, error) {
 		CdConfig:       cdConfig,
 		AcdConfig:      acdConfig,
 		Timeout:        timeout,
+		VeleroConfig:   veleroConfig,
 	}, nil
 }

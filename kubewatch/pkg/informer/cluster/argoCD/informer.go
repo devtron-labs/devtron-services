@@ -54,7 +54,6 @@ func NewInformerImpl(logger *zap.SugaredLogger,
 		argoCdInformerStopper: make(map[int]*informerBean.SharedStopper),
 	}
 }
-
 func (impl *InformerImpl) StartInformerForCluster(clusterInfo *repository.Cluster) error {
 	if !impl.appConfig.GetAcdConfig().ACDInformer || impl.appConfig.GetExternalConfig().External {
 		impl.logger.Warnw("argo cd informer is not enabled for cluster, skipping...", "clusterId", clusterInfo.Id, "clusterName", clusterInfo.ClusterName, "appConfig", impl.appConfig)

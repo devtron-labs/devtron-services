@@ -54,6 +54,16 @@ func (impl *InformerImpl) GetClientAdvisor(clientType bean.ClientType) (ClientAd
 		return impl.cdWfInformer, nil
 	case bean.SystemExecutorClientType:
 		return impl.systemExecInformer, nil
+	case bean.VeleroBslClientType:
+		return impl.veleroBslInformer, nil
+	case bean.VeleroVslClientType:
+		return impl.veleroVslInformer, nil
+	case bean.VeleroBackupClientType:
+		return impl.veleroBackupInformer, nil
+	case bean.VeleroRestoreClientType:
+		return impl.veleroRestoreInformer, nil
+	case bean.VeleroBackupScheduleClientType:
+		return impl.veleroBackupScheduleInformer, nil
 	default:
 		return NewUnimplementedAdvisor(), fmt.Errorf("client type %q not supported", clientType)
 	}
@@ -69,6 +79,16 @@ func (impl *InformerImpl) IsMultiClusterMode(clientType bean.ClientType) bool {
 		return impl.appConfig.IsMultiClusterCdArgoWfType()
 	case bean.SystemExecutorClientType:
 		return impl.appConfig.IsMultiClusterSystemExec()
+	case bean.VeleroBslClientType:
+		return impl.appConfig.IsMultiClusterVeleroType()
+	case bean.VeleroVslClientType:
+		return impl.appConfig.IsMultiClusterVeleroType()
+	case bean.VeleroBackupClientType:
+		return impl.appConfig.IsMultiClusterVeleroType()
+	case bean.VeleroRestoreClientType:
+		return impl.appConfig.IsMultiClusterVeleroType()
+	case bean.VeleroBackupScheduleClientType:
+		return impl.appConfig.IsMultiClusterVeleroType()
 	default:
 		return false
 	}
