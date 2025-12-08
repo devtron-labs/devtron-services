@@ -27,6 +27,7 @@
  | CLUSTER_ARGO_CD_TYPE | string |IN_CLUSTER | Determines cluster mode for ArgoCD informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER |  | false |
  | CLUSTER_CD_ARGO_WF_TYPE | string |IN_CLUSTER | Determines cluster mode for CD ArgoWorkflow informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER |  | false |
  | CLUSTER_CI_ARGO_WF_TYPE | string |IN_CLUSTER | Determines cluster mode for CI ArgoWorkflow informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER |  | false |
+ | CLUSTER_STORAGE_MODULE_TYPE | string |ALL_CLUSTER | Determines cluster mode for Velero BSL informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER |  | false |
  | CLUSTER_TYPE | string |IN_CLUSTER | Determines cluster mode for System Executor informer; for multiple cluster mode, it will be set to ALL_CLUSTER; for single cluster mode, it will be set to IN_CLUSTER |  | false |
 
 
@@ -59,7 +60,7 @@
  | PG_PORT | string |5432 |  |  | false |
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
  | PG_USER | string | |  |  | false |
- | RUNTIME_CONFIG_LOCAL_DEV | LocalDevMode |false |  |  | false |
+ | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
  | STREAM_CONFIG_JSON | string | |  |  | false |
  | USE_CUSTOM_HTTP_TRANSPORT | bool |false |  |  | false |
 
@@ -77,4 +78,19 @@
 | Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
 |-------|----------|-------------------|-------------------|-----------------------|------------------|
  | SLEEP_TIMEOUT | int |5 | Graceful shutdown timeout in seconds |  | false |
+
+
+## POSTGRES Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | CASBIN_DATABASE | string |casbin |  |  | false |
+ | PG_READ_TIMEOUT | int64 |30 |  |  | false |
+ | PG_WRITE_TIMEOUT | int64 |30 |  |  | false |
+
+
+## VELERO_INFORMER Related Environment Variables
+| Key   | Type     | Default Value     | Description       | Example       | Deprecated       |
+|-------|----------|-------------------|-------------------|-----------------------|------------------|
+ | VELERO_INFORMER | bool |false | Used to determine whether Velero informer is enabled or not |  | false |
+ | VELERO_NAMESPACE | string |velero | Namespace where all the Velero backup objects are published |  | false |
 

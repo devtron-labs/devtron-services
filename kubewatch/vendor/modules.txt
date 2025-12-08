@@ -251,7 +251,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251104082051-1f7627ecb6be
+# github.com/devtron-labs/common-lib v0.0.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205120949-62ef158e4713
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
@@ -264,6 +264,7 @@ github.com/devtron-labs/common-lib/monitoring/statsViz
 github.com/devtron-labs/common-lib/pubsub-lib
 github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
+github.com/devtron-labs/common-lib/securestore
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/http
@@ -274,6 +275,8 @@ github.com/devtron-labs/common-lib/utils/k8s/health
 github.com/devtron-labs/common-lib/utils/k8sObjectsUtil
 github.com/devtron-labs/common-lib/utils/remoteConnection/bean
 github.com/devtron-labs/common-lib/utils/runTime
+github.com/devtron-labs/common-lib/utils/sql
+github.com/devtron-labs/common-lib/utils/storage
 github.com/devtron-labs/common-lib/utils/yaml
 # github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
 ## explicit
@@ -883,6 +886,18 @@ github.com/vmihailenco/msgpack/v5/msgpcode
 github.com/vmihailenco/tagparser/v2
 github.com/vmihailenco/tagparser/v2/internal
 github.com/vmihailenco/tagparser/v2/internal/parser
+# github.com/vmware-tanzu/velero v1.14.1
+## explicit; go 1.22.6
+github.com/vmware-tanzu/velero/pkg/apis/velero/shared
+github.com/vmware-tanzu/velero/pkg/apis/velero/v1
+github.com/vmware-tanzu/velero/pkg/apis/velero/v2alpha1
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned/scheme
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned/typed/velero/v1
+github.com/vmware-tanzu/velero/pkg/generated/clientset/versioned/typed/velero/v2alpha1
+github.com/vmware-tanzu/velero/pkg/generated/informers/externalversions/internalinterfaces
+github.com/vmware-tanzu/velero/pkg/generated/informers/externalversions/velero/v1
+github.com/vmware-tanzu/velero/pkg/generated/listers/velero/v1
 # github.com/x448/float16 v0.8.4
 ## explicit; go 1.11
 github.com/x448/float16
@@ -1987,4 +2002,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
 sigs.k8s.io/yaml/goyaml.v3
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251104082051-1f7627ecb6be
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251205120949-62ef158e4713
