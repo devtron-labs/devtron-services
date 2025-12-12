@@ -47,7 +47,7 @@ type ImageScanEvent struct {
 	CiWorkflowId     int                     `json:"ciWorkflowId"`
 	CdWorkflowId     int                     `json:"cdWorkflowId"`
 	ChartHistoryId   int                     `json:"chartHistoryId"`
-	ManifestData     *ManifestData           `json:"manifestData"`
+	ManifestData     *ManifestData           `json:"-"`
 	ReScan           bool                    `json:"reScan"`
 }
 
