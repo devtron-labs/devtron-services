@@ -1303,11 +1303,12 @@ func (impl *HelmAppServiceImpl) InstallReleaseWithCustomChart(ctx context.Contex
 	impl.logger.Debugw("tar file write at", "referenceChartDir", referenceChartDir)
 	// Install release starts
 	chartSpec := &helmClient.ChartSpec{
-		ReleaseName: releaseIdentifier.ReleaseName,
-		Namespace:   releaseIdentifier.ReleaseNamespace,
-		ValuesYaml:  request.ValuesYaml,
-		ChartName:   referenceChartDir,
-		KubeVersion: request.K8SVersion,
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ValuesYaml:    request.ValuesYaml,
+		ChartName:     referenceChartDir,
+		KubeVersion:   request.K8SVersion,
+		TakeOwnership: request.TakeOwnership,
 	}
 
 	impl.logger.Debug("Installing release with chart info")
@@ -1365,11 +1366,12 @@ func (impl *HelmAppServiceImpl) UpgradeReleaseWithCustomChart(ctx context.Contex
 	impl.logger.Debugw("tar file write at", "referenceChartDir", referenceChartDir)
 	// Install release spec
 	installChartSpec := &helmClient.ChartSpec{
-		ReleaseName: releaseIdentifier.ReleaseName,
-		Namespace:   releaseIdentifier.ReleaseNamespace,
-		ValuesYaml:  request.ValuesYaml,
-		ChartName:   referenceChartDir,
-		KubeVersion: request.K8SVersion,
+		ReleaseName:   releaseIdentifier.ReleaseName,
+		Namespace:     releaseIdentifier.ReleaseNamespace,
+		ValuesYaml:    request.ValuesYaml,
+		ChartName:     referenceChartDir,
+		KubeVersion:   request.K8SVersion,
+		TakeOwnership: request.TakeOwnership,
 	}
 	// Update release spec
 	updateChartSpec := installChartSpec
