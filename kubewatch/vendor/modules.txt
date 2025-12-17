@@ -51,8 +51,8 @@ github.com/ProtonMail/go-crypto/openpgp/packet
 github.com/ProtonMail/go-crypto/openpgp/s2k
 github.com/ProtonMail/go-crypto/openpgp/x25519
 github.com/ProtonMail/go-crypto/openpgp/x448
-# github.com/argoproj/argo-cd/v2 v2.14.13
-## explicit; go 1.23.0
+# github.com/argoproj/argo-cd/v2 v2.14.20
+## explicit; go 1.24.6
 github.com/argoproj/argo-cd/v2/assets
 github.com/argoproj/argo-cd/v2/common
 github.com/argoproj/argo-cd/v2/pkg/apis/application
@@ -88,8 +88,8 @@ github.com/argoproj/argo-events/pkg/apis/events/v1alpha1
 github.com/argoproj/argo-events/pkg/client/clientset/versioned
 github.com/argoproj/argo-events/pkg/client/clientset/versioned/scheme
 github.com/argoproj/argo-events/pkg/client/clientset/versioned/typed/events/v1alpha1
-# github.com/argoproj/argo-workflows/v3 v3.6.7
-## explicit; go 1.24.2
+# github.com/argoproj/argo-workflows/v3 v3.6.14
+## explicit; go 1.24.4
 github.com/argoproj/argo-workflows/v3
 github.com/argoproj/argo-workflows/v3/config
 github.com/argoproj/argo-workflows/v3/errors
@@ -158,14 +158,15 @@ github.com/argoproj/gitops-engine/pkg/utils/kube
 github.com/argoproj/gitops-engine/pkg/utils/kube/scheme
 github.com/argoproj/gitops-engine/pkg/utils/text
 github.com/argoproj/gitops-engine/pkg/utils/tracing
-# github.com/argoproj/pkg v0.13.7-0.20240704113442-a69fd34a8117
-## explicit; go 1.14
+# github.com/argoproj/pkg v0.13.7-0.20250123033407-65f2d4777bfd
+## explicit; go 1.21
 github.com/argoproj/pkg/exec
 github.com/argoproj/pkg/expr
 github.com/argoproj/pkg/file
 github.com/argoproj/pkg/json
 github.com/argoproj/pkg/rand
 github.com/argoproj/pkg/sync
+github.com/argoproj/pkg/time
 # github.com/arl/statsviz v0.6.0
 ## explicit; go 1.20
 github.com/arl/statsviz
@@ -320,7 +321,7 @@ github.com/evilmonkeyinc/jsonpath/token
 # github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f
 ## explicit; go 1.15
 github.com/exponent-io/jsonpath
-# github.com/expr-lang/expr v1.17.0
+# github.com/expr-lang/expr v1.17.0 => github.com/expr-lang/expr v1.17.7
 ## explicit; go 1.18
 github.com/expr-lang/expr
 github.com/expr-lang/expr/ast
@@ -331,6 +332,7 @@ github.com/expr-lang/expr/compiler
 github.com/expr-lang/expr/conf
 github.com/expr-lang/expr/file
 github.com/expr-lang/expr/internal/deref
+github.com/expr-lang/expr/internal/ring
 github.com/expr-lang/expr/optimizer
 github.com/expr-lang/expr/parser
 github.com/expr-lang/expr/parser/lexer
@@ -995,8 +997,8 @@ go.yaml.in/yaml/v2
 # go.yaml.in/yaml/v3 v3.0.3
 ## explicit; go 1.22
 go.yaml.in/yaml/v3
-# golang.org/x/crypto v0.40.0
-## explicit; go 1.23.0
+# golang.org/x/crypto v0.45.0
+## explicit; go 1.24.0
 golang.org/x/crypto/argon2
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blake2b
@@ -1023,8 +1025,8 @@ golang.org/x/crypto/ssh/knownhosts
 # golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
 ## explicit; go 1.23.0
 golang.org/x/exp/maps
-# golang.org/x/net v0.41.0
-## explicit; go 1.23.0
+# golang.org/x/net v0.47.0
+## explicit; go 1.24.0
 golang.org/x/net/context
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -1052,24 +1054,24 @@ golang.org/x/oauth2/google/internal/stsexchange
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.16.0
-## explicit; go 1.23.0
+# golang.org/x/sync v0.18.0
+## explicit; go 1.24.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.34.0
-## explicit; go 1.23.0
+# golang.org/x/sys v0.38.0
+## explicit; go 1.24.0
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/term v0.33.0
-## explicit; go 1.23.0
+# golang.org/x/term v0.37.0
+## explicit; go 1.24.0
 golang.org/x/term
-# golang.org/x/text v0.27.0
-## explicit; go 1.23.0
+# golang.org/x/text v0.31.0
+## explicit; go 1.24.0
 golang.org/x/text/cases
 golang.org/x/text/encoding
 golang.org/x/text/encoding/internal
@@ -2003,3 +2005,4 @@ sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
 sigs.k8s.io/yaml/goyaml.v3
 # github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251208103603-781b3db37eab
+# github.com/expr-lang/expr => github.com/expr-lang/expr v1.17.7
