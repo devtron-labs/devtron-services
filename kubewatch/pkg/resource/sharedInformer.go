@@ -20,6 +20,11 @@ import (
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"github.com/devtron-labs/kubewatch/pkg/resource/application"
 	"github.com/devtron-labs/kubewatch/pkg/resource/bean"
+	veleroBackup "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/backup"
+	veleroBackupSchedule "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/backupSchedule"
+	veleroBSL "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/bsl"
+	veleroRestore "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/restore"
+	veleroVSL "github.com/devtron-labs/kubewatch/pkg/resource/veleroResource/vsl"
 	"github.com/devtron-labs/kubewatch/pkg/resource/workflow"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -37,6 +42,17 @@ func (impl *InformerClientImpl) GetSharedInformerClient(sharedInformerType bean.
 		return workflow.NewCiInformerImpl(impl.logger, impl.client, impl.appConfig)
 	case bean.CdWorkflowResourceType:
 		return workflow.NewCdInformerImpl(impl.logger, impl.client, impl.appConfig)
+	case bean.VeleroBslResourceType:
+		return veleroBSL.NewInformerImpl(impl.logger, impl.client)
+	case bean.VeleroVslResourceType:
+		return veleroVSL.NewInformerImpl(impl.logger, impl.client)
+	case bean.VeleroBackupResourceType:
+		return veleroBackup.NewInformerImpl(impl.logger, impl.client)
+	case bean.VeleroRestoreResourceType:
+		return veleroRestore.NewInformerImpl(impl.logger, impl.client)
+	case bean.VeleroBackupScheduleResourceType:
+		return veleroBackupSchedule.NewInformerImpl(impl.logger, impl.client)
+
 	default:
 		return NewUnimplementedImpl()
 	}
