@@ -1,12 +1,12 @@
 module github.com/devtron-labs/kubewatch
 
-go 1.24.2
+go 1.24.6
 
-toolchain go1.24.3
+toolchain go1.24.10
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.14.13
-	github.com/argoproj/argo-workflows/v3 v3.6.7
+	github.com/argoproj/argo-cd/v2 v2.14.20
+	github.com/argoproj/argo-workflows/v3 v3.6.14
 	github.com/argoproj/gitops-engine v0.7.1-0.20250521000818-c08b0a72c1f1
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-pg/pg v6.15.1+incompatible
@@ -60,7 +60,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.5 // indirect
 	github.com/argoproj/argo-events v1.9.6 // indirect
-	github.com/argoproj/pkg v0.13.7-0.20240704113442-a69fd34a8117 // indirect
+	github.com/argoproj/pkg v0.13.7-0.20250123033407-65f2d4777bfd // indirect
 	github.com/arl/statsviz v0.6.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -205,13 +205,13 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.3 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/term v0.33.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	google.golang.org/genproto v0.0.0-20250519155744-55703ea1f237 // indirect
 	google.golang.org/grpc v1.72.2 // indirect
@@ -242,4 +242,6 @@ require (
 replace (
 	github.com/cyphar/filepath-securejoin v0.4.1 => github.com/cyphar/filepath-securejoin v0.3.6 // indirect
 	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251208103603-781b3db37eab
+	github.com/expr-lang/expr => github.com/expr-lang/expr v1.17.7
+	k8s.io/kubernetes v1.33.1 => k8s.io/kubernetes v1.33.4
 )
