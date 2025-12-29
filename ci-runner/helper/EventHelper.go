@@ -201,6 +201,7 @@ type CommonWorkflowRequest struct {
 	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
 	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
 	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
+	WizCliConfig                  string                         `json:"wizCliConfig,omitempty"`
 	PartSize                      int64                          `json:"partSize,omitempty"`
 	ConcurrencyMultiplier         int                            `json:"concurrencyMultiplier,omitempty"`
 }
