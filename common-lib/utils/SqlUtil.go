@@ -114,8 +114,14 @@ var PgQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 var DbConnectionHoldDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Name:    "db_connection_hold_seconds",
 	Help:    "Duration for which a DB connection is held",
-	Buckets: []float64{0.01, 0.05, 0.1, 0.2, 0.5, 1, 2},
+	Buckets: []float64{0.05, 0.1, 0.5, 1, 5, 10, 30, 60},
 }, []string{"serviceName"})
+
+func ObserveTxHold(start time.Time, serviceName string) {
+	DbConnectionHoldDuration.
+		WithLabelValues(serviceName).
+		Observe(time.Since(start).Seconds())
+}
 
 func getErrorType(err error) ErrorType {
 	if err == nil {
