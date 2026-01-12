@@ -16,7 +16,12 @@
 
 package sql
 
-import "github.com/go-pg/pg"
+import (
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/go-pg/pg"
+	"sync"
+	"time"
+)
 
 type TransactionWrapper interface {
 	StartTx() (*pg.Tx, error)
@@ -26,19 +31,49 @@ type TransactionWrapper interface {
 
 type TransactionUtilImpl struct {
 	dbConnection *pg.DB
+	txStartTimes map[*pg.Tx]time.Time
+	mu           sync.Mutex
+	serviceName  string
 }
 
-func NewTransactionUtilImpl(db *pg.DB) *TransactionUtilImpl {
+func NewTransactionUtilImpl(db *pg.DB, serviceName string) *TransactionUtilImpl {
 	return &TransactionUtilImpl{
 		dbConnection: db,
+		txStartTimes: make(map[*pg.Tx]time.Time),
+		serviceName:  serviceName,
 	}
 }
 func (impl *TransactionUtilImpl) RollbackTx(tx *pg.Tx) error {
+	impl.observeTxHoldDuration(tx)
 	return tx.Rollback()
 }
 func (impl *TransactionUtilImpl) CommitTx(tx *pg.Tx) error {
+	impl.observeTxHoldDuration(tx)
 	return tx.Commit()
 }
 func (impl *TransactionUtilImpl) StartTx() (*pg.Tx, error) {
-	return impl.dbConnection.Begin()
+	tx, err := impl.dbConnection.Begin()
+	if err != nil {
+		return nil, err
+	}
+	impl.mu.Lock()
+	impl.txStartTimes[tx] = time.Now()
+	impl.mu.Unlock()
+	return tx, nil
+}
+
+func (impl *TransactionUtilImpl) observeTxHoldDuration(tx *pg.Tx) {
+	if tx == nil {
+		return
+	}
+	impl.mu.Lock()
+	startTime, exists := impl.txStartTimes[tx]
+	if exists {
+		delete(impl.txStartTimes, tx)
+	}
+	impl.mu.Unlock()
+
+	if exists {
+		utils.ObserveTxHold(startTime, impl.serviceName)
+	}
 }
