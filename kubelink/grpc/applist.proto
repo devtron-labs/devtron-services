@@ -344,6 +344,7 @@ message UpgradeReleaseRequest {
   ChartContent chartContent = 4;
   bool RunInCtx = 5;
   string K8sVersion = 6;
+  bool TakeOwnership = 7;
 }
 
 message UpgradeReleaseResponse {
@@ -421,6 +422,7 @@ message HelmInstallCustomRequest {
   ReleaseIdentifier releaseIdentifier = 3;
   bool RunInCtx = 4;
   string K8sVersion = 5;
+  bool TakeOwnership = 6;
 }
 
 message HelmInstallCustomResponse {
