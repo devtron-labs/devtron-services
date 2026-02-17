@@ -145,7 +145,11 @@ type ChartSpec struct {
 	// The timeout may be specified via the 'Timeout' field.
 	WaitForJobs bool `json:"waitForJobs,omitempty"`
 	// KubeVersion indicates Kubernetes version used for Capabilities.KubeVersion
-	KubeVersion    string `json:"kubeVersion,omitempty"`
+	KubeVersion string `json:"kubeVersion,omitempty"`
+	// TakeOwnership will ignore the check for helm annotations and take ownership of the resources.
+	// +optional
+	TakeOwnership bool `json:"takeOwnership,omitempty"`
+
 	RepoURL        string `json:"repoURL,omitempty"`
 	RegistryClient *registry.Client
 }
