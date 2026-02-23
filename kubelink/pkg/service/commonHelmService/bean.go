@@ -48,6 +48,7 @@ type BuildNodesRequest struct {
 	RestConfig        *rest.Config
 	ReleaseNamespace  string
 	ParentResourceRef *commonBean.ResourceRef
+	concurrencySem    chan struct{} // shared semaphore for bounded all-depth parallelism in child node building
 }
 
 func NewBuildNodesRequest(buildNodesConfig *BuildNodesRequest) *BuildNodesConfig {
@@ -114,6 +115,11 @@ func (req *BuildNodesRequest) WithParentResourceRef(parentResourceRef *commonBea
 		return req
 	}
 	req.ParentResourceRef = parentResourceRef
+	return req
+}
+
+func (req *BuildNodesRequest) WithSemaphore(sem chan struct{}) *BuildNodesRequest {
+	req.concurrencySem = sem
 	return req
 }
 
