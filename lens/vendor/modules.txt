@@ -7,7 +7,7 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251217072256-6c8429c6cc72
+# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260217083108-c98656a51178
 ## explicit; go 1.24.0
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
@@ -180,7 +180,7 @@ golang.org/x/crypto/nacl/box
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/salsa20/salsa
-# golang.org/x/net v0.41.0
+# golang.org/x/net v0.42.0
 ## explicit; go 1.23.0
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
@@ -304,4 +304,4 @@ google.golang.org/protobuf/types/known/timestamppb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20251217072256-6c8429c6cc72
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260217083108-c98656a51178
