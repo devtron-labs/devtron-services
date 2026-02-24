@@ -75,18 +75,22 @@ func sanitizeParentObjects(parentObjects []*client.ObjectIdentifier) []*client.O
 func (impl *ResourceTreeServiceImpl) BuildResourceTreeUsingK8s(ctx context.Context, appDetailRequest *client.AppDetailRequest, conf *rest.Config, parentObjects []*client.ObjectIdentifier) (*bean.ResourceTreeResponse, error) {
 	liveManifests := impl.getLiveManifestsForGVKList(conf, parentObjects)
 
-	// shared semaphore limits total concurrent K8s calls for child node building across all recursion depths;
-	// sized to BuildNodesBatchSize so the combined in-flight calls (parent batch + child sem) stay within safe API server limits
-	semSize := impl.helmReleaseConfig.BuildNodesBatchSize
-	if semSize <= 0 {
-		semSize = 1
+	// when FeatAllDepthChildNodeBuildParallelism is enabled, create a shared semaphore that bounds
+	// concurrent K8s calls across all recursion depths (depth-2+); a nil semaphore makes
+	// buildChildNodesInBatch fall back to the previous depth-1-only parallel behaviour
+	var sem chan struct{}
+	if impl.helmReleaseConfig.FeatAllDepthChildNodeBuildParallelism {
+		semSize := impl.helmReleaseConfig.BuildNodesBatchSize
+		if semSize <= 0 {
+			semSize = 1
+		}
+		sem = make(chan struct{}, semSize)
 	}
-	sem := make(chan struct{}, semSize)
 
 	// build resource Nodes
 	req := NewBuildNodesRequest(NewBuildNodesConfig(conf).
 		WithReleaseNamespace(appDetailRequest.Namespace).
-		WithSemaphore(sem)).
+		WithSemaphore(sem)). // nil when flag is off → depth-2+ falls back to sequential
 		WithDesiredOrLiveManifests(liveManifests...).
 		WithBatchWorker(impl.helmReleaseConfig.BuildNodesBatchSize, impl.logger)
 	buildNodesResponse, err := impl.BuildNodes(req)
@@ -300,8 +304,8 @@ func (impl *ResourceTreeServiceImpl) buildChildNodesWithSemaphore(sem chan struc
 			// slot acquired — run in a goroutine
 			wg.Add(1)
 			go func(r *BuildNodesConfig) {
-				defer wg.Done()
-				defer func() { <-sem }() // release slot when done
+				defer func() { <-sem }() // release slot after wg.Done so the semaphore bound stays tight
+				defer wg.Done()          // signal completion first (LIFO: wg.Done runs before <-sem)
 				childResp, err := impl.BuildNodes(r)
 				if err != nil {
 					impl.logger.Errorw("error in building child Nodes", "ReleaseNamespace", r.ReleaseNamespace, "parentResource", r.ParentResourceRef.GetGvk(), "err", err)
@@ -323,7 +327,9 @@ func (impl *ResourceTreeServiceImpl) buildChildNodesWithSemaphore(sem chan struc
 				wg.Wait()
 				return response, err
 			}
+			mu.Lock()
 			response.WithNodes(childResp.Nodes).WithHealthStatusArray(childResp.HealthStatusArray)
+			mu.Unlock()
 		}
 	}
 	wg.Wait()
