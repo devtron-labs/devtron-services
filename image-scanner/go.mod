@@ -69,4 +69,4 @@ require (
 	mellium.im/sasl v0.3.2 // indirect
 )
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260217083108-c98656a51178
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260227055702-7fe9d47354a0
