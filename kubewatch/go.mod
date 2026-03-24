@@ -3,12 +3,11 @@ module github.com/devtron-labs/kubewatch
 go 1.24.10
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.14.13
+	github.com/argoproj/argo-cd/v2 v2.14.16
 	github.com/argoproj/argo-workflows/v3 v3.7.11
 	github.com/argoproj/gitops-engine v0.7.1-0.20250521000818-c08b0a72c1f1
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/go-pg/pg v6.15.1+incompatible
-	github.com/go-resty/resty/v2 v2.16.5
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/gorilla/mux v1.8.1
 	github.com/nlopes/slack v0.1.0

@@ -49,6 +49,8 @@ github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be/go.mod h1:ySMOLuW
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/argoproj/argo-cd/v2 v2.14.13 h1:oSLPHV9Gon6mEqVkyBOuLJ7T16ShZv6xSjkCiquzEDM=
 github.com/argoproj/argo-cd/v2 v2.14.13/go.mod h1:P72XxcRigWQpQsuAgaXyHPFYkSPE4sdACA5g/s3Si1I=
+github.com/argoproj/argo-cd/v2 v2.14.16 h1:S7ZE9XqyyQCAqaJO37+CyO1zdytkTr/Uepo4TlgPUvk=
+github.com/argoproj/argo-cd/v2 v2.14.16/go.mod h1:CF9GX0CjKiszpAnvYNCLV5tLSVqgfOgn/tcOt2VHTQo=
 github.com/argoproj/argo-events v1.9.6 h1:tQTyUmMt0/4UI+9fbXrmK1/h9oalV7KBCC3YgPI7qz0=
 github.com/argoproj/argo-events v1.9.6/go.mod h1:MkJI9UXTLnLOFX6LKo0rC1tnvWfLFzKkGigsdfu58SA=
 github.com/argoproj/argo-workflows/v3 v3.6.7 h1:3vT0ygPVtZxSSUaZsCeI+Th/Bm9Cfc2J1FQOGe2iKoM=
