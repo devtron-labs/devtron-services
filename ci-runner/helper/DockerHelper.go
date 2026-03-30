@@ -23,6 +23,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
@@ -38,18 +51,6 @@ import (
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"github.com/devtron-labs/common-lib/utils/retryFunc"
 	"golang.org/x/sync/errgroup"
-	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -433,6 +434,8 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
+	log.Println("ciRequest.BuildxBuilderPodWaitDurationSecs", ciRequest.BuildxBuilderPodWaitDurationSecs)
+	log.Println("builderPodWaitDuration", builderPodWaitDuration)
 	ciBuildConfig := ciRequest.CiBuildConfig
 	// Docker build, tag image and push
 	dockerFileLocationDir := ciRequest.CheckoutPath
