@@ -115,26 +115,25 @@ func (impl *RoundTripperServiceImpl) GetAuthenticatorByDockerRegistryId(dockerRe
 	}
 	if dockerRegistry.RegistryType == repository.REGISTRYTYPE_ECR {
 		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey.String()
-		var creds *credentials.Credentials
+		var sess *session.Session
 		if len(dockerRegistry.AWSAccessKeyId) == 0 || len(dockerRegistry.AWSSecretAccessKey) == 0 {
-			sess, err := session.NewSession(&aws.Config{
+			sess, err = session.NewSession(&aws.Config{
 				Region: &dockerRegistry.AWSRegion,
 			})
 			if err != nil {
 				impl.Logger.Errorw("error in starting aws new session", "err", err)
 				return nil, nil, err
 			}
-			creds = ec2rolecreds.NewCredentials(sess)
 		} else {
-			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
-		}
-		sess, err := session.NewSession(&aws.Config{
-			Region:      &dockerRegistry.AWSRegion,
-			Credentials: creds,
-		})
-		if err != nil {
-			impl.Logger.Errorw("error in starting aws new session", "err", err)
-			return nil, nil, err
+			creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+			sess, err = session.NewSession(&aws.Config{
+				Region:      &dockerRegistry.AWSRegion,
+				Credentials: creds,
+			})
+			if err != nil {
+				impl.Logger.Errorw("error in starting aws new session", "err", err)
+				return nil, nil, err
+			}
 		}
 
 		// Create a ECR client with additional configuration
@@ -142,6 +141,10 @@ func (impl *RoundTripperServiceImpl) GetAuthenticatorByDockerRegistryId(dockerRe
 		token, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 		if err != nil {
 			impl.Logger.Errorw("error in getting auth token from ecr", "err", err)
+			return nil, nil, err
+		}
+		if len(token.AuthorizationData) == 0 {
+			impl.Logger.Errorw("no authorization data received from ecr")
 			return nil, nil, err
 		}
 		authConfig.Auth = *token.AuthorizationData[0].AuthorizationToken
