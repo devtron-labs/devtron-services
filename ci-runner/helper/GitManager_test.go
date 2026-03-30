@@ -38,7 +38,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -54,7 +54,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -70,7 +70,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -86,7 +86,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -102,7 +102,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -118,7 +118,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -134,7 +134,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -150,7 +150,7 @@ func TestGitHelper(t *testing.T) {
 
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 
 		// Assert the expected results
 		if err != nil {
@@ -167,7 +167,7 @@ func TestGitHelper(t *testing.T) {
 		clonedRepo := ciProjectDetails[0].GitRepository[strings.LastIndex(ciProjectDetails[0].GitRepository, "/"):]
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 		err = os.Chdir(util.WORKINGDIR + clonedRepo)
 		// Assert the expected results
 		if err == nil {
@@ -185,7 +185,7 @@ func TestGitHelper(t *testing.T) {
 		clonedRepo := ciProjectDetails[0].GitRepository[strings.LastIndex(ciProjectDetails[0].GitRepository, "/"):]
 		os.RemoveAll(util.WORKINGDIR)
 		// Call the function
-		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails)
+		err := gitManagerImpl.CloneAndCheckout(ciProjectDetails, false)
 		err = os.Chdir(util.WORKINGDIR + clonedRepo)
 		// Assert the expected results
 		if err == nil {
