@@ -23,21 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/caarlos0/env"
-	cicxt "github.com/devtron-labs/ci-runner/executor/context"
-	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
-	"github.com/devtron-labs/ci-runner/util"
-	"github.com/devtron-labs/common-lib/constants"
-	"github.com/devtron-labs/common-lib/utils"
-	"github.com/devtron-labs/common-lib/utils/bean"
-	"github.com/devtron-labs/common-lib/utils/dockerOperations"
-	"github.com/devtron-labs/common-lib/utils/retryFunc"
-	"golang.org/x/sync/errgroup"
 	"io"
 	"io/ioutil"
 	"log"
@@ -50,6 +35,21 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/caarlos0/env"
+	cicxt "github.com/devtron-labs/ci-runner/executor/context"
+	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
+	"github.com/devtron-labs/ci-runner/util"
+	"github.com/devtron-labs/common-lib/constants"
+	"github.com/devtron-labs/common-lib/utils"
+	"github.com/devtron-labs/common-lib/utils/bean"
+	"github.com/devtron-labs/common-lib/utils/dockerOperations"
+	"github.com/devtron-labs/common-lib/utils/retryFunc"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -234,28 +234,27 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 			accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
 			//fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
 
-			var creds *credentials.Credentials
-
+			var sess *session.Session
+			var err error
 			if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
 				//fmt.Println("empty accessKey or secretKey")
-				sess, err := session.NewSession(&aws.Config{
+				sess, err = session.NewSession(&aws.Config{
 					Region: &dockerCredentials.AwsRegion,
 				})
 				if err != nil {
 					log.Println(err)
 					return err
 				}
-				creds = ec2rolecreds.NewCredentials(sess)
 			} else {
-				creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
-			}
-			sess, err := session.NewSession(&aws.Config{
-				Region:      &dockerCredentials.AwsRegion,
-				Credentials: creds,
-			})
-			if err != nil {
-				log.Println(err)
-				return err
+				creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+				sess, err = session.NewSession(&aws.Config{
+					Region:      &dockerCredentials.AwsRegion,
+					Credentials: creds,
+				})
+				if err != nil {
+					log.Println(err)
+					return err
+				}
 			}
 			svc := ecr.New(sess)
 			input := &ecr.GetAuthorizationTokenInput{}
@@ -265,6 +264,10 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 				return err
 			}
 			// decode token
+			if len(authData.AuthorizationData) == 0 {
+				log.Println("no authorization data received from AWS ECR")
+				return fmt.Errorf("no authorization data received from AWS ECR")
+			}
 			token := authData.AuthorizationData[0].AuthorizationToken
 			decodedToken, err := base64.StdEncoding.DecodeString(*token)
 			if err != nil {
