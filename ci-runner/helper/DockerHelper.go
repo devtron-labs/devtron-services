@@ -74,15 +74,23 @@ type DockerHelper interface {
 	GetDockerAuthConfigForPrivateRegistries(workflowRequest *CommonWorkflowRequest) *bean.DockerAuthConfig
 }
 
+// BuildxK8sClientFactory creates a BuildxK8sInterface from deployment names.
+// Abstracted for testability — production code uses newBuildxK8sClient as the default.
+type BuildxK8sClientFactory func(deploymentNames []string) (BuildxK8sInterface, error)
+
 type DockerHelperImpl struct {
 	DockerCommandEnv []string
 	cmdExecutor      CommandExecutor
+	k8sClientFactory BuildxK8sClientFactory
 }
 
 func NewDockerHelperImpl(cmdExecutor CommandExecutor) *DockerHelperImpl {
 	return &DockerHelperImpl{
 		DockerCommandEnv: os.Environ(),
 		cmdExecutor:      cmdExecutor,
+		k8sClientFactory: func(names []string) (BuildxK8sInterface, error) {
+			return newBuildxK8sClient(names)
+		},
 	}
 }
 
@@ -300,9 +308,27 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return performDockerLogin()
 }
 
+// waitForBuilderPods waits until all buildx k8s driver pods reach Running state,
+// or returns an error if the deadline is exceeded. Extracted for testability.
+func waitForBuilderPods(ctx context.Context, k8sClient BuildxK8sInterface, duration time.Duration) error {
+	log.Println(util.DEVTRON, fmt.Sprintf("waiting for builder pods to be ready (timeout: %v)", duration))
+	initDone := make(chan bool, 1)
+	initCtx, initCancel := context.WithTimeout(ctx, duration)
+	defer initCancel()
+	go k8sClient.WaitUntilBuilderPodLive(initCtx, initDone)
+	select {
+	case <-initDone:
+		log.Println(util.DEVTRON, "builder pods are ready for build")
+		return nil
+	case <-initCtx.Done():
+		return fmt.Errorf("builder pods did not reach Running state within %v", duration)
+	}
+}
+
 func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8sClient BuildxK8sInterface,
 	useBuildxK8sDriver bool, dockerBuild string, deploymentNames []string,
-	dockerBuildStageMetadata bean2.DockerBuildStageMetadata, reBuildLogs []any) error {
+	dockerBuildStageMetadata bean2.DockerBuildStageMetadata, reBuildLogs []any,
+	builderPodWaitDuration time.Duration) error {
 	if !useBuildxK8sDriver {
 		return nil
 	}
@@ -311,7 +337,7 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 		log.Println(util.DEVTRON, fmt.Sprintf(" error in RestartBuilders : %s", k8sErr.Error()))
 		return k8sErr
 	}
-	k8sClient, err := newBuildxK8sClient(deploymentNames)
+	k8sClient, err := impl.k8sClientFactory(deploymentNames)
 	if err != nil {
 		log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
 		return err
@@ -324,18 +350,15 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 	rebuildImageStage := func() error {
 		// wait for the builder pod to be up again
 		startTime := time.Now()
-		util.LogInfo("Waiting for builder pod to be ready,", "timeout: 2 minutes")
-		done := make(chan bool)
-		ctx, cancel := context.WithCancel(ciContext)
+		util.LogInfo("Waiting for builder pod to be ready,", fmt.Sprintf("timeout: %v", builderPodWaitDuration))
+		done := make(chan bool, 1) // buffered to prevent goroutine leak on timeout
+		ctx, cancel := context.WithTimeout(ciContext, builderPodWaitDuration)
 		defer cancel()
 		go k8sClient.WaitUntilBuilderPodLive(ctx, done)
 		select {
 		case <-done:
 			// builder pod is up again, continue with the build
-			cancel()
-		case <-time.After(2 * time.Minute):
-			// timeout after 2 minutes
-			cancel()
+		case <-ctx.Done():
 			return BuilderPodDeletedError
 		}
 		util.LogInfo("DONE -->", time.Since(startTime).Seconds())
@@ -403,6 +426,10 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	if err != nil {
 		log.Println("Error while parsing environment variables", err)
 	}
+	builderPodWaitDuration := 2 * time.Minute // backward-compat default
+	if ciRequest.BuildxBuilderPodWaitDurationSecs > 0 {
+		builderPodWaitDuration = time.Duration(ciRequest.BuildxBuilderPodWaitDurationSecs) * time.Second
+	}
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
@@ -467,6 +494,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					err = k8sClient.RegisterBuilderPods(ciContext)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
+						return err
+					}
+					// Wait for builder pods to reach Running state before starting the build.
+					// Prevents false-positive BuilderPodDeletedError from pod startup latency.
+					if err = waitForBuilderPods(ciContext, k8sClient, builderPodWaitDuration); err != nil {
 						return err
 					}
 				} else {
@@ -534,7 +566,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					reBuildLogs = []any{fmt.Sprintf("Starting re docker build (Attempt %d) : ", attempt), dockerBuild}
 				}
 				return impl.executeDockerReBuild(ciContext, k8sClient, useBuildxK8sDriver, dockerBuild,
-					deploymentNames, dockerBuildStageMetadata, reBuildLogs)
+					deploymentNames, dockerBuildStageMetadata, reBuildLogs, builderPodWaitDuration)
 			}
 			err = retryFunc.RetryWithOutLogging(callback, retryFunc.IsRetryableError, maxRetry, 1*time.Second)
 			if err != nil {
