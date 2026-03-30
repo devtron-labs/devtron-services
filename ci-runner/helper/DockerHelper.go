@@ -485,7 +485,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
-					k8sClient, err = newBuildxK8sClient(deploymentNames)
+					k8sClient, err = impl.k8sClientFactory(deploymentNames)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
 						return err

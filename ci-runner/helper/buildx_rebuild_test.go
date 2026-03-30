@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -304,7 +305,7 @@ func TestBuildxRebuild(t *testing.T) {
 		if !retryFunc.IsRetryableError(err) {
 			t.Errorf("expected RetryableError wrapping BuilderPodDeletedError, got %T: %v", err, err)
 		}
-		if !contains(err.Error(), BuilderPodDeletedError.Error()) {
+		if !strings.Contains(err.Error(), BuilderPodDeletedError.Error()) {
 			t.Errorf("expected error message to contain %q, got %q", BuilderPodDeletedError.Error(), err.Error())
 		}
 	})
@@ -342,10 +343,10 @@ func TestWaitForBuilderPods(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 		errMsg := err.Error()
-		if !contains(errMsg, "did not reach Running state") {
+		if !strings.Contains(errMsg, "did not reach Running state") {
 			t.Errorf("error %q should contain 'did not reach Running state'", errMsg)
 		}
-		if !contains(errMsg, "100ms") {
+		if !strings.Contains(errMsg, "100ms") {
 			t.Errorf("error %q should contain '100ms'", errMsg)
 		}
 	})
@@ -359,19 +360,6 @@ func TestWaitForBuilderPods(t *testing.T) {
 			t.Error("expected non-nil error for pre-cancelled context, got nil")
 		}
 	})
-}
-
-// contains is a simple helper since strings.Contains is from standard library.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		func() bool {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
-			return false
-		}())
 }
 
 // ---------------------------------------------------------------------------
