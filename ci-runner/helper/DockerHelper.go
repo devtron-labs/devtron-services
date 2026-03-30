@@ -23,6 +23,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
@@ -38,18 +51,6 @@ import (
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"github.com/devtron-labs/common-lib/utils/retryFunc"
 	"golang.org/x/sync/errgroup"
-	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -480,7 +481,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					deploymentNames, err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					deploymentNames, err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId, builderPodWaitDuration)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
@@ -1129,14 +1130,14 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) ([]string, error) {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int, timeout time.Duration) ([]string, error) {
 	deploymentNames := make([]string, 0)
 	if len(builderNodes) == 0 {
 		return deploymentNames, errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId, timeout)
 		if err != nil {
 			return deploymentNames, err
 		}
@@ -1213,7 +1214,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string, error) {
+func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int, timeout time.Duration) (string, string, error) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1235,6 +1236,9 @@ func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, bu
 	}
 
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
+	if timeout > 0 {
+		driverOpts["driverOptions"] = getBuildXDriverOptionsWithTimeout(timeout, driverOpts["driverOptions"])
+	}
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
@@ -1255,6 +1259,21 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 		} else {
 			driverOptions = driverImageOption
 		}
+	}
+	return driverOptions
+}
+
+func getBuildXDriverOptionsWithTimeout(timeout time.Duration, driverOptions string) string {
+	if strings.HasPrefix(driverOptions, "timeout=") ||
+		strings.Contains(driverOptions, ",timeout=") {
+		// if timeout is already present in driver options then do not override it, just return the existing options
+		return driverOptions
+	}
+	timeoutOption := fmt.Sprintf("\"timeout=%s\"", timeout.String())
+	if len(driverOptions) > 0 {
+		driverOptions += fmt.Sprintf(",%s", timeoutOption)
+	} else {
+		driverOptions = timeoutOption
 	}
 	return driverOptions
 }
