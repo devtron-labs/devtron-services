@@ -40,6 +40,7 @@ func NewToRegistryConfig(store *sql.DockerArtifactStore) (*registry.Configuratio
 		AwsAccessKey:              store.AWSAccessKeyId,
 		AwsSecretKey:              store.AWSSecretAccessKey.String(),
 		AwsRegion:                 store.AWSRegion,
+		AssumeRoleArn:             store.AssumeRoleArn,
 		RegistryConnectionType:    store.Connection,
 		RegistryCertificateString: store.Cert,
 		RegistryCAFilePath:        certificatePath,

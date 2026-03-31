@@ -23,6 +23,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Knetic/govaluate"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/common-lib/async"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
@@ -243,12 +248,53 @@ func (impl *ImageScanServiceImpl) GetImageScanRenderDto(registryId string, scanE
 		impl.Logger.Errorw("error in getting docker registry by id", "id", registryId, "err", err)
 		return nil, err
 	}
+	awsAccessKeyId := dockerRegistry.AWSAccessKeyId
+	awsSecretAccessKey := dockerRegistry.AWSSecretAccessKey.String()
+	awsSessionToken := ""
+
+	// If AssumeRoleArn is configured, perform STS AssumeRole and use temporary credentials
+	if len(dockerRegistry.AssumeRoleArn) > 0 && dockerRegistry.RegistryType == repository.REGISTRYTYPE_ECR {
+		var creds *credentials.Credentials
+		if len(awsAccessKeyId) == 0 || len(awsSecretAccessKey) == 0 {
+			baseSess, err := session.NewSession(&aws.Config{Region: &dockerRegistry.AWSRegion})
+			if err != nil {
+				impl.Logger.Errorw("error in creating AWS session for AssumeRole", "err", err)
+				return nil, err
+			}
+			creds = ec2rolecreds.NewCredentials(baseSess)
+		} else {
+			creds = credentials.NewStaticCredentials(awsAccessKeyId, awsSecretAccessKey, "")
+		}
+		sess, err := session.NewSession(&aws.Config{
+			Region:      &dockerRegistry.AWSRegion,
+			Credentials: creds,
+		})
+		if err != nil {
+			impl.Logger.Errorw("error in creating AWS session for AssumeRole", "err", err)
+			return nil, err
+		}
+		stsClient := sts.New(sess)
+		assumeOutput, err := stsClient.AssumeRole(&sts.AssumeRoleInput{
+			RoleArn:         aws.String(dockerRegistry.AssumeRoleArn),
+			RoleSessionName: aws.String("devtron-image-scanner"),
+		})
+		if err != nil {
+			impl.Logger.Errorw("error in assuming role for image scan", "assumeRoleArn", dockerRegistry.AssumeRoleArn, "err", err)
+			return nil, err
+		}
+		awsAccessKeyId = *assumeOutput.Credentials.AccessKeyId
+		awsSecretAccessKey = *assumeOutput.Credentials.SecretAccessKey
+		awsSessionToken = *assumeOutput.Credentials.SessionToken
+		impl.Logger.Infow("STS AssumeRole successful for image scan", "assumeRoleArn", dockerRegistry.AssumeRoleArn)
+	}
+
 	imageScanRenderDto := &common.ImageScanRenderDto{
 		RegistryType:       dockerRegistry.RegistryType,
 		Username:           dockerRegistry.Username,
 		Password:           dockerRegistry.Password.String(),
-		AWSAccessKeyId:     dockerRegistry.AWSAccessKeyId,
-		AWSSecretAccessKey: dockerRegistry.AWSSecretAccessKey.String(),
+		AWSAccessKeyId:     awsAccessKeyId,
+		AWSSecretAccessKey: awsSecretAccessKey,
+		AWSSessionToken:    awsSessionToken,
 		AWSRegion:          dockerRegistry.AWSRegion,
 		Image:              scanEvent.Image,
 		DockerConnection:   scanEvent.DockerConnection,
@@ -734,6 +780,7 @@ func (impl *ImageScanServiceImpl) RenderInputDataForAStep(inputPayloadTmpl strin
 	//entering imageScanRenderData in above json map; TODO: update this to some other logic to handle more fields in future
 	jsonMap[common.AWSSecretAccessKey] = imageScanRenderDto.AWSSecretAccessKey
 	jsonMap[common.AWSAccessKeyId] = imageScanRenderDto.AWSAccessKeyId
+	jsonMap[common.AWSSessionToken] = imageScanRenderDto.AWSSessionToken
 	jsonMap[common.AWSRegion] = imageScanRenderDto.AWSRegion
 	jsonMap[common.Username] = imageScanRenderDto.Username
 	jsonMap[common.Password] = imageScanRenderDto.Password

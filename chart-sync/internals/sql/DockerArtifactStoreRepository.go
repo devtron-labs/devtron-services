@@ -51,6 +51,7 @@ type DockerArtifactStore struct {
 	AWSAccessKeyId           string                      `sql:"aws_accesskey_id" json:"awsAccessKeyId,omitempty" `
 	AWSSecretAccessKey       securestore.EncryptedString `sql:"aws_secret_accesskey" json:"awsSecretAccessKey,omitempty"`
 	AWSRegion                string                      `sql:"aws_region" json:"awsRegion,omitempty"`
+	AssumeRoleArn            string                      `sql:"assume_role_arn" json:"assumeRoleArn,omitempty"`
 	Username                 string                      `sql:"username" json:"username,omitempty"`
 	Password                 securestore.EncryptedString `sql:"password" json:"password,omitempty"`
 	IsDefault                bool                        `sql:"is_default,notnull" json:"isDefault"`

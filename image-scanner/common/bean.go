@@ -27,6 +27,7 @@ import (
 const (
 	AWSAccessKeyId     = "AWS_ACCESS_KEY_ID"
 	AWSSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	AWSSessionToken    = "AWS_SESSION_TOKEN"
 	AWSRegion          = "AWS_DEFAULT_REGION"
 	Username           = "USERNAME"
 	Password           = "PASSWORD"
@@ -58,6 +59,7 @@ type ImageScanRenderDto struct {
 	RegistryType       RegistryType `json:"-"`
 	AWSAccessKeyId     string       `json:"awsAccessKeyId,omitempty" `
 	AWSSecretAccessKey string       `json:"awsSecretAccessKey,omitempty"`
+	AWSSessionToken    string       `json:"awsSessionToken,omitempty"`
 	AWSRegion          string       `json:"awsRegion"`
 	Username           string       `json:"username,omitempty"`
 	Password           string       `json:"password,omitempty"`
