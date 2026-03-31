@@ -4122,6 +4122,7 @@ type RegistryCredential struct {
 	RegistryName           string                  `protobuf:"bytes,12,opt,name=RegistryName,proto3" json:"RegistryName,omitempty"`
 	RegistryCertificate    string                  `protobuf:"bytes,13,opt,name=RegistryCertificate,proto3" json:"RegistryCertificate,omitempty"`
 	CredentialsType        string                  `protobuf:"bytes,14,opt,name=CredentialsType,proto3" json:"CredentialsType,omitempty"`
+	AssumeRoleArn          string                  `protobuf:"bytes,15,opt,name=AssumeRoleArn,proto3" json:"AssumeRoleArn,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -4250,6 +4251,13 @@ func (x *RegistryCredential) GetRegistryCertificate() string {
 func (x *RegistryCredential) GetCredentialsType() string {
 	if x != nil {
 		return x.CredentialsType
+	}
+	return ""
+}
+
+func (x *RegistryCredential) GetAssumeRoleArn() string {
+	if x != nil {
+		return x.AssumeRoleArn
 	}
 	return ""
 }

@@ -22,6 +22,7 @@ func NewRegistryConfig(credential *client.RegistryCredential) (*registry.Configu
 			AwsAccessKey:              credential.AccessKey,
 			AwsSecretKey:              credential.SecretKey,
 			AwsRegion:                 credential.AwsRegion,
+			AssumeRoleArn:             credential.AssumeRoleArn,
 			RegistryConnectionType:    credential.Connection,
 			RegistryCertificateString: credential.RegistryCertificate,
 			RegistryType:              credential.RegistryType,

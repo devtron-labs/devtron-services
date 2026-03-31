@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/devtron-labs/common-lib/imageScan/bean"
 	"github.com/devtron-labs/common-lib/securestore"
 	"github.com/devtron-labs/image-scanner/pkg/security"
@@ -135,6 +136,32 @@ func (impl *RoundTripperServiceImpl) GetAuthenticatorByDockerRegistryId(dockerRe
 		if err != nil {
 			impl.Logger.Errorw("error in starting aws new session", "err", err)
 			return nil, nil, err
+		}
+
+		// If an assume role ARN is provided, use STS to assume the cross-account role
+		if len(dockerRegistry.AssumeRoleArn) > 0 {
+			stsClient := sts.New(sess)
+			assumeOutput, err := stsClient.AssumeRole(&sts.AssumeRoleInput{
+				RoleArn:         aws.String(dockerRegistry.AssumeRoleArn),
+				RoleSessionName: aws.String("devtron-ecr-cross-account"),
+			})
+			if err != nil {
+				impl.Logger.Errorw("error in assuming role for ECR", "assumeRoleArn", dockerRegistry.AssumeRoleArn, "err", err)
+				return nil, nil, err
+			}
+			assumedCreds := credentials.NewStaticCredentials(
+				*assumeOutput.Credentials.AccessKeyId,
+				*assumeOutput.Credentials.SecretAccessKey,
+				*assumeOutput.Credentials.SessionToken,
+			)
+			sess, err = session.NewSession(&aws.Config{
+				Region:      &dockerRegistry.AWSRegion,
+				Credentials: assumedCreds,
+			})
+			if err != nil {
+				impl.Logger.Errorw("error in creating AWS session with assumed role credentials", "err", err)
+				return nil, nil, err
+			}
 		}
 
 		// Create a ECR client with additional configuration

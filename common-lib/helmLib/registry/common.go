@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sts"
 	http2 "github.com/devtron-labs/common-lib/utils/http"
 	"helm.sh/helm/v3/pkg/registry"
 	"log"
@@ -117,6 +118,33 @@ func extractCredentialsForRegistry(config *Configuration) (string, string, error
 			log.Printf("error in creating AWS client %w ", err)
 			return "", "", err
 		}
+
+		// If an assume role ARN is provided, use STS to assume the cross-account role
+		if len(config.AssumeRoleArn) > 0 {
+			stsClient := sts.New(sess)
+			assumeOutput, err := stsClient.AssumeRole(&sts.AssumeRoleInput{
+				RoleArn:         aws.String(config.AssumeRoleArn),
+				RoleSessionName: aws.String("devtron-ecr-cross-account"),
+			})
+			if err != nil {
+				log.Printf("error in assuming role %s: %v", config.AssumeRoleArn, err)
+				return "", "", fmt.Errorf("failed to assume role %s: %v", config.AssumeRoleArn, err)
+			}
+			assumedCreds := credentials.NewStaticCredentials(
+				*assumeOutput.Credentials.AccessKeyId,
+				*assumeOutput.Credentials.SecretAccessKey,
+				*assumeOutput.Credentials.SessionToken,
+			)
+			sess, err = session.NewSession(&aws.Config{
+				Region:      &config.AwsRegion,
+				Credentials: assumedCreds,
+			})
+			if err != nil {
+				log.Printf("error in creating AWS session with assumed role credentials: %v", err)
+				return "", "", err
+			}
+		}
+
 		svc := ecr.New(sess)
 		input := &ecr.GetAuthorizationTokenInput{}
 		authData, err := svc.GetAuthorizationToken(input)

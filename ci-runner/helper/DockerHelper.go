@@ -28,6 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/caarlos0/env"
 	cicxt "github.com/devtron-labs/ci-runner/executor/context"
 	bean2 "github.com/devtron-labs/ci-runner/helper/bean"
@@ -210,7 +211,7 @@ const CacheModeMax = "max"
 const CacheModeMin = "min"
 
 type DockerCredentials struct {
-	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, DockerRegistryURL, DockerRegistryType, CredentialsType string
+	DockerUsername, DockerPassword, AwsRegion, AccessKey, SecretKey, AssumeRoleArn, DockerRegistryURL, DockerRegistryType, CredentialsType string
 }
 
 type EnvironmentVariables struct {
@@ -257,6 +258,34 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 				log.Println(err)
 				return err
 			}
+
+			// If an assume role ARN is provided, use STS to assume the cross-account role
+			if len(dockerCredentials.AssumeRoleArn) > 0 {
+				stsClient := sts.New(sess)
+				assumeOutput, err := stsClient.AssumeRole(&sts.AssumeRoleInput{
+					RoleArn:         aws.String(dockerCredentials.AssumeRoleArn),
+					RoleSessionName: aws.String("devtron-ecr-cross-account"),
+				})
+				if err != nil {
+					log.Printf("error in assuming role %s: %v", dockerCredentials.AssumeRoleArn, err)
+					return err
+				}
+				assumedCreds := credentials.NewStaticCredentials(
+					*assumeOutput.Credentials.AccessKeyId,
+					*assumeOutput.Credentials.SecretAccessKey,
+					*assumeOutput.Credentials.SessionToken,
+				)
+				sess, err = session.NewSession(&aws.Config{
+					Region:      &dockerCredentials.AwsRegion,
+					Credentials: assumedCreds,
+				})
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+				log.Printf("STS AssumeRole successful for cross-account ECR access, roleArn: %s", dockerCredentials.AssumeRoleArn)
+			}
+
 			svc := ecr.New(sess)
 			input := &ecr.GetAuthorizationTokenInput{}
 			authData, err := svc.GetAuthorizationToken(input)
@@ -293,7 +322,11 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 			log.Println(err)
 			return err
 		}
-		log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
+		if len(dockerCredentials.AssumeRoleArn) > 0 {
+			log.Printf("Docker login successful (cross-account via AssumeRole %s) with username %s on registry %s", dockerCredentials.AssumeRoleArn, username, dockerCredentials.DockerRegistryURL)
+		} else {
+			log.Println("Docker login successful with username ", username, " on docker registry URL ", dockerCredentials.DockerRegistryURL)
+		}
 		return nil
 	}
 
@@ -1428,6 +1461,7 @@ func (impl *DockerHelperImpl) GetDockerAuthConfigForPrivateRegistries(workflowRe
 				AccessKeyEcr:       workflowRequest.AccessKey,
 				SecretAccessKeyEcr: workflowRequest.SecretKey,
 				EcrRegion:          workflowRequest.AwsRegion,
+				AssumeRoleArnEcr:   workflowRequest.AssumeRoleArn,
 				IsRegistryPrivate:  true,
 			}
 		}
