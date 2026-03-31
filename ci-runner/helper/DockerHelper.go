@@ -174,6 +174,7 @@ func (impl *DockerHelperImpl) StartDockerDaemonAndDockerLogin(commonWorkflowRequ
 				AwsRegion:          commonWorkflowRequest.AwsRegion,
 				AccessKey:          commonWorkflowRequest.AccessKey,
 				SecretKey:          commonWorkflowRequest.SecretKey,
+				AssumeRoleArn:      commonWorkflowRequest.AssumeRoleArn,
 				DockerRegistryURL:  commonWorkflowRequest.IntermediateDockerRegistryUrl,
 				DockerRegistryType: commonWorkflowRequest.DockerRegistryType,
 				CredentialsType:    commonWorkflowRequest.CredentialsType,
