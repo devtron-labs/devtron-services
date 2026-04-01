@@ -204,6 +204,8 @@ type CommonWorkflowRequest struct {
 	AwsInspectorConfig               string                         `json:"awsInspectorConfig,omitempty"`
 	PartSize                         int64                          `json:"partSize,omitempty"`
 	ConcurrencyMultiplier            int                            `json:"concurrencyMultiplier,omitempty"`
+	DockerfileScanEnabled            bool                           `json:"dockerfileScanEnabled,omitempty"`
+	ForceDockerfileScan              bool                           `json:"forceDockerfileScan,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {

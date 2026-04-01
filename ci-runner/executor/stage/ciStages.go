@@ -348,6 +348,28 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	// build
 	start := time.Now()
 	metrics.BuildStartTime = start
+	
+	// Trigger Dockerfile scan right before build (git clone has definitely completed)
+	// Check BOTH flags: user's choice OR policy override
+	if ciCdRequest.CommonWorkflowRequest.DockerfileScanEnabled || ciCdRequest.CommonWorkflowRequest.ForceDockerfileScan {
+		log.Println(util.DEVTRON, "dockerfile scan triggered at build start (git clone completed)",
+			"buildId", ciCdRequest.CommonWorkflowRequest.WorkflowId,
+			"pipelineId", ciCdRequest.CommonWorkflowRequest.PipelineId,
+			"appId", ciCdRequest.CommonWorkflowRequest.AppId,
+			"checkoutPath", ciCdRequest.CommonWorkflowRequest.CheckoutPath)
+		// Trigger scan asynchronously (non-blocking, runs parallel to build)
+		go func() {
+			log.Println(util.DEVTRON, "dockerfile scan started",
+				"appId", ciCdRequest.CommonWorkflowRequest.AppId,
+				"buildId", ciCdRequest.CommonWorkflowRequest.WorkflowId,
+				"pipelineId", ciCdRequest.CommonWorkflowRequest.PipelineId,
+				"checkoutPath", ciCdRequest.CommonWorkflowRequest.CheckoutPath)
+			helper.InitiateDockerfileScan(ciCdRequest.CommonWorkflowRequest)
+			log.Println(util.DEVTRON, "dockerfile scan request sent to image-scanner",
+				"buildId", ciCdRequest.CommonWorkflowRequest.WorkflowId)
+		}()
+	}
+	
 	dest, err := impl.dockerHelper.BuildArtifact(ciCdRequest.CommonWorkflowRequest) // TODO make it skipable
 	metrics.BuildDuration = time.Since(start).Seconds()
 	if err != nil {
