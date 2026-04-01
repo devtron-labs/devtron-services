@@ -20,12 +20,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
-	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
+	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/pubsub"
@@ -203,6 +204,8 @@ type CommonWorkflowRequest struct {
 	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
 	PartSize                      int64                          `json:"partSize,omitempty"`
 	ConcurrencyMultiplier         int                            `json:"concurrencyMultiplier,omitempty"`
+	DockerfileScanEnabled         bool                           `json:"dockerfileScanEnabled,omitempty"`
+	ForceDockerfileScan           bool                           `json:"forceDockerfileScan,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {
