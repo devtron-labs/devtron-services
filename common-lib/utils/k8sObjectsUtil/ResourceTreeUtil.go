@@ -209,6 +209,14 @@ func PopulatePodInfo(un *unstructured.Unstructured) ([]commonBean.InfoItem, erro
 	restarts := 0
 	totalContainers := len(pod.Spec.Containers)
 	readyContainers := 0
+	initContainers := make(map[string]*v1.Container)
+
+	for i := range pod.Spec.InitContainers {
+		initContainers[pod.Spec.InitContainers[i].Name] = &pod.Spec.InitContainers[i]
+		if isRestartableInitContainer(&pod.Spec.InitContainers[i]) {
+			totalContainers++
+		}
+	}
 
 	reason := string(pod.Status.Phase)
 	if pod.Status.Reason != "" {
@@ -221,6 +229,12 @@ func PopulatePodInfo(un *unstructured.Unstructured) ([]commonBean.InfoItem, erro
 		restarts += int(container.RestartCount)
 		switch {
 		case container.State.Terminated != nil && container.State.Terminated.ExitCode == 0:
+			continue
+		case isRestartableInitContainer(initContainers[container.Name]) &&
+			container.Started != nil && *container.Started:
+			if container.Ready {
+				readyContainers++
+			}
 			continue
 		case container.State.Terminated != nil:
 			// initialization is failed
@@ -243,7 +257,7 @@ func PopulatePodInfo(un *unstructured.Unstructured) ([]commonBean.InfoItem, erro
 		}
 		break
 	}
-	if !initializing {
+	if !initializing || isPodInitializedConditionTrue(&pod.Status) {
 		restarts = 0
 		hasRunning := false
 		for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
@@ -284,6 +298,24 @@ func PopulatePodInfo(un *unstructured.Unstructured) ([]commonBean.InfoItem, erro
 	}
 	infoItems = getAllInfoItems(infoItems, reason, restarts, readyContainers, totalContainers, pod)
 	return infoItems, nil
+}
+
+func isRestartableInitContainer(initContainer *v1.Container) bool {
+	return initContainer != nil &&
+		initContainer.RestartPolicy != nil &&
+		*initContainer.RestartPolicy == v1.ContainerRestartPolicyAlways
+}
+
+func isPodInitializedConditionTrue(status *v1.PodStatus) bool {
+	for _, condition := range status.Conditions {
+		if condition.Type != v1.PodInitialized {
+			continue
+		}
+
+		return condition.Status == v1.ConditionTrue
+	}
+
+	return false
 }
 
 func getAllInfoItems(infoItems []commonBean.InfoItem, reason string, restarts int, readyContainers int, totalContainers int, pod v1.Pod) []commonBean.InfoItem {
