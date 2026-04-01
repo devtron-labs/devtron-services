@@ -359,6 +359,11 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 			"checkoutPath", ciCdRequest.CommonWorkflowRequest.CheckoutPath)
 		// Trigger scan asynchronously (non-blocking, runs parallel to build)
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println(util.DEVTRON, "recovered from panic in Dockerfile scan goroutine", "panic", r)
+				}
+			}()
 			log.Println(util.DEVTRON, "dockerfile scan started",
 				"appId", ciCdRequest.CommonWorkflowRequest.AppId,
 				"buildId", ciCdRequest.CommonWorkflowRequest.WorkflowId,

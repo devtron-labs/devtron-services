@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2024. Devtron Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package helper
 
 import (
@@ -11,36 +27,16 @@ import (
 	"time"
 
 	"github.com/caarlos0/env"
+	"github.com/devtron-labs/ci-runner/helper/bean"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/go-resty/resty/v2"
 )
-
-// DockerfileScanRequest represents the request to scan a Dockerfile
-type DockerfileScanRequest struct {
-	AppId                 int      `json:"appId"`
-	BuildId               int      `json:"buildId"`
-	PipelineId            int      `json:"pipelineId"`
-	DockerfileContent     string   `json:"dockerfileContent"`
-	DockerfileScanEnabled bool     `json:"dockerfileScanEnabled"`
-	ForceDockerfileScan   bool     `json:"forceDockerfileScan"`
-	IgnoredRules          []string `json:"ignoredRules"`
-}
-
-// ScanConfig holds configuration for Dockerfile scanning
-type ScanConfig struct {
-	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-service.devtroncd:80"`
-	FailOnError          bool   `env:"DOCKERFILE_SCAN_FAIL_ON_ERROR" envDefault:"false"`
-	MaxRetries           int    `env:"DOCKERFILE_SCAN_MAX_RETRIES" envDefault:"3"`
-	RetryWaitTimeSeconds int    `env:"DOCKERFILE_SCAN_RETRY_WAIT_SECONDS" envDefault:"5"`
-}
 
 // MaxDockerfileSize is the maximum allowed Dockerfile size (1MB)
 const MaxDockerfileSize = 1 * 1024 * 1024 // 1MB
 
 // InitiateDockerfileScan initiates a Dockerfile scan using hadolint
 // It reads the Dockerfile from filesystem and sends content to image-scanner service
-// Note: The decision to run the scan is made by the caller (runBuildArtifact)
-// which handles FORCE_DOCKERFILE_SCAN flag and pipeline-level DockerfileScanEnabled settings
 func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 	log.Println(util.DEVTRON, "initiating Dockerfile scan")
 
@@ -50,83 +46,62 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 		return
 	}
 
-	// Wait for git clone to complete (checkout path to exist)
-	// Use the SAME path resolution as Docker build (getDockerfilePath)
+	// Resolve Dockerfile path
 	var dockerfilePath string
 	if ciRequest.CiBuildConfig.CiBuildType == "managed-dockerfile-build" {
-		// For managed Dockerfile, use GetSelfManagedDockerfilePath
 		dockerfilePath = filepath.Join(util.WORKINGDIR, ciRequest.CheckoutPath, "./Dockerfile")
 	} else {
-		// For self-managed Dockerfile, use the configured path
 		dockerfilePath = ciRequest.CiBuildConfig.DockerBuildConfig.DockerfilePath
 	}
-	// Convert to absolute path (same as Docker build)
-	dockerfilePath, _ = filepath.Abs(dockerfilePath)
 
-	// Fallback wait (should not be needed - scan triggered at Docker build start)
-	maxWait := 2 * time.Minute
-	waitInterval := 10 * time.Second
-	startTime := time.Now()
-
-	log.Println(util.DEVTRON, "dockerfile scan: waiting for git clone to complete", "path", dockerfilePath, "buildId", ciRequest.WorkflowId)
-
-	for time.Since(startTime) < maxWait {
-		if _, err := os.Stat(dockerfilePath); err == nil {
-			log.Println(util.DEVTRON, "dockerfile scan: Dockerfile found, proceeding", "path", dockerfilePath, "elapsed", time.Since(startTime).Round(time.Second))
-			break // File exists, proceed
-		}
-		// Log progress every 30 seconds
-		if int(time.Since(startTime).Seconds())%30 == 0 {
-			log.Println(util.DEVTRON, "dockerfile scan: waiting for git clone to complete...", "path", dockerfilePath, "elapsed", time.Since(startTime).Round(time.Second), "maxWait", maxWait)
-		}
-		time.Sleep(waitInterval)
-	}
-
-	// Read Dockerfile from filesystem (single source of truth)
-	dockerfileContent, err := os.ReadFile(dockerfilePath)
+	// Convert to absolute path
+	var err error
+	dockerfilePath, err = filepath.Abs(dockerfilePath)
 	if err != nil {
-		log.Println(util.DEVTRON, "error in reading Dockerfile for scanning",
-			"path", dockerfilePath, "err", err)
-		if err := handleScanError(fmt.Sprintf("Failed to read Dockerfile from %s: %v", dockerfilePath, err), ciRequest.DockerfileScanEnabled); err != nil {
-			return
-		}
+		log.Println(util.DEVTRON, "error in resolving absolute path for Dockerfile", "path", dockerfilePath, "err", err)
 		return
 	}
 
-	// Prepare scan request with Dockerfile content
-	// CRITICAL FIX: Read DockerfileScanEnabled from ciRequest.DockerfileScanEnabled (CommonWorkflowRequest level)
-	// NOT from ciRequest.CiBuildConfig.DockerBuildConfig.DockerfileScanEnabled (which may be out of sync)
-	// ForceDockerfileScan is only available at CommonWorkflowRequest level
-	scanRequest := &DockerfileScanRequest{
+	// Check if Dockerfile exists (removed polling logic)
+	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+		log.Println(util.DEVTRON, "dockerfile scan: Dockerfile not found at", dockerfilePath)
+		return
+	}
+
+	// Read Dockerfile from filesystem
+	dockerfileContent, err := os.ReadFile(dockerfilePath)
+	if err != nil {
+		log.Println(util.DEVTRON, "error in reading Dockerfile for scanning", "path", dockerfilePath, "err", err)
+		handleScanError(fmt.Sprintf("Failed to read Dockerfile: %v", err), ciRequest.DockerfileScanEnabled)
+		return
+	}
+
+	// Prepare scan request
+	scanRequest := &bean.DockerfileScanRequest{
 		AppId:                 ciRequest.AppId,
 		BuildId:               ciRequest.WorkflowId,
 		PipelineId:            ciRequest.PipelineId,
 		DockerfileContent:     string(dockerfileContent),
 		DockerfileScanEnabled: ciRequest.DockerfileScanEnabled,
 		ForceDockerfileScan:   ciRequest.ForceDockerfileScan,
-		IgnoredRules:          []string{}, // Can be populated from config in future
 	}
 
 	jsonBody, err := json.Marshal(scanRequest)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in marshalling Dockerfile scan request", "err", err)
-		if err := handleScanError(fmt.Sprintf("Failed to marshal scan request: %v", err), ciRequest.DockerfileScanEnabled); err != nil {
-			return
-		}
+		handleScanError(fmt.Sprintf("Failed to marshal scan request: %v", err), ciRequest.DockerfileScanEnabled)
 		return
 	}
 
-	cfg := &ScanConfig{}
+	cfg := &bean.ScanConfig{}
 	err = env.Parse(cfg)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in parsing scan config", "err", err)
-		if err := handleScanError(fmt.Sprintf("Failed to parse scan config: %v", err), ciRequest.DockerfileScanEnabled); err != nil {
-			return
-		}
+		handleScanError(fmt.Sprintf("Failed to parse scan config: %v", err), ciRequest.DockerfileScanEnabled)
 		return
 	}
 
-	// Create HTTP client with timeout and configurable retries
+	// Create HTTP client (Using local instantiation but with improved error logging)
 	client := resty.New()
 	client.SetTimeout(2 * time.Minute)
 	client.
@@ -139,28 +114,28 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 		SetBody(jsonBody).
 		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/dockerfile/scan"))
 
-	// Record success/failure in circuit breaker
+	// Record success/failure with actual error logging
 	if err != nil || (resp != nil && (resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusOK)) {
-		log.Println(util.DEVTRON, "circuit breaker recorded FAILURE", "buildId", ciRequest.WorkflowId)
+		var status string
+		if resp != nil {
+			status = resp.Status()
+		}
+		log.Println(util.DEVTRON, "circuit breaker recorded FAILURE for Dockerfile scan", "buildId", ciRequest.WorkflowId, "err", err, "status", status)
 	} else {
-		log.Println(util.DEVTRON, "circuit breaker recorded SUCCESS", "buildId", ciRequest.WorkflowId)
+		log.Println(util.DEVTRON, "circuit breaker recorded SUCCESS for Dockerfile scan", "buildId", ciRequest.WorkflowId)
 	}
 
 	if err != nil {
 		log.Println(util.DEVTRON, "error in calling image-scanner for Dockerfile scan", "err", err)
-		if err := handleScanError(fmt.Sprintf("Dockerfile scan failed: %v", err), cfg.FailOnError); err != nil {
-			return
-		}
+		handleScanError(fmt.Sprintf("Dockerfile scan failed: %v", err), cfg.FailOnError)
 		return
 	}
 
-	// Accept both 202 (Accepted) and 200 (OK - for cached results)
+	// Accept both 202 (Accepted) and 200 (OK)
 	if resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusOK {
 		log.Println(util.DEVTRON, "image-scanner returned non-202/200 status for Dockerfile scan",
 			"status", resp.StatusCode(), "body", string(resp.Body()))
-		if err := handleScanError(fmt.Sprintf("Dockerfile scan failed with status: %d", resp.StatusCode()), cfg.FailOnError); err != nil {
-			return
-		}
+		handleScanError(fmt.Sprintf("Dockerfile scan failed with status: %d", resp.StatusCode()), cfg.FailOnError)
 		return
 	}
 
@@ -169,12 +144,11 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 }
 
 // handleScanError handles scan errors based on FailOnError configuration
-func handleScanError(message string, failOnError bool) error {
+func handleScanError(message string, failOnError bool) {
 	if failOnError {
 		log.Println(util.DEVTRON, "Dockerfile scan failed (fail-on-error enabled)", "message", message)
-		return fmt.Errorf("Dockerfile scan failed: %s", message)
+		// We don't return error here because this is called in a goroutine
+	} else {
+		log.Println(util.DEVTRON, "Dockerfile scan failed (fail-on-error disabled)", "message", message)
 	}
-	// Log warning but don't fail the build
-	log.Println(util.DEVTRON, "Dockerfile scan failed (fail-on-error disabled)", "message", message)
-	return nil
 }
