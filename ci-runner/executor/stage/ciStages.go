@@ -350,8 +350,9 @@ func (impl *CiStage) runBuildArtifact(ciCdRequest *helper.CiCdTriggerEvent, metr
 	metrics.BuildStartTime = start
 
 	// Trigger Dockerfile scan right before build (git clone has definitely completed)
-	// Check BOTH flags: user's choice OR policy override
-	if ciCdRequest.CommonWorkflowRequest.DockerfileScanEnabled || ciCdRequest.CommonWorkflowRequest.ForceDockerfileScan {
+	// Orchestrator has already made the decision (OR logic: userEnabled OR orgForced)
+	// CI-Runner blindly trusts Orchestrator's decision (no decision logic here)
+	if ciCdRequest.CommonWorkflowRequest.DockerfileScanEnabled {
 		log.Println(util.DEVTRON, "dockerfile scan triggered at build start (git clone completed)",
 			"buildId", ciCdRequest.CommonWorkflowRequest.WorkflowId,
 			"pipelineId", ciCdRequest.CommonWorkflowRequest.PipelineId,
