@@ -19,13 +19,14 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/helper"
 	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
-	"os"
-	"strconv"
-	"strings"
 )
 
 type ScriptEnvVariables struct {
@@ -96,6 +97,7 @@ func GetGlobalEnvVariables(ciCdRequest *helper.CiCdTriggerEvent) (*ScriptEnvVari
 		envs["ACCESS_KEY"] = ciCdRequest.CommonWorkflowRequest.AccessKey
 		envs["SECRET_KEY"] = ciCdRequest.CommonWorkflowRequest.SecretKey
 		envs["AWS_REGION"] = ciCdRequest.CommonWorkflowRequest.AwsRegion
+		envs["ASSUME_ROLE_ARN"] = ciCdRequest.CommonWorkflowRequest.AssumeRoleArn
 		envs["LAST_FETCHED_TIME"] = ciCdRequest.CommonWorkflowRequest.CiArtifactLastFetch.String()
 
 		//adding some envs for Image scanning plugin

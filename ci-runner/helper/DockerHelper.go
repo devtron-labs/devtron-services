@@ -23,9 +23,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -39,18 +51,6 @@ import (
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"github.com/devtron-labs/common-lib/utils/retryFunc"
 	"golang.org/x/sync/errgroup"
-	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -236,25 +236,22 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 			accessKey, secretKey := dockerCredentials.AccessKey, dockerCredentials.SecretKey
 			//fmt.Printf("accessKey %s, secretKey %s\n", accessKey, secretKey)
 
-			var creds *credentials.Credentials
+			var sess *session.Session
+			var err error
 
-			if len(dockerCredentials.AccessKey) == 0 || len(dockerCredentials.SecretKey) == 0 {
-				//fmt.Println("empty accessKey or secretKey")
-				sess, err := session.NewSession(&aws.Config{
+			if len(accessKey) == 0 || len(secretKey) == 0 {
+				// Case 1: IAM role — use default credential chain (IRSA, instance profile, task role, env vars)
+				sess, err = session.NewSession(&aws.Config{
 					Region: &dockerCredentials.AwsRegion,
 				})
-				if err != nil {
-					log.Println(err)
-					return err
-				}
-				creds = ec2rolecreds.NewCredentials(sess)
 			} else {
-				creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
+				// Case 2: Static credentials
+				creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+				sess, err = session.NewSession(&aws.Config{
+					Region:      &dockerCredentials.AwsRegion,
+					Credentials: creds,
+				})
 			}
-			sess, err := session.NewSession(&aws.Config{
-				Region:      &dockerCredentials.AwsRegion,
-				Credentials: creds,
-			})
 			if err != nil {
 				log.Println(err)
 				return err

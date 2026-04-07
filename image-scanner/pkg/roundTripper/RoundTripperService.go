@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -116,23 +115,21 @@ func (impl *RoundTripperServiceImpl) GetAuthenticatorByDockerRegistryId(dockerRe
 	}
 	if dockerRegistry.RegistryType == repository.REGISTRYTYPE_ECR {
 		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey.String()
-		var creds *credentials.Credentials
-		if len(dockerRegistry.AWSAccessKeyId) == 0 || len(dockerRegistry.AWSSecretAccessKey) == 0 {
-			sess, err := session.NewSession(&aws.Config{
+		var sess *session.Session
+		var err error
+		if len(accessKey) == 0 || len(secretKey) == 0 {
+			// Case 1: IAM role — use default credential chain (IRSA, instance profile, task role, env vars)
+			sess, err = session.NewSession(&aws.Config{
 				Region: &dockerRegistry.AWSRegion,
 			})
-			if err != nil {
-				impl.Logger.Errorw("error in starting aws new session", "err", err)
-				return nil, nil, err
-			}
-			creds = ec2rolecreds.NewCredentials(sess)
 		} else {
-			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
+			// Case 2: Static credentials
+			creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+			sess, err = session.NewSession(&aws.Config{
+				Region:      &dockerRegistry.AWSRegion,
+				Credentials: creds,
+			})
 		}
-		sess, err := session.NewSession(&aws.Config{
-			Region:      &dockerRegistry.AWSRegion,
-			Credentials: creds,
-		})
 		if err != nil {
 			impl.Logger.Errorw("error in starting aws new session", "err", err)
 			return nil, nil, err

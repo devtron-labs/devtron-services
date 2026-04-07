@@ -4,20 +4,20 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/sts"
-	http2 "github.com/devtron-labs/common-lib/utils/http"
-	"helm.sh/helm/v3/pkg/registry"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sts"
+	http2 "github.com/devtron-labs/common-lib/utils/http"
+	"helm.sh/helm/v3/pkg/registry"
 )
 
 func GetLoggedInClient(client *registry.Client, config *Configuration) (*registry.Client, error) {
@@ -96,26 +96,24 @@ func extractCredentialsForRegistry(config *Configuration) (string, string, error
 	}
 	if config.RegistryType == REGISTRY_TYPE_ECR {
 		accessKey, secretKey := config.AwsAccessKey, config.AwsSecretKey
-		var creds *credentials.Credentials
+		var sess *session.Session
+		var err error
 
-		if len(config.AwsAccessKey) == 0 || len(config.AwsSecretKey) == 0 {
-			sess, err := session.NewSession(&aws.Config{
+		if len(accessKey) == 0 || len(secretKey) == 0 {
+			// Case 1: IAM role — use default credential chain (IRSA, instance profile, task role, env vars)
+			sess, err = session.NewSession(&aws.Config{
 				Region: &config.AwsRegion,
 			})
-			if err != nil {
-				log.Printf("error in creating AWS client %w ", err)
-				return "", "", err
-			}
-			creds = ec2rolecreds.NewCredentials(sess)
 		} else {
-			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
+			// Case 2: Static credentials
+			creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+			sess, err = session.NewSession(&aws.Config{
+				Region:      &config.AwsRegion,
+				Credentials: creds,
+			})
 		}
-		sess, err := session.NewSession(&aws.Config{
-			Region:      &config.AwsRegion,
-			Credentials: creds,
-		})
 		if err != nil {
-			log.Printf("error in creating AWS client %w ", err)
+			log.Printf("error in creating AWS client %v ", err)
 			return "", "", err
 		}
 
@@ -149,14 +147,14 @@ func extractCredentialsForRegistry(config *Configuration) (string, string, error
 		input := &ecr.GetAuthorizationTokenInput{}
 		authData, err := svc.GetAuthorizationToken(input)
 		if err != nil {
-			log.Printf("error in creating AWS client %w ", err)
+			log.Printf("error in creating AWS client %v ", err)
 			return "", "", err
 		}
 		// decode token
 		token := authData.AuthorizationData[0].AuthorizationToken
 		decodedToken, err := base64.StdEncoding.DecodeString(*token)
 		if err != nil {
-			log.Printf("error in creating AWS client %w ", err)
+			log.Printf("error in creating AWS client %v ", err)
 			return "", "", err
 		}
 		credsSlice := strings.Split(string(decodedToken), ":")
