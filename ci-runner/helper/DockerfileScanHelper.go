@@ -30,6 +30,7 @@ import (
 	"github.com/devtron-labs/ci-runner/helper/bean"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/go-resty/resty/v2"
+	"github.com/devtron-labs/ci-runner/pubsub"
 )
 
 // MaxDockerfileSize is the maximum allowed Dockerfile size (1MB)
@@ -72,24 +73,20 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 	dockerfileContent, err := os.ReadFile(dockerfilePath)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in reading Dockerfile for scanning", "path", dockerfilePath, "err", err)
-		handleScanError(fmt.Sprintf("Failed to read Dockerfile: %v", err), ciRequest.DockerfileScanEnabled)
 		return
 	}
 
 	// Prepare scan request
 	scanRequest := &bean.DockerfileScanRequest{
-		AppId:                 ciRequest.AppId,
-		BuildId:               ciRequest.WorkflowId,
-		PipelineId:            ciRequest.PipelineId,
-		DockerfileContent:     string(dockerfileContent),
-		DockerfileScanEnabled: ciRequest.DockerfileScanEnabled,
-		ForceDockerfileScan:   ciRequest.ForceDockerfileScan,
+		AppId:             ciRequest.AppId,
+		BuildId:           ciRequest.WorkflowId,
+		PipelineId:        ciRequest.PipelineId,
+		DockerfileContent: string(dockerfileContent),
 	}
 
 	jsonBody, err := json.Marshal(scanRequest)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in marshalling Dockerfile scan request", "err", err)
-		handleScanError(fmt.Sprintf("Failed to marshal scan request: %v", err), ciRequest.DockerfileScanEnabled)
 		return
 	}
 
@@ -97,7 +94,13 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 	err = env.Parse(cfg)
 	if err != nil {
 		log.Println(util.DEVTRON, "error in parsing scan config", "err", err)
-		handleScanError(fmt.Sprintf("Failed to parse scan config: %v", err), ciRequest.DockerfileScanEnabled)
+		return
+	}
+
+	scannerCfg := &pubsub.PubSubConfig{}
+	err = env.Parse(scannerCfg)
+	if err != nil {
+		log.Println(util.DEVTRON, "error in parsing scanner endpoint config", "err", err)
 		return
 	}
 
@@ -112,7 +115,7 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetBody(jsonBody).
-		Post(fmt.Sprintf("%s/%s", cfg.ImageScannerEndpoint, "scanner/dockerfile/scan"))
+		Post(fmt.Sprintf("%s/%s", scannerCfg.ImageScannerEndpoint, "scanner/dockerfile/scan"))
 
 	// Record success/failure with actual error logging
 	if err != nil || (resp != nil && (resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusOK)) {
@@ -127,7 +130,6 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 
 	if err != nil {
 		log.Println(util.DEVTRON, "error in calling image-scanner for Dockerfile scan", "err", err)
-		handleScanError(fmt.Sprintf("Dockerfile scan failed: %v", err), cfg.FailOnError)
 		return
 	}
 
@@ -135,20 +137,9 @@ func InitiateDockerfileScan(ciRequest *CommonWorkflowRequest) {
 	if resp.StatusCode() != http.StatusAccepted && resp.StatusCode() != http.StatusOK {
 		log.Println(util.DEVTRON, "image-scanner returned non-202/200 status for Dockerfile scan",
 			"status", resp.StatusCode(), "body", string(resp.Body()))
-		handleScanError(fmt.Sprintf("Dockerfile scan failed with status: %d", resp.StatusCode()), cfg.FailOnError)
 		return
 	}
 
 	log.Println(util.DEVTRON, "successfully initiated Dockerfile scan",
 		"statusCode", resp.StatusCode(), "buildId", ciRequest.WorkflowId)
-}
-
-// handleScanError handles scan errors based on FailOnError configuration
-func handleScanError(message string, failOnError bool) {
-	if failOnError {
-		log.Println(util.DEVTRON, "Dockerfile scan failed (fail-on-error enabled)", "message", message)
-		// We don't return error here because this is called in a goroutine
-	} else {
-		log.Println(util.DEVTRON, "Dockerfile scan failed (fail-on-error disabled)", "message", message)
-	}
 }

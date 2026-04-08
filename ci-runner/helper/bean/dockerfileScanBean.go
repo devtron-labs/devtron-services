@@ -28,7 +28,6 @@ type DockerfileScanRequest struct {
 
 // ScanConfig holds configuration for Dockerfile scanning
 type ScanConfig struct {
-	ImageScannerEndpoint string `env:"IMAGE_SCANNER_ENDPOINT" envDefault:"http://image-scanner-service.devtroncd:80"`
 	FailOnError          bool   `env:"DOCKERFILE_SCAN_FAIL_ON_ERROR" envDefault:"false"`
 	MaxRetries           int    `env:"DOCKERFILE_SCAN_MAX_RETRIES" envDefault:"3"`
 	RetryWaitTimeSeconds int    `env:"DOCKERFILE_SCAN_RETRY_WAIT_SECONDS" envDefault:"5"`
