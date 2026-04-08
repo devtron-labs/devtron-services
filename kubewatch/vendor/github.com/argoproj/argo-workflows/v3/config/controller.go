@@ -13,7 +13,6 @@ import (
 
 type Controller interface {
 	Get(context.Context) (*Config, error)
-	GetNamespace() string
 	GetName() string
 }
 
@@ -61,10 +60,6 @@ func (cc *controller) Get(ctx context.Context) (*Config, error) {
 		return nil, err
 	}
 	return config, parseConfigMap(cm, config)
-}
-
-func (cc *controller) GetNamespace() string {
-	return cc.namespace
 }
 
 func (cc *controller) GetName() string {
