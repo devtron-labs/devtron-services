@@ -22,8 +22,6 @@ type DockerfileScanRequest struct {
 	BuildId               int    `json:"buildId"`
 	PipelineId            int    `json:"pipelineId"`
 	DockerfileContent     string `json:"dockerfileContent"`
-	DockerfileScanEnabled bool   `json:"dockerfileScanEnabled"`
-	ForceDockerfileScan   bool   `json:"forceDockerfileScan"`
 }
 
 // ScanConfig holds configuration for Dockerfile scanning
