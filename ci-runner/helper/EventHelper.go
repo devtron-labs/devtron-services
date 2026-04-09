@@ -25,9 +25,6 @@ import (
 	"strings"
 	"time"
 
-	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
-	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
-
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
