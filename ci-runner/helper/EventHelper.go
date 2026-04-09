@@ -32,7 +32,9 @@ import (
 	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
 	blobStorage "github.com/devtron-labs/common-lib/blob-storage"
+	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
 	pubSub "github.com/devtron-labs/common-lib/pubsub-lib"
+	"github.com/devtron-labs/common-lib/utils/remoteConnection/bean"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -171,40 +173,41 @@ type CommonWorkflowRequest struct {
 	EnableSecretMasking            bool                             `json:"enableSecretMasking"`
 	PropagateLabelsInBuildxPod     bool                             `json:"propagateLabelsInBuildxPod"`
 	// Data from CD Workflow service
-	WorkflowRunnerId              int                            `json:"workflowRunnerId"`
-	CdPipelineId                  int                            `json:"cdPipelineId"`
-	StageYaml                     string                         `json:"stageYaml"`
-	ArtifactLocation              string                         `json:"artifactLocation"`
-	CiArtifactDTO                 CiArtifactDTO                  `json:"ciArtifactDTO"`
-	CdImage                       string                         `json:"cdImage"`
-	StageType                     string                         `json:"stageType"`
-	CdCacheLocation               string                         `json:"cdCacheLocation"`
-	CdCacheRegion                 string                         `json:"cdCacheRegion"`
-	WorkflowPrefixForLog          string                         `json:"workflowPrefixForLog"`
-	DeploymentTriggeredBy         string                         `json:"deploymentTriggeredBy,omitempty"`
-	DeploymentTriggerTime         time.Time                      `json:"deploymentTriggerTime,omitempty"`
-	DeploymentReleaseCounter      int                            `json:"deploymentReleaseCounter,omitempty"`
-	PrePostDeploySteps            []*StepObject                  `json:"prePostDeploySteps"`
-	TaskYaml                      *TaskYaml                      `json:"-"`
-	IsVirtualExecution            bool                           `json:"isVirtualExecution"`
-	CiArtifactLastFetch           time.Time                      `json:"ciArtifactLastFetch"`
-	CiPipelineType                string                         `json:"CiPipelineType"`
-	RegistryDestinationImageMap   map[string][]string            `json:"registryDestinationImageMap"`
-	RegistryCredentialMap         map[string]RegistryCredentials `json:"registryCredentialMap"`
-	PluginArtifactStage           string                         `json:"pluginArtifactStage"`
-	PushImageBeforePostCI         bool                           `json:"pushImageBeforePostCI"`
-	IntermediateDockerRegistryUrl string                         `json:"-"` // this URL will be used for all operations and can be mutated
-	BuildxCacheModeMin            bool                           `json:"buildxCacheModeMin"`
-	AsyncBuildxCacheExport        bool                           `json:"asyncBuildxCacheExport"`
-	BuildxInterruptionMaxRetry    int                            `json:"buildxInterruptionMaxRetry"`
-	UseDockerApiToGetDigest       bool                           `json:"useDockerApiToGetDigest"`
-	HostUrl                       string                         `json:"hostUrl"`
-	ImageScanningSteps            []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
-	ExecuteImageScanningVia       bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
-	AwsInspectorConfig            string                         `json:"awsInspectorConfig,omitempty"`
-	PartSize                      int64                          `json:"partSize,omitempty"`
-	ConcurrencyMultiplier         int                            `json:"concurrencyMultiplier,omitempty"`
-	DockerfileScanEnabled         bool                           `json:"dockerfileScanEnabled,omitempty"`
+	WorkflowRunnerId                 int                            `json:"workflowRunnerId"`
+	CdPipelineId                     int                            `json:"cdPipelineId"`
+	StageYaml                        string                         `json:"stageYaml"`
+	ArtifactLocation                 string                         `json:"artifactLocation"`
+	CiArtifactDTO                    CiArtifactDTO                  `json:"ciArtifactDTO"`
+	CdImage                          string                         `json:"cdImage"`
+	StageType                        string                         `json:"stageType"`
+	CdCacheLocation                  string                         `json:"cdCacheLocation"`
+	CdCacheRegion                    string                         `json:"cdCacheRegion"`
+	WorkflowPrefixForLog             string                         `json:"workflowPrefixForLog"`
+	DeploymentTriggeredBy            string                         `json:"deploymentTriggeredBy,omitempty"`
+	DeploymentTriggerTime            time.Time                      `json:"deploymentTriggerTime,omitempty"`
+	DeploymentReleaseCounter         int                            `json:"deploymentReleaseCounter,omitempty"`
+	PrePostDeploySteps               []*StepObject                  `json:"prePostDeploySteps"`
+	TaskYaml                         *TaskYaml                      `json:"-"`
+	IsVirtualExecution               bool                           `json:"isVirtualExecution"`
+	CiArtifactLastFetch              time.Time                      `json:"ciArtifactLastFetch"`
+	CiPipelineType                   string                         `json:"CiPipelineType"`
+	RegistryDestinationImageMap      map[string][]string            `json:"registryDestinationImageMap"`
+	RegistryCredentialMap            map[string]RegistryCredentials `json:"registryCredentialMap"`
+	PluginArtifactStage              string                         `json:"pluginArtifactStage"`
+	PushImageBeforePostCI            bool                           `json:"pushImageBeforePostCI"`
+	IntermediateDockerRegistryUrl    string                         `json:"-"` // this URL will be used for all operations and can be mutated
+	BuildxCacheModeMin               bool                           `json:"buildxCacheModeMin"`
+	AsyncBuildxCacheExport           bool                           `json:"asyncBuildxCacheExport"`
+	BuildxInterruptionMaxRetry       int                            `json:"buildxInterruptionMaxRetry"`
+	BuildxBuilderPodWaitDurationSecs int                            `json:"buildxBuilderPodWaitDurationSecs"`
+	UseDockerApiToGetDigest          bool                           `json:"useDockerApiToGetDigest"`
+	HostUrl                          string                         `json:"hostUrl"`
+	ImageScanningSteps               []*ImageScanningSteps          `json:"imageScanningSteps,omitempty"`
+	ExecuteImageScanningVia          bean2.ScanExecutionMedium      `json:"executeImageScanningVia,omitempty"`
+	AwsInspectorConfig               string                         `json:"awsInspectorConfig,omitempty"`
+	PartSize                         int64                          `json:"partSize,omitempty"`
+	ConcurrencyMultiplier            int                            `json:"concurrencyMultiplier,omitempty"`
+	DockerfileScanEnabled            bool                           `json:"dockerfileScanEnabled,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {

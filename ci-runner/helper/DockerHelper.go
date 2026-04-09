@@ -23,6 +23,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
@@ -38,18 +51,6 @@ import (
 	"github.com/devtron-labs/common-lib/utils/dockerOperations"
 	"github.com/devtron-labs/common-lib/utils/retryFunc"
 	"golang.org/x/sync/errgroup"
-	"io"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -74,15 +75,23 @@ type DockerHelper interface {
 	GetDockerAuthConfigForPrivateRegistries(workflowRequest *CommonWorkflowRequest) *bean.DockerAuthConfig
 }
 
+// BuildxK8sClientFactory creates a BuildxK8sInterface from deployment names.
+// Abstracted for testability — production code uses newBuildxK8sClient as the default.
+type BuildxK8sClientFactory func(deploymentNames []string) (BuildxK8sInterface, error)
+
 type DockerHelperImpl struct {
 	DockerCommandEnv []string
 	cmdExecutor      CommandExecutor
+	k8sClientFactory BuildxK8sClientFactory
 }
 
 func NewDockerHelperImpl(cmdExecutor CommandExecutor) *DockerHelperImpl {
 	return &DockerHelperImpl{
 		DockerCommandEnv: os.Environ(),
 		cmdExecutor:      cmdExecutor,
+		k8sClientFactory: func(names []string) (BuildxK8sInterface, error) {
+			return newBuildxK8sClient(names)
+		},
 	}
 }
 
@@ -300,9 +309,27 @@ func (impl *DockerHelperImpl) DockerLogin(ciContext cicxt.CiContext, dockerCrede
 	return performDockerLogin()
 }
 
+// waitForBuilderPods waits until all buildx k8s driver pods reach Running state,
+// or returns an error if the deadline is exceeded. Extracted for testability.
+func waitForBuilderPods(ctx context.Context, k8sClient BuildxK8sInterface, duration time.Duration) error {
+	log.Println(util.DEVTRON, fmt.Sprintf("waiting for builder pods to be ready (timeout: %v)", duration))
+	initDone := make(chan bool, 1)
+	initCtx, initCancel := context.WithTimeout(ctx, duration)
+	defer initCancel()
+	go k8sClient.WaitUntilBuilderPodLive(initCtx, initDone)
+	select {
+	case <-initDone:
+		log.Println(util.DEVTRON, "builder pods are ready for build")
+		return nil
+	case <-initCtx.Done():
+		return fmt.Errorf("builder pods did not reach Running state within %v", duration)
+	}
+}
+
 func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8sClient BuildxK8sInterface,
 	useBuildxK8sDriver bool, dockerBuild string, deploymentNames []string,
-	dockerBuildStageMetadata bean2.DockerBuildStageMetadata, reBuildLogs []any) error {
+	dockerBuildStageMetadata bean2.DockerBuildStageMetadata, reBuildLogs []any,
+	builderPodWaitDuration time.Duration) error {
 	if !useBuildxK8sDriver {
 		return nil
 	}
@@ -311,7 +338,7 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 		log.Println(util.DEVTRON, fmt.Sprintf(" error in RestartBuilders : %s", k8sErr.Error()))
 		return k8sErr
 	}
-	k8sClient, err := newBuildxK8sClient(deploymentNames)
+	k8sClient, err := impl.k8sClientFactory(deploymentNames)
 	if err != nil {
 		log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
 		return err
@@ -324,18 +351,15 @@ func (impl *DockerHelperImpl) executeDockerReBuild(ciContext cicxt.CiContext, k8
 	rebuildImageStage := func() error {
 		// wait for the builder pod to be up again
 		startTime := time.Now()
-		util.LogInfo("Waiting for builder pod to be ready,", "timeout: 2 minutes")
-		done := make(chan bool)
-		ctx, cancel := context.WithCancel(ciContext)
+		util.LogInfo("Waiting for builder pod to be ready,", fmt.Sprintf("timeout: %v", builderPodWaitDuration))
+		done := make(chan bool, 1) // buffered to prevent goroutine leak on timeout
+		ctx, cancel := context.WithTimeout(ciContext, builderPodWaitDuration)
 		defer cancel()
 		go k8sClient.WaitUntilBuilderPodLive(ctx, done)
 		select {
 		case <-done:
 			// builder pod is up again, continue with the build
-			cancel()
-		case <-time.After(2 * time.Minute):
-			// timeout after 2 minutes
-			cancel()
+		case <-ctx.Done():
 			return BuilderPodDeletedError
 		}
 		util.LogInfo("DONE -->", time.Since(startTime).Seconds())
@@ -403,6 +427,10 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 	if err != nil {
 		log.Println("Error while parsing environment variables", err)
 	}
+	builderPodWaitDuration := 2 * time.Minute // backward-compat default
+	if ciRequest.BuildxBuilderPodWaitDurationSecs > 0 {
+		builderPodWaitDuration = time.Duration(ciRequest.BuildxBuilderPodWaitDurationSecs) * time.Second
+	}
 	if ciRequest.DockerImageTag == "" {
 		ciRequest.DockerImageTag = "latest"
 	}
@@ -453,12 +481,12 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				}
 				useBuildxK8sDriver, eligibleK8sDriverNodes = dockerBuildConfig.CheckForBuildXK8sDriver()
 				if useBuildxK8sDriver {
-					deploymentNames, err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId)
+					deploymentNames, err = impl.createBuildxBuilderWithK8sDriver(ciContext, ciRequest.PropagateLabelsInBuildxPod, ciRequest.DockerConnection, dockerBuildConfig.BuildxDriverImage, eligibleK8sDriverNodes, ciRequest.PipelineId, ciRequest.WorkflowId, builderPodWaitDuration)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxDriver , err : ", err.Error())
 						return err
 					}
-					k8sClient, err = newBuildxK8sClient(deploymentNames)
+					k8sClient, err = impl.k8sClientFactory(deploymentNames)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in creating buildxK8sClient , err : ", err.Error())
 						return err
@@ -467,6 +495,11 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					err = k8sClient.RegisterBuilderPods(ciContext)
 					if err != nil {
 						log.Println(util.DEVTRON, " error in registering builder pods ", " err: ", err)
+						return err
+					}
+					// Wait for builder pods to reach Running state before starting the build.
+					// Prevents false-positive BuilderPodDeletedError from pod startup latency.
+					if err = waitForBuilderPods(ciContext, k8sClient, builderPodWaitDuration); err != nil {
 						return err
 					}
 				} else {
@@ -534,7 +567,7 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 					reBuildLogs = []any{fmt.Sprintf("Starting re docker build (Attempt %d) : ", attempt), dockerBuild}
 				}
 				return impl.executeDockerReBuild(ciContext, k8sClient, useBuildxK8sDriver, dockerBuild,
-					deploymentNames, dockerBuildStageMetadata, reBuildLogs)
+					deploymentNames, dockerBuildStageMetadata, reBuildLogs, builderPodWaitDuration)
 			}
 			err = retryFunc.RetryWithOutLogging(callback, retryFunc.IsRetryableError, maxRetry, 1*time.Second)
 			if err != nil {
@@ -1097,14 +1130,14 @@ func (impl *DockerHelperImpl) createBuildxBuilderForMultiArchBuild(ciContext cic
 	return nil
 }
 
-func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int) ([]string, error) {
+func (impl *DockerHelperImpl) createBuildxBuilderWithK8sDriver(ciContext cicxt.CiContext, propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, builderNodes []map[string]string, ciPipelineId, ciWorkflowId int, timeout time.Duration) ([]string, error) {
 	deploymentNames := make([]string, 0)
 	if len(builderNodes) == 0 {
 		return deploymentNames, errors.New("atleast one node is expected for builder with kubernetes driver")
 	}
 	for i := 0; i < len(builderNodes); i++ {
 		nodeOpts := builderNodes[i]
-		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId)
+		builderCmd, deploymentName, err := getBuildxK8sDriverCmd(propagateLabelsInBuildxPod, dockerConnection, buildxDriverImage, nodeOpts, ciPipelineId, ciWorkflowId, timeout)
 		if err != nil {
 			return deploymentNames, err
 		}
@@ -1181,7 +1214,7 @@ func (impl *DockerHelperImpl) runCmd(cmd string) (error, *bytes.Buffer) {
 	return err, errBuf
 }
 
-func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int) (string, string, error) {
+func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, buildxDriverImage string, driverOpts map[string]string, ciPipelineId, ciWorkflowId int, timeout time.Duration) (string, string, error) {
 	buildxCreate := "docker buildx create --buildkitd-flags '--allow-insecure-entitlement network.host --allow-insecure-entitlement security.insecure' --name=%s --driver=kubernetes --node=%s --bootstrap "
 	nodeName := driverOpts["node"]
 	if nodeName == "" {
@@ -1203,6 +1236,9 @@ func getBuildxK8sDriverCmd(propagateLabelsInBuildxPod bool, dockerConnection, bu
 	}
 
 	driverOpts["driverOptions"] = getBuildXDriverOptionsWithImage(buildxDriverImage, driverOpts["driverOptions"])
+	if timeout > 0 {
+		driverOpts["driverOptions"] = getBuildXDriverOptionsWithTimeout(timeout, driverOpts["driverOptions"])
+	}
 	if len(driverOpts["driverOptions"]) > 0 {
 		buildxCreate += " '--driver-opt=%s' "
 		buildxCreate = fmt.Sprintf(buildxCreate, driverOpts["driverOptions"])
@@ -1223,6 +1259,21 @@ func getBuildXDriverOptionsWithImage(buildxDriverImage, driverOptions string) st
 		} else {
 			driverOptions = driverImageOption
 		}
+	}
+	return driverOptions
+}
+
+func getBuildXDriverOptionsWithTimeout(timeout time.Duration, driverOptions string) string {
+	if strings.HasPrefix(driverOptions, "timeout=") ||
+		strings.Contains(driverOptions, ",timeout=") {
+		// if timeout is already present in driver options then do not override it, just return the existing options
+		return driverOptions
+	}
+	timeoutOption := fmt.Sprintf("\"timeout=%s\"", timeout.String())
+	if len(driverOptions) > 0 {
+		driverOptions += fmt.Sprintf(",%s", timeoutOption)
+	} else {
+		driverOptions = timeoutOption
 	}
 	return driverOptions
 }

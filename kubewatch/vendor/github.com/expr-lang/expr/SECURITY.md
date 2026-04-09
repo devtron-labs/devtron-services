@@ -11,8 +11,11 @@ unless this is not possible or feasible with a reasonable effort.
 
 | Version | Supported          |
 |---------|--------------------|
-| 1.x     | :white_check_mark: |
-| 0.x     | :x:                |
+| 1.16    | :white_check_mark: |
+| 1.15    | :white_check_mark: |
+| 1.14    | :white_check_mark: |
+| 1.13    | :white_check_mark: |
+| < 1.13  | :x:                |
 
 ## Reporting a Vulnerability
 
