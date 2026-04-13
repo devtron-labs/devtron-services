@@ -22,6 +22,9 @@
  | DEFAULT_CACHE_BUCKET_REGION | string | |  |  | false |
  | DEFAULT_CD_LOGS_BUCKET_REGION | string | |  |  | false |
  | DEFAULT_LOG_TIME_LIMIT | int64 |1 |  |  | false |
+ | DOCKERFILE_SCAN_FAIL_ON_ERROR | bool |false |  |  | false |
+ | DOCKERFILE_SCAN_MAX_RETRIES | int |3 |  |  | false |
+ | DOCKERFILE_SCAN_RETRY_WAIT_SECONDS | int |5 |  |  | false |
  | IMAGE_SCANNER_ENDPOINT | string |http://image-scanner-new-demo-devtroncd-service.devtroncd:80 |  |  | false |
  | LOG_LEVEL | int |0 |  |  | false |
  | NATS_MSG_ACK_WAIT_IN_SECS | int |120 |  |  | false |
