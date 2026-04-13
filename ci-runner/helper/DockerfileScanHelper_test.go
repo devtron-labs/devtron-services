@@ -33,7 +33,7 @@ func TestInitiateDockerfileScan_Success(t *testing.T) {
 	// We use os.MkdirTemp but then we need to ensure the path aligns with util.WORKINGDIR
 	// Since util.WORKINGDIR is constant "/devtroncd", we will create a temp dir and symlink or just use a unique path
 	// To avoid permission issues, we will check if we can write to util.WORKINGDIR
-	
+
 	testDir := filepath.Join(util.WORKINGDIR, "test-scan-"+t.Name())
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Skipf("Skipping test: cannot create directory %s: %v", testDir, err)
@@ -155,4 +155,3 @@ func TestInitiateDockerfileScan_ServerError(t *testing.T) {
 	// Should handle error gracefully
 	InitiateDockerfileScan(req)
 }
-

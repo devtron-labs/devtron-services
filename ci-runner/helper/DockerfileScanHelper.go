@@ -28,9 +28,9 @@ import (
 
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/ci-runner/helper/bean"
+	"github.com/devtron-labs/ci-runner/pubsub"
 	"github.com/devtron-labs/ci-runner/util"
 	"github.com/go-resty/resty/v2"
-	"github.com/devtron-labs/ci-runner/pubsub"
 )
 
 // MaxDockerfileSize is the maximum allowed Dockerfile size (1MB)

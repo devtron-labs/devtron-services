@@ -18,15 +18,15 @@ package bean
 
 // DockerfileScanRequest represents the request to scan a Dockerfile
 type DockerfileScanRequest struct {
-	AppId                 int    `json:"appId"`
-	BuildId               int    `json:"buildId"`
-	PipelineId            int    `json:"pipelineId"`
-	DockerfileContent     string `json:"dockerfileContent"`
+	AppId             int    `json:"appId"`
+	BuildId           int    `json:"buildId"`
+	PipelineId        int    `json:"pipelineId"`
+	DockerfileContent string `json:"dockerfileContent"`
 }
 
 // ScanConfig holds configuration for Dockerfile scanning
 type ScanConfig struct {
-	FailOnError          bool   `env:"DOCKERFILE_SCAN_FAIL_ON_ERROR" envDefault:"false"`
-	MaxRetries           int    `env:"DOCKERFILE_SCAN_MAX_RETRIES" envDefault:"3"`
-	RetryWaitTimeSeconds int    `env:"DOCKERFILE_SCAN_RETRY_WAIT_SECONDS" envDefault:"5"`
+	FailOnError          bool `env:"DOCKERFILE_SCAN_FAIL_ON_ERROR" envDefault:"false"`
+	MaxRetries           int  `env:"DOCKERFILE_SCAN_MAX_RETRIES" envDefault:"3"`
+	RetryWaitTimeSeconds int  `env:"DOCKERFILE_SCAN_RETRY_WAIT_SECONDS" envDefault:"5"`
 }
