@@ -3,7 +3,7 @@ module github.com/devtron-labs/kubewatch
 go 1.24.10
 
 require (
-	github.com/argoproj/argo-cd/v2 v2.14.16
+	github.com/argoproj/argo-cd/v2 v2.14.20
 	github.com/argoproj/argo-workflows/v3 v3.7.11
 	github.com/argoproj/gitops-engine v0.7.1-0.20250521000818-c08b0a72c1f1
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -94,8 +94,8 @@ require (
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-git/go-git/v5 v5.16.5 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
