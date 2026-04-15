@@ -3,6 +3,7 @@
 // allows for Go-compatible named attribute access, including accessing embedded
 // struct attributes and the ability to use  functions and struct tags to
 // customize field names.
+//
 package reflectx
 
 import (
@@ -154,7 +155,7 @@ func (m *Mapper) FieldByName(v reflect.Value, name string) reflect.Value {
 	tm := m.TypeMap(v.Type())
 	fi, ok := tm.Names[name]
 	if !ok {
-		return reflect.Value{}
+		return v
 	}
 	return FieldByIndexes(v, fi.Index)
 }

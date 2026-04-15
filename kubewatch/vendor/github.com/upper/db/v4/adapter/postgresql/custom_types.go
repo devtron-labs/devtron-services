@@ -27,7 +27,6 @@ import (
 	"database/sql/driver"
 	"time"
 
-	"github.com/upper/db/v4"
 	"github.com/upper/db/v4/internal/sqlbuilder"
 )
 
@@ -123,7 +122,7 @@ func (t *timeWrapper) Scan(src interface{}) error {
 }
 
 func (d *database) ConvertValueContext(ctx context.Context, in interface{}) interface{} {
-	tz, _ := ctx.Value(db.ContextKey("timezone")).(*time.Location)
+	tz, _ := ctx.Value("timezone").(*time.Location)
 
 	switch v := in.(type) {
 	case *time.Time:

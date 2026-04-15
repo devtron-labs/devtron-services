@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/util"
-
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/filemode"
@@ -80,8 +79,6 @@ func (w *Worktree) PullContext(ctx context.Context, o *PullOptions) error {
 		Progress:        o.Progress,
 		Force:           o.Force,
 		InsecureSkipTLS: o.InsecureSkipTLS,
-		ClientCert:      o.ClientCert,
-		ClientKey:       o.ClientKey,
 		CABundle:        o.CABundle,
 		ProxyOptions:    o.ProxyOptions,
 	})
@@ -310,20 +307,13 @@ func (w *Worktree) ResetSparsely(opts *ResetOptions, dirs []string) error {
 		return err
 	}
 
-	var removedFiles []string
 	if opts.Mode == MixedReset || opts.Mode == MergeReset || opts.Mode == HardReset {
-		if removedFiles, err = w.resetIndex(t, dirs, opts.Files); err != nil {
+		if err := w.resetIndex(t, dirs, opts.Files); err != nil {
 			return err
 		}
 	}
 
-	if opts.Mode == MergeReset && len(removedFiles) > 0 {
-		if err := w.resetWorktree(t, removedFiles); err != nil {
-			return err
-		}
-	}
-
-	if opts.Mode == HardReset {
+	if opts.Mode == MergeReset || opts.Mode == HardReset {
 		if err := w.resetWorktree(t, opts.Files); err != nil {
 			return err
 		}
@@ -372,24 +362,23 @@ func (w *Worktree) Reset(opts *ResetOptions) error {
 	return w.ResetSparsely(opts, nil)
 }
 
-func (w *Worktree) resetIndex(t *object.Tree, dirs []string, files []string) ([]string, error) {
+func (w *Worktree) resetIndex(t *object.Tree, dirs []string, files []string) error {
 	idx, err := w.r.Storer.Index()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	b := newIndexBuilder(idx)
 
 	changes, err := w.diffTreeWithStaging(t, true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var removedFiles []string
 	for _, ch := range changes {
 		a, err := ch.Action()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		var name string
@@ -400,7 +389,7 @@ func (w *Worktree) resetIndex(t *object.Tree, dirs []string, files []string) ([]
 			name = ch.To.String()
 			e, err = t.FindEntry(name)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		case merkletrie.Delete:
 			name = ch.From.String()
@@ -414,7 +403,6 @@ func (w *Worktree) resetIndex(t *object.Tree, dirs []string, files []string) ([]
 		}
 
 		b.Remove(name)
-		removedFiles = append(removedFiles, name)
 		if e == nil {
 			continue
 		}
@@ -433,7 +421,7 @@ func (w *Worktree) resetIndex(t *object.Tree, dirs []string, files []string) ([]
 		idx.SkipUnless(dirs)
 	}
 
-	return removedFiles, w.r.Storer.SetIndex(idx)
+	return w.r.Storer.SetIndex(idx)
 }
 
 func inFiles(files []string, v string) bool {

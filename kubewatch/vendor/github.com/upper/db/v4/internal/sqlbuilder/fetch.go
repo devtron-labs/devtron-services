@@ -26,7 +26,6 @@ import (
 
 	"database/sql"
 	"database/sql/driver"
-
 	db "github.com/upper/db/v4"
 	"github.com/upper/db/v4/internal/reflectx"
 )

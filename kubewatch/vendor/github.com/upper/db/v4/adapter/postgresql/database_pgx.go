@@ -27,11 +27,9 @@ package postgresql
 import (
 	"context"
 	"database/sql"
-	"time"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/upper/db/v4"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/upper/db/v4/internal/sqladapter"
+	"time"
 )
 
 func (*database) OpenDSN(sess sqladapter.Session, dsn string) (*sql.DB, error) {
@@ -39,16 +37,10 @@ func (*database) OpenDSN(sess sqladapter.Session, dsn string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if tz := connURL.Options["timezone"]; tz != "" {
-		loc, err := time.LoadLocation(tz)
-		if err != nil {
-			return nil, err
-		}
-
-		ctx := context.WithValue(sess.Context(), db.ContextKey("timezone"), loc)
+		loc, _ := time.LoadLocation(tz)
+		ctx := context.WithValue(sess.Context(), "timezone", loc)
 		sess.SetContext(ctx)
 	}
-
 	return sql.Open("pgx", dsn)
 }

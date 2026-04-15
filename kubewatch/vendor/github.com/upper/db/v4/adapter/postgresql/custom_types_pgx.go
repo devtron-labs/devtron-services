@@ -1,4 +1,3 @@
-//go:build !pq
 // +build !pq
 
 // Copyright (c) 2012-present The upper.io/db authors. All rights reserved.

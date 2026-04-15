@@ -416,7 +416,7 @@ func parseHstore(s string) (k []string, v []Text, err error) {
 				case end:
 					err = errors.New("Found EOS after ',', expecting space")
 				case (unicode.IsSpace(r)):
-					p.Consume()
+					r, end = p.Consume()
 					state = hsKey
 				default:
 					err = fmt.Errorf("Invalid character '%c' after ', ', expecting \"", r)

@@ -223,6 +223,8 @@ type session struct {
 
 	connURL db.ConnectionURL
 
+	builder db.SQL
+
 	lookupNameOnce sync.Once
 	name           string
 
@@ -1029,7 +1031,7 @@ func ReplaceWithDollarSign(buf []byte) []byte {
 		i = i + 1
 	}
 
-	out = append(out, buf...)
+	out = append(out, buf[:len(buf)]...)
 	buf = nil
 
 	return out

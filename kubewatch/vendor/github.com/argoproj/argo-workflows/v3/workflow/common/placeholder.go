@@ -1,8 +1,11 @@
 package common
 
-import "github.com/argoproj/argo-workflows/v3/util/template"
+import (
+	"fmt"
+	"strings"
+)
 
-// placeholderGenerator generates dynamically-indexed placeholder strings.
+// placeholderGenerator is to generate dynamically-generated placeholder strings.
 type placeholderGenerator struct {
 	index int
 }
@@ -12,13 +15,13 @@ func NewPlaceholderGenerator() *placeholderGenerator {
 	return &placeholderGenerator{}
 }
 
-// NextPlaceholder returns an arbitrary string to perform mock substitution of variables.
+// NextPlaceholder returns an arbitrary string to perform mock substitution of variables
 func (p *placeholderGenerator) NextPlaceholder() string {
-	s := template.NewPlaceholder(p.index)
+	s := fmt.Sprintf("placeholder-%d", p.index)
 	p.index = p.index + 1
 	return s
 }
 
 func (p *placeholderGenerator) IsPlaceholder(s string) bool {
-	return template.IsPlaceholder(s)
+	return strings.HasPrefix(s, "placeholder-")
 }

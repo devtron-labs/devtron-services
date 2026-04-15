@@ -437,7 +437,7 @@ func prepareQueryForDisplay(in string) string {
 		}
 	}
 	if !whitespace {
-		out = append(out, in[offset:]...)
+		out = append(out, in[offset:len(in)]...)
 	}
 	return string(out)
 }

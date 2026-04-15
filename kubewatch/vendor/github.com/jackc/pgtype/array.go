@@ -285,7 +285,7 @@ func arrayParseQuotedValue(buf *bytes.Buffer) (string, bool, error) {
 				return "", false, err
 			}
 		case '"':
-			_, _, err = buf.ReadRune()
+			r, _, err = buf.ReadRune()
 			if err != nil {
 				return "", false, err
 			}
