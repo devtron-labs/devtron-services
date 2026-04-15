@@ -1,9 +1,8 @@
 package exql
 
 import (
-	"strings"
-
 	"github.com/upper/db/v4/internal/cache"
+	"strings"
 )
 
 // ColumnValue represents a bundle between a column and a corresponding value.

@@ -202,9 +202,8 @@ func (dst *JSON) UnmarshalJSON(b []byte) error {
 	if b == nil || string(b) == "null" {
 		*dst = JSON{Status: Null}
 	} else {
-		bCopy := make([]byte, len(b))
-		copy(bCopy, b)
-		*dst = JSON{Bytes: bCopy, Status: Present}
+		*dst = JSON{Bytes: b, Status: Present}
 	}
 	return nil
+
 }

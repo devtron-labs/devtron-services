@@ -1,4 +1,3 @@
-//go:build pq
 // +build pq
 
 package postgresql

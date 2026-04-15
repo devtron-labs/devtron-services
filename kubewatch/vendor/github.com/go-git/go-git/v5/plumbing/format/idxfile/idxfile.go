@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"sort"
-	"sync"
 
 	encbin "encoding/binary"
 
@@ -58,9 +57,8 @@ type MemoryIndex struct {
 	PackfileChecksum [hash.Size]byte
 	IdxChecksum      [hash.Size]byte
 
-	offsetHash      map[int64]plumbing.Hash
-	offsetBuildOnce sync.Once
-	mu              sync.RWMutex
+	offsetHash       map[int64]plumbing.Hash
+	offsetHashIsFull bool
 }
 
 var _ Index = (*MemoryIndex)(nil)
@@ -128,13 +126,13 @@ func (idx *MemoryIndex) FindOffset(h plumbing.Hash) (int64, error) {
 
 	offset := idx.getOffset(k, i)
 
-	// Save the offset for reverse lookup
-	idx.mu.Lock()
-	if idx.offsetHash == nil {
-		idx.offsetHash = make(map[int64]plumbing.Hash)
+	if !idx.offsetHashIsFull {
+		// Save the offset for reverse lookup
+		if idx.offsetHash == nil {
+			idx.offsetHash = make(map[int64]plumbing.Hash)
+		}
+		idx.offsetHash[int64(offset)] = h
 	}
-	idx.offsetHash[int64(offset)] = h
-	idx.mu.Unlock()
 
 	return int64(offset), nil
 }
@@ -175,17 +173,20 @@ func (idx *MemoryIndex) FindHash(o int64) (plumbing.Hash, error) {
 	var hash plumbing.Hash
 	var ok bool
 
-	var genErr error
-	idx.offsetBuildOnce.Do(func() {
-		genErr = idx.genOffsetHash()
-	})
-	if genErr != nil {
-		return plumbing.ZeroHash, genErr
+	if idx.offsetHash != nil {
+		if hash, ok = idx.offsetHash[o]; ok {
+			return hash, nil
+		}
 	}
 
-	idx.mu.RLock()
-	hash, ok = idx.offsetHash[o]
-	idx.mu.RUnlock()
+	// Lazily generate the reverse offset/hash map if required.
+	if !idx.offsetHashIsFull || idx.offsetHash == nil {
+		if err := idx.genOffsetHash(); err != nil {
+			return plumbing.ZeroHash, err
+		}
+
+		hash, ok = idx.offsetHash[o]
+	}
 
 	if !ok {
 		return plumbing.ZeroHash, plumbing.ErrObjectNotFound
@@ -201,7 +202,8 @@ func (idx *MemoryIndex) genOffsetHash() error {
 		return err
 	}
 
-	offsetHash := make(map[int64]plumbing.Hash, count)
+	idx.offsetHash = make(map[int64]plumbing.Hash, count)
+	idx.offsetHashIsFull = true
 
 	var hash plumbing.Hash
 	i := uint32(0)
@@ -210,14 +212,10 @@ func (idx *MemoryIndex) genOffsetHash() error {
 		for secondLevel := uint32(0); i < fanoutValue; i++ {
 			copy(hash[:], idx.Names[mappedFirstLevel][secondLevel*objectIDLength:])
 			offset := int64(idx.getOffset(mappedFirstLevel, int(secondLevel)))
-			offsetHash[offset] = hash
+			idx.offsetHash[offset] = hash
 			secondLevel++
 		}
 	}
-
-	idx.mu.Lock()
-	idx.offsetHash = offsetHash
-	idx.mu.Unlock()
 
 	return nil
 }

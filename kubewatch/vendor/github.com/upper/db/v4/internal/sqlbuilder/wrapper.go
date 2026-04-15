@@ -77,7 +77,7 @@ func (d *dbAdapter) Open(conn db.ConnectionURL) (db.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return sess, nil
+	return sess.(db.Session), nil
 }
 
 func NewCompatAdapter(adapter Adapter) db.Adapter {
