@@ -2,7 +2,7 @@ module github.com/devtron-labs/ci-runner
 
 go 1.25.0
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415065843-95488378c093
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415110935-98f73d2be609
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible

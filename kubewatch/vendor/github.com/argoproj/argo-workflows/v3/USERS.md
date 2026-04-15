@@ -7,9 +7,6 @@ User community survey results are available: [2023](https://blog.argoproj.io/arg
 
 As the Argo Community grows, we'd like to keep track of our users. Please send a PR with your organization or project name in the following sections.
 
-Argo Workflows is seeking more community involvement and ultimately more [Reviewers and Approvers](https://github.com/argoproj/argoproj/blob/main/community/membership.md) to help keep it viable. 
-See [Sustainability Effort](https://github.com/argoproj/argo-workflows/blob/main/community/sustainability_effort.md) for more information. 
-
 ### Organizations Using Argo
 
 Currently, the following organizations are **officially** using Argo Workflows:
@@ -29,6 +26,7 @@ Currently, the following organizations are **officially** using Argo Workflows:
 1. [Anova](https://www.anova.com/)
 1. [Ant Group](https://www.antgroup.com/)
 1. [AppDirect](https://www.appdirect.com/)
+1. [Arcadia](https://www.arcadia.io)
 1. [Arabesque](https://www.arabesque.com/)
 1. [Argonaut](https://www.argonaut.dev/)
 1. [ArthurAI](https://arthur.ai/)
@@ -73,9 +71,11 @@ Currently, the following organizations are **officially** using Argo Workflows:
 1. [DataRobot](https://www.datarobot.com/)
 1. [DataStax](https://www.datastax.com/)
 1. [DDEV](https://www.ddev.com/)
+1. [Deutsche Telekom AG](https://telekom.com)
 1. [DevSamurai](https://www.devsamurai.com/)
 1. [Devtron Labs](https://github.com/devtron-labs/devtron)
 1. [DLR](https://www.dlr.de/eoc/)
+2. [DocNetwork](https://docnetwork.org/)
 1. [DP Technology](https://www.dp.tech/)
 1. [Dyno Therapeutics](https://dynotx.com)
 1. [EBSCO Information Services](https://www.ebsco.com/)
@@ -155,6 +155,7 @@ Currently, the following organizations are **officially** using Argo Workflows:
 1. [Polarpoint.io](https://polarpoint.io)
 1. [Pollination](https://pollination.cloud)
 1. [Preferred Networks](https://www.preferred-networks.jp/en/)
+1. [Priceline.com](https://www.priceline.com)
 1. [Procore](https://www.procore.com)
 1. [Promaton](https://www.promaton.com/)
 1. [Prudential](https://www.prudential.com.sg/)
@@ -191,6 +192,7 @@ Currently, the following organizations are **officially** using Argo Workflows:
 1. [Styra](https://www.styra.com/)
 1. [Splunk](https://www.splunk.com/)
 1. [Sutpc](http://www.sutpc.com/)
+1. [Swissblock Technologies](https://swissblock.net/)
 1. [Tessell](https://www.tessell.com/)
 1. [Threekit](https://www.threekit.com/)
 1. [Tiger Analytics](https://www.tigeranalytics.com/)

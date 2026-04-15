@@ -1,8 +1,11 @@
 package sqldb
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -15,27 +18,33 @@ import (
 
 	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	sutils "github.com/argoproj/argo-workflows/v3/server/utils"
+	"github.com/argoproj/argo-workflows/v3/util/env"
 	"github.com/argoproj/argo-workflows/v3/util/instanceid"
+	"github.com/argoproj/argo-workflows/v3/util/sqldb"
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
 )
 
 const (
-	archiveTableName       = "argo_archived_workflows"
-	archiveLabelsTableName = archiveTableName + "_labels"
+	archiveTableName        = "argo_archived_workflows"
+	archiveLabelsTableName  = archiveTableName + "_labels"
+	postgresNullReplacement = "ARGO_POSTGRES_NULL_REPLACEMENT"
+	// Default timeout in seconds for database queries in GetWorkflowForEstimator to prevent blocking workflow execution
+	// Can be overridden by WORKFLOW_ESTIMATION_DB_QUERY_TIMEOUT_SECONDS environment variable
+	defaultEstimationDBQueryTimeoutSeconds = 5
 )
 
 type archivedWorkflowMetadata struct {
-	ClusterName string             `db:"clustername"`
-	InstanceID  string             `db:"instanceid"`
-	UID         string             `db:"uid"`
-	Name        string             `db:"name"`
-	Namespace   string             `db:"namespace"`
-	Phase       wfv1.WorkflowPhase `db:"phase"`
-	StartedAt   time.Time          `db:"startedat"`
-	FinishedAt  time.Time          `db:"finishedat"`
+	ClusterName       string             `db:"clustername"`
+	InstanceID        string             `db:"instanceid"`
+	UID               string             `db:"uid"`
+	Name              string             `db:"name"`
+	Namespace         string             `db:"namespace"`
+	Phase             wfv1.WorkflowPhase `db:"phase"`
+	StartedAt         time.Time          `db:"startedat"`
+	FinishedAt        time.Time          `db:"finishedat"`
+	CreationTimestamp time.Time          `db:"creationtimestamp,omitempty"`
 
 	// The following fields are not stored as columns in the database, and they are stored as JSON strings in the workflow column, and will be loaded from there.
-	CreationTimestamp string `db:"creationtimestamp,omitempty"`
 	Labels            string `db:"labels,omitempty"`
 	Annotations       string `db:"annotations,omitempty"`
 	Suspend           *bool  `db:"suspend,omitempty"`
@@ -83,7 +92,7 @@ type workflowArchive struct {
 	clusterName       string
 	managedNamespace  string
 	instanceIDService instanceid.Service
-	dbType            dbType
+	dbType            sqldb.DBType
 }
 
 func (r *workflowArchive) IsEnabled() bool {
@@ -92,7 +101,7 @@ func (r *workflowArchive) IsEnabled() bool {
 
 // NewWorkflowArchive returns a new workflowArchive
 func NewWorkflowArchive(session db.Session, clusterName, managedNamespace string, instanceIDService instanceid.Service) WorkflowArchive {
-	return &workflowArchive{session: session, clusterName: clusterName, managedNamespace: managedNamespace, instanceIDService: instanceIDService, dbType: dbTypeFor(session)}
+	return &workflowArchive{session: session, clusterName: clusterName, managedNamespace: managedNamespace, instanceIDService: instanceIDService, dbType: sqldb.DBTypeFor(session)}
 }
 
 func (r *workflowArchive) ArchiveWorkflow(wf *wfv1.Workflow) error {
@@ -102,6 +111,9 @@ func (r *workflowArchive) ArchiveWorkflow(wf *wfv1.Workflow) error {
 	workflow, err := json.Marshal(wf)
 	if err != nil {
 		return err
+	}
+	if r.dbType == sqldb.Postgres {
+		workflow = bytes.ReplaceAll(workflow, []byte("\\u0000"), []byte(postgresNullReplacement))
 	}
 	return r.session.Tx(func(sess db.Session) error {
 		_, err := sess.SQL().
@@ -115,14 +127,15 @@ func (r *workflowArchive) ArchiveWorkflow(wf *wfv1.Workflow) error {
 		_, err = sess.Collection(archiveTableName).
 			Insert(&archivedWorkflowRecord{
 				archivedWorkflowMetadata: archivedWorkflowMetadata{
-					ClusterName: r.clusterName,
-					InstanceID:  r.instanceIDService.InstanceID(),
-					UID:         string(wf.UID),
-					Name:        wf.Name,
-					Namespace:   wf.Namespace,
-					Phase:       wf.Status.Phase,
-					StartedAt:   wf.Status.StartedAt.Time,
-					FinishedAt:  wf.Status.FinishedAt.Time,
+					ClusterName:       r.clusterName,
+					InstanceID:        r.instanceIDService.InstanceID(),
+					UID:               string(wf.UID),
+					Name:              wf.Name,
+					Namespace:         wf.Namespace,
+					Phase:             wf.Status.Phase,
+					StartedAt:         wf.Status.StartedAt.Time,
+					FinishedAt:        wf.Status.FinishedAt.Time,
+					CreationTimestamp: wf.CreationTimestamp.Time,
 				},
 				Workflow: string(workflow),
 			})
@@ -157,46 +170,67 @@ func (r *workflowArchive) ArchiveWorkflow(wf *wfv1.Workflow) error {
 
 func (r *workflowArchive) ListWorkflows(options sutils.ListOptions) (wfv1.Workflows, error) {
 	var archivedWfs []archivedWorkflowMetadata
+	var baseSelector = r.session.SQL().Select("name", "namespace", "uid", "phase", "startedat", "finishedat", "creationtimestamp")
 
-	selectQuery, err := selectArchivedWorkflowQuery(r.dbType)
-	if err != nil {
-		return nil, err
-	}
+	switch r.dbType {
+	case sqldb.MySQL:
+		selectQuery := baseSelector.
+			Columns(
+				db.Raw("coalesce(workflow->'$.metadata.labels', '{}') as labels"),
+				db.Raw("coalesce(workflow->'$.metadata.annotations', '{}') as annotations"),
+				db.Raw("coalesce(workflow->>'$.status.progress', '') as progress"),
+				db.Raw("workflow->>'$.spec.suspend'"),
+				db.Raw("coalesce(workflow->>'$.status.message', '') as message"),
+				db.Raw("coalesce(workflow->>'$.status.estimatedDuration', '0') as estimatedduration"),
+				db.Raw("coalesce(workflow->'$.status.resourcesDuration', '{}') as resourcesduration"),
+			).
+			From(archiveTableName).
+			Where(r.clusterManagedNamespaceAndInstanceID())
 
-	subSelector := r.session.SQL().
-		Select(db.Raw("uid")).
-		From(archiveTableName).
-		Where(r.clusterManagedNamespaceAndInstanceID())
+		selectQuery, err := BuildArchivedWorkflowSelector(selectQuery, archiveTableName, archiveLabelsTableName, r.dbType, options, false)
+		if err != nil {
+			return nil, err
+		}
 
-	subSelector, err = BuildArchivedWorkflowSelector(subSelector, archiveTableName, archiveLabelsTableName, r.dbType, options, false)
-	if err != nil {
-		return nil, err
-	}
+		err = selectQuery.All(&archivedWfs)
+		if err != nil {
+			return nil, err
+		}
+	case sqldb.Postgres:
+		// Use a common table expression to reduce detoast overhead for the "workflow" column:
+		// https://github.com/argoproj/argo-workflows/issues/13601#issuecomment-2420499551
+		cteSelector := baseSelector.
+			Columns(
+				db.Raw("coalesce(workflow->'metadata', '{}') as metadata"),
+				db.Raw("coalesce(workflow->'status', '{}') as status"),
+				db.Raw("workflow->'spec'->>'suspend' as suspend"),
+			).
+			From(archiveTableName).
+			Where(r.clusterManagedNamespaceAndInstanceID())
 
-	if r.dbType == MySQL {
-		// workaround for mysql 42000 error (Unsupported subquery syntax):
-		//
-		//     Error 1235 (42000): This version of MySQL doesn't yet support 'LIMIT \u0026 IN/ALL/ANY/SOME subquery'
-		//
-		// more context:
-		// * https://dev.mysql.com/doc/refman/8.0/en/subquery-errors.html
-		// * https://dev.to/gkoniaris/limit-mysql-subquery-results-inside-a-where-in-clause-using-laravel-s-eloquent-orm-26en
-		subSelector = r.session.SQL().Select(db.Raw("*")).From(subSelector).As("x")
-	}
+		cteSelector, err := BuildArchivedWorkflowSelector(cteSelector, archiveTableName, archiveLabelsTableName, r.dbType, options, false)
+		if err != nil {
+			return nil, err
+		}
 
-	// why a subquery? the json unmarshal triggers for every row in the filter
-	// query. by filtering on uid first, we delay json parsing until a single
-	// row, speeding up the query(e.g. up to 257 times faster for some
-	// deployments).
-	//
-	// more context: https://github.com/argoproj/argo-workflows/pull/13566
-	selector := r.session.SQL().Select(selectQuery).From(archiveTableName).Where(
-		r.clusterManagedNamespaceAndInstanceID().And(db.Cond{"uid IN": subSelector}),
-	)
+		selectQuery := baseSelector.Columns(
+			db.Raw("coalesce(metadata->>'labels', '{}') as labels"),
+			db.Raw("coalesce(metadata->>'annotations', '{}') as annotations"),
+			db.Raw("coalesce(status->>'progress', '') as progress"),
+			"suspend",
+			db.Raw("coalesce(status->>'message', '') as message"),
+			db.Raw("coalesce(status->>'estimatedDuration', '0') as estimatedduration"),
+			db.Raw("coalesce(status->>'resourcesDuration', '{}') as resourcesduration"),
+		)
 
-	err = selector.All(&archivedWfs)
-	if err != nil {
-		return nil, err
+		err = r.session.SQL().
+			Iterator("WITH workflows AS ? ?", cteSelector, selectQuery.From("workflows")).
+			All(&archivedWfs)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported db type %s", r.dbType)
 	}
 
 	wfs := make(wfv1.Workflows, len(archivedWfs))
@@ -213,10 +247,7 @@ func (r *workflowArchive) ListWorkflows(options sutils.ListOptions) (wfv1.Workfl
 			return nil, err
 		}
 
-		t, err := time.Parse(time.RFC3339, md.CreationTimestamp)
-		if err != nil {
-			return nil, err
-		}
+		t := md.CreationTimestamp
 
 		resourcesDuration := make(map[corev1.ResourceName]wfv1.ResourceDuration)
 		if err := json.Unmarshal([]byte(md.ResourcesDuration), &resourcesDuration); err != nil {
@@ -284,6 +315,20 @@ func startedAtFromClause(from time.Time) db.Cond {
 	return db.Cond{}
 }
 
+func createdAfterClause(createdAfter time.Time) db.Cond {
+	if !createdAfter.IsZero() {
+		return db.Cond{"creationtimestamp >=": createdAfter}
+	}
+	return db.Cond{}
+}
+
+func finishedBeforeClause(finishedBefore time.Time) db.Cond {
+	if !finishedBefore.IsZero() {
+		return db.Cond{"finishedat <=": finishedBefore}
+	}
+	return db.Cond{}
+}
+
 func startedAtToClause(to time.Time) db.Cond {
 	if !to.IsZero() {
 		return db.Cond{"startedat <=": to}
@@ -344,7 +389,11 @@ func (r *workflowArchive) GetWorkflow(uid string, namespace string, name string)
 			}
 			num := int64(total.Total)
 			if num > 1 {
-				return nil, fmt.Errorf("found %d archived workflows with namespace/name: %s/%s", num, namespace, name)
+				log.WithFields(log.Fields{
+					"namespace": namespace,
+					"name":      name,
+					"num":       num,
+				}).Debug("returning latest of archived workflows")
 			}
 			err = r.session.SQL().
 				Select("workflow").
@@ -352,6 +401,7 @@ func (r *workflowArchive) GetWorkflow(uid string, namespace string, name string)
 				Where(r.clusterManagedNamespaceAndInstanceID()).
 				And(namespaceEqual(namespace)).
 				And(nameEqual(name)).
+				OrderBy("-startedat").
 				One(archivedWf)
 		} else {
 			return nil, sutils.ToStatusError(fmt.Errorf("both name and namespace are required if uid is not specified"), codes.InvalidArgument)
@@ -364,6 +414,9 @@ func (r *workflowArchive) GetWorkflow(uid string, namespace string, name string)
 		return nil, err
 	}
 	var wf *wfv1.Workflow
+	if r.dbType == sqldb.Postgres {
+		archivedWf.Workflow = strings.ReplaceAll(archivedWf.Workflow, postgresNullReplacement, "\\u0000")
+	}
 	err = json.Unmarshal([]byte(archivedWf.Workflow), &wf)
 	if err != nil {
 		return nil, err
@@ -374,7 +427,13 @@ func (r *workflowArchive) GetWorkflow(uid string, namespace string, name string)
 }
 
 func (r *workflowArchive) GetWorkflowForEstimator(namespace string, requirements []labels.Requirement) (*wfv1.Workflow, error) {
-	selector := r.session.SQL().
+	// Add timeout to database query to prevent blocking workflow execution
+	// if database is slow or locked.
+	queryTimeoutSeconds := env.LookupEnvIntOr("WORKFLOW_ESTIMATION_DB_QUERY_TIMEOUT_SECONDS", defaultEstimationDBQueryTimeoutSeconds)
+	queryCtx, cancel := context.WithTimeout(context.Background(), time.Duration(queryTimeoutSeconds)*time.Second)
+	defer cancel()
+
+	selector := r.session.WithContext(queryCtx).SQL().
 		Select("name", "namespace", "uid", "startedat", "finishedat").
 		From(archiveTableName).
 		Where(r.clusterManagedNamespaceAndInstanceID()).
@@ -445,14 +504,4 @@ func (r *workflowArchive) DeleteExpiredWorkflows(ttl time.Duration) error {
 	}
 	log.WithFields(log.Fields{"rowsAffected": rowsAffected}).Info("Deleted archived workflows")
 	return nil
-}
-
-func selectArchivedWorkflowQuery(t dbType) (*db.RawExpr, error) {
-	switch t {
-	case MySQL:
-		return db.Raw("name, namespace, uid, phase, startedat, finishedat, coalesce(JSON_EXTRACT(workflow,'$.metadata.labels'), '{}') as labels,coalesce(JSON_EXTRACT(workflow,'$.metadata.annotations'), '{}') as annotations, coalesce(JSON_UNQUOTE(JSON_EXTRACT(workflow,'$.status.progress')), '') as progress, coalesce(JSON_UNQUOTE(JSON_EXTRACT(workflow,'$.metadata.creationTimestamp')), '') as creationtimestamp, JSON_UNQUOTE(JSON_EXTRACT(workflow,'$.spec.suspend')) as suspend, coalesce(JSON_UNQUOTE(JSON_EXTRACT(workflow,'$.status.message')), '') as message, coalesce(JSON_UNQUOTE(JSON_EXTRACT(workflow,'$.status.estimatedDuration')), '0') as estimatedduration, coalesce(JSON_EXTRACT(workflow,'$.status.resourcesDuration'), '{}') as resourcesduration"), nil
-	case Postgres:
-		return db.Raw("name, namespace, uid, phase, startedat, finishedat, coalesce(workflow->'metadata'->>'labels', '{}') as labels, coalesce(workflow->'metadata'->>'annotations', '{}') as annotations, coalesce(workflow->'status'->>'progress', '') as progress, coalesce(workflow->'metadata'->>'creationTimestamp', '') as creationtimestamp, workflow->'spec'->>'suspend' as suspend, coalesce(workflow->'status'->>'message', '') as message, coalesce(workflow->'status'->>'estimatedDuration', '0') as estimatedduration, coalesce(workflow->'status'->>'resourcesDuration', '{}') as resourcesduration"), nil
-	}
-	return nil, fmt.Errorf("unsupported db type %s", t)
 }
