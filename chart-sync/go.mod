@@ -1,8 +1,6 @@
 module github.com/devtron-labs/chart-sync
 
-go 1.24.0
-
-toolchain go1.24.3
+go 1.25.0
 
 replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415070948-6353c1c123c3
 
