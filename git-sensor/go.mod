@@ -1,10 +1,8 @@
 module github.com/devtron-labs/git-sensor
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.3
-
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415070948-6353c1c123c3
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415113300-e49850611af6
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
@@ -25,7 +23,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.9.3
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.39.0
+	golang.org/x/sys v0.42.0
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/src-d/go-billy.v4 v4.3.2

@@ -74,8 +74,8 @@ github.com/cespare/xxhash/v2
 github.com/coreos/clair/api/v3/clairpb
 github.com/coreos/clair/database
 github.com/coreos/clair/ext/versionfmt
-# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415070948-6353c1c123c3
-## explicit; go 1.24.0
+# github.com/devtron-labs/common-lib v0.19.0 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415113300-e49850611af6
+## explicit; go 1.25.0
 github.com/devtron-labs/common-lib/async
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
@@ -298,8 +298,8 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.19.0
 ## explicit; go 1.24.0
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.39.0
-## explicit; go 1.24.0
+# golang.org/x/sys v0.42.0
+## explicit; go 1.25.0
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/unix
@@ -458,4 +458,4 @@ google.golang.org/protobuf/types/known/wrapperspb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415070948-6353c1c123c3
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415113300-e49850611af6

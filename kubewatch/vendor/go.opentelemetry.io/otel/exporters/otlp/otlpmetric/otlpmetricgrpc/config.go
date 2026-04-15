@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 
@@ -77,8 +66,9 @@ func WithInsecure() Option {
 //
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
 // environment variable is set, and this option is not passed, that variable
-// value will be used. If both are set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
-// will take precedence.
+// value will be used. If both environment variables are set,
+// OTEL_EXPORTER_OTLP_METRICS_ENDPOINT will take precedence. If an environment
+// variable is set, and this option is passed, this option will take precedence.
 //
 // If both this option and WithEndpointURL are used, the last used option will
 // take precedence.
@@ -95,8 +85,9 @@ func WithEndpoint(endpoint string) Option {
 //
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
 // environment variable is set, and this option is not passed, that variable
-// value will be used. If both are set, OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
-// will take precedence.
+// value will be used. If both environment variables are set,
+// OTEL_EXPORTER_OTLP_METRICS_ENDPOINT will take precedence. If an environment
+// variable is set, and this option is passed, this option will take precedence.
 //
 // If both this option and WithEndpoint are used, the last used option will
 // take precedence.
@@ -196,6 +187,8 @@ func WithServiceConfig(serviceConfig string) Option {
 // gRPC connection. The options here are appended to the internal grpc.DialOptions
 // used so they will take precedence over any other internal grpc.DialOptions
 // they might conflict with.
+// The [grpc.WithBlock], [grpc.WithTimeout], and [grpc.WithReturnConnectionError]
+// grpc.DialOptions are ignored.
 //
 // This option has no effect if WithGRPCConn is used.
 func WithDialOption(opts ...grpc.DialOption) Option {
@@ -245,8 +238,9 @@ func WithTimeout(duration time.Duration) Option {
 // explicitly returns a backoff time in the response, that time will take
 // precedence over these settings.
 //
-// These settings do not define any network retry strategy. That is entirely
-// handled by the gRPC ClientConn.
+// These settings define the retry strategy implemented by the exporter.
+// These settings do not define any network retry strategy.
+// That is handled by the gRPC ClientConn.
 //
 // If unset, the default retry policy will be used. It will retry the export
 // 5 seconds after receiving a retryable error and increase exponentially
