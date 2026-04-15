@@ -1,6 +1,7 @@
 # markdown-spellcheck dictionary
 000s
 0s
+100Gi
 100Mi
 100s
 10h
@@ -11,6 +12,7 @@
 1Mi
 1h
 1m
+200Ki
 2Gi
 2h
 30s
@@ -23,6 +25,7 @@
 5xx
 8Ki
 90m
+@filename
 Alexandre
 Alibaba
 Ang
@@ -38,12 +41,15 @@ CloudSQL
 ClusterRoleBinding
 ClusterRoles
 ClusterWorkflowTemplate
+ClusterWorkflowTemplates
 Codespaces
 ConfigMap
 ConfigMaps
+ContainerSet
 Couler
 CronWorkflow
 CronWorkflows
+CustomResource
 DataDog
 Dataflow
 DevOps
@@ -100,7 +106,9 @@ PDBs
 PProf
 PVCs
 Peixuan
+PersistentVolumeClaims
 Ploomber
+PostgreSQL
 Postgres
 PriorityClass
 RCs
@@ -116,19 +124,21 @@ Snyk
 Sumit
 Tekton
 Traefik
-Triaging
 TripAdvisor
 UI
+UTF-8
 VSCode
 Valasek
 Webhooks
 Welch
+WorkflowEventBinding
 WorkflowTemplate
 WorkflowTemplates
 a.m.
 anded
 apis
 architecting
+arg
 argo
 argoproj
 args
@@ -140,6 +150,7 @@ boolean
 booleans
 buildkit
 changelog
+codebase
 config
 cpu
 cron
@@ -158,6 +169,7 @@ env
 errored
 expr
 fibonacci
+filename
 finalizer
 gitops
 goroutine
@@ -181,6 +193,7 @@ kubelet
 kubernetes
 liveness
 localhost
+marshaled
 maxFailures
 maxSuccess
 md
@@ -201,7 +214,11 @@ parameterizing
 params
 pprof
 pre-commit
+programmatically
+proxying
+pytorch
 qps
+ray
 rc2
 repo
 roadmap
@@ -213,9 +230,11 @@ shortcodes
 stateful
 stderr
 symlinks
+syscall
 temporality
 tolerations
 triaged
+triaging
 un-reconciled
 v1
 v1.0
@@ -251,6 +270,7 @@ v3.4.
 v3.4.4
 v3.5
 v3.6
+v3.7
 validator
 vendored
 versioned
@@ -258,6 +278,7 @@ versioning
 webHDFS
 webhook
 webhooks
+webpack-dev-server
 workflow-controller-configmap
 workqueue
 yaml
