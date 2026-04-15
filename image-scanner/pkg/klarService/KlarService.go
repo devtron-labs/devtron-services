@@ -18,9 +18,10 @@ package klarService
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	bean2 "github.com/devtron-labs/common-lib/imageScan/bean"
@@ -29,10 +30,13 @@ import (
 	"github.com/devtron-labs/image-scanner/pkg/security"
 	"github.com/devtron-labs/image-scanner/pkg/sql/bean"
 	"github.com/devtron-labs/image-scanner/pkg/sql/repository"
-	"strings"
 
 	"errors"
+
+	"time"
+
 	"github.com/caarlos0/env/v6"
+
 	/*"github.com/devtron-labs/image-scanner/client"*/
 	/*"github.com/devtron-labs/image-scanner/client"*/
 	"github.com/devtron-labs/image-scanner/pkg/grafeasService"
@@ -40,7 +44,6 @@ import (
 	"github.com/optiopay/klar/docker"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/google"
-	"time"
 )
 
 type KlarConfig struct {
@@ -114,23 +117,21 @@ func (impl *KlarServiceImpl) Process(scanEvent *bean2.ImageScanEvent, executionH
 	tokenAddr := &tokenData
 	if dockerRegistry.RegistryType == repository.REGISTRYTYPE_ECR {
 		accessKey, secretKey := dockerRegistry.AWSAccessKeyId, dockerRegistry.AWSSecretAccessKey.String()
-		var creds *credentials.Credentials
-		if len(dockerRegistry.AWSAccessKeyId) == 0 || len(dockerRegistry.AWSSecretAccessKey) == 0 {
-			sess, err := session.NewSession(&aws.Config{
+		var sess *session.Session
+		var err error
+		if len(accessKey) == 0 || len(secretKey) == 0 {
+			// Case 1: IAM role — use default credential chain (IRSA, instance profile, task role, env vars)
+			sess, err = session.NewSession(&aws.Config{
 				Region: &dockerRegistry.AWSRegion,
 			})
-			if err != nil {
-				impl.logger.Errorw("error in starting aws new session", "err", err)
-				return nil, err
-			}
-			creds = ec2rolecreds.NewCredentials(sess)
 		} else {
-			creds = credentials.NewStaticCredentials(accessKey, secretKey, "")
+			// Case 2: Static credentials
+			creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+			sess, err = session.NewSession(&aws.Config{
+				Region:      &dockerRegistry.AWSRegion,
+				Credentials: creds,
+			})
 		}
-		sess, err := session.NewSession(&aws.Config{
-			Region:      &dockerRegistry.AWSRegion,
-			Credentials: creds,
-		})
 		if err != nil {
 			impl.logger.Errorw("error in starting aws new session", "err", err)
 			return nil, err

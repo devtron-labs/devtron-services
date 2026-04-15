@@ -119,7 +119,6 @@ tasks:
     - "8080"
     watch:
     - package.json
-    - webpack.config.js
     workingDir: ui
   ui-deps:
     command:

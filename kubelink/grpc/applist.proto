@@ -480,6 +480,7 @@ message RegistryCredential {
   string RegistryName = 12;
   string RegistryCertificate = 13;
   string CredentialsType = 14;
+  string AssumeRoleArn = 15;
 }
 
 enum RemoteConnectionMethod {

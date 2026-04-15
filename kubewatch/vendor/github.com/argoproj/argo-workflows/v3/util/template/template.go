@@ -3,8 +3,6 @@ package template
 import (
 	"bytes"
 	"io"
-	"regexp"
-	"strings"
 
 	"github.com/valyala/fasttemplate"
 
@@ -18,7 +16,6 @@ const (
 
 type Template interface {
 	Replace(replaceMap map[string]interface{}, allowUnresolved bool) (string, error)
-	ReplaceStrict(replaceMap map[string]any, strictPrefixes []string) (string, error)
 }
 
 func NewTemplate(s string) (Template, error) {
@@ -33,44 +30,17 @@ type impl struct {
 	*fasttemplate.Template
 }
 
-func (t *impl) replace(replaceMap map[string]any, regex *regexp.Regexp, allowUnresolvedArtifacts bool) (string, error) {
+func (t *impl) Replace(replaceMap map[string]interface{}, allowUnresolved bool) (string, error) {
 	replacedTmpl := &bytes.Buffer{}
 	_, err := t.ExecuteFunc(replacedTmpl, func(w io.Writer, tag string) (int, error) {
 		kind, expression := parseTag(tag)
 		switch kind {
 		case kindExpression:
 			env := exprenv.GetFuncMap(replaceMap)
-			return expressionReplaceStrict(w, expression, env, regex)
+			return expressionReplace(w, expression, env, allowUnresolved)
 		default:
-			return simpleReplaceStrict(w, tag, replaceMap, regex, allowUnresolvedArtifacts)
+			return simpleReplace(w, tag, replaceMap, allowUnresolved)
 		}
 	})
 	return replacedTmpl.String(), err
-}
-
-func (t *impl) Replace(replaceMap map[string]interface{}, allowUnresolved bool) (string, error) {
-	var regex *regexp.Regexp
-	if !allowUnresolved {
-		regex = matchAllRegex
-	}
-	return t.replace(replaceMap, regex, allowUnresolved)
-}
-
-func getStrictRegex(strictPrefixes []string) *regexp.Regexp {
-	if len(strictPrefixes) == 0 {
-		return nil
-	}
-	var patterns []string
-	for _, p := range strictPrefixes {
-		patterns = append(patterns, regexp.QuoteMeta(p))
-	}
-	// Match any string starting with one of the prefixes, followed by a dot or the end of the string.
-	// This ensures that we match a full dot-segment (e.g., "tasks" matches "tasks.A" but not "tasksA").
-	regexStr := "^((" + strings.Join(patterns, "|") + "))(\\.|$)"
-	return regexp.MustCompile(regexStr)
-}
-
-func (t *impl) ReplaceStrict(replaceMap map[string]any, strictPrefixes []string) (string, error) {
-	strictRegex := getStrictRegex(strictPrefixes)
-	return t.replace(replaceMap, strictRegex, true)
 }
