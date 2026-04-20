@@ -11,6 +11,7 @@ import (
 	"github.com/argoproj/argo-workflows/v3/errors"
 	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	typed "github.com/argoproj/argo-workflows/v3/pkg/client/clientset/versioned/typed/workflow/v1alpha1"
+	listers "github.com/argoproj/argo-workflows/v3/pkg/client/listers/workflow/v1alpha1"
 	"github.com/argoproj/argo-workflows/v3/workflow/common"
 )
 
@@ -55,6 +56,18 @@ type NullClusterWorkflowTemplateGetter struct{}
 func (n *NullClusterWorkflowTemplateGetter) Get(name string) (*wfv1.ClusterWorkflowTemplate, error) {
 	return nil, errors.Errorf("", "invalid spec: clusterworkflowtemplates.argoproj.io `%s` is "+
 		"forbidden: User cannot get resource 'clusterworkflowtemplates' in API group argoproj.io at the cluster scope", name)
+}
+
+type clusterWorkflowTemplateListerWrapper struct {
+	lister listers.ClusterWorkflowTemplateLister
+}
+
+func WrapClusterWorkflowTemplateLister(lister listers.ClusterWorkflowTemplateLister) ClusterWorkflowTemplateGetter {
+	return &clusterWorkflowTemplateListerWrapper{lister: lister}
+}
+
+func (w *clusterWorkflowTemplateListerWrapper) Get(name string) (*wfv1.ClusterWorkflowTemplate, error) {
+	return w.lister.Get(name)
 }
 
 // Get retrieves the WorkflowTemplate of a given name.
@@ -107,6 +120,10 @@ func (ctx *Context) GetTemplateByName(name string) (*wfv1.Template, error) {
 	if tmpl == nil {
 		return nil, errors.Errorf(errors.CodeNotFound, "template %s not found", name)
 	}
+
+	podMetadata := ctx.tmplBase.GetPodMetadata()
+	ctx.addPodMetadata(podMetadata, tmpl)
+
 	return tmpl.DeepCopy(), nil
 }
 
@@ -141,6 +158,10 @@ func (ctx *Context) GetTemplateFromRef(tmplRef *wfv1.TemplateRef) (*wfv1.Templat
 	if template == nil {
 		return nil, errors.Errorf(errors.CodeNotFound, "template %s not found in workflow template %s", tmplRef.Template, tmplRef.Name)
 	}
+
+	podMetadata := wftmpl.GetPodMetadata()
+	ctx.addPodMetadata(podMetadata, template)
+
 	return template.DeepCopy(), nil
 }
 
@@ -267,4 +288,22 @@ func (ctx *Context) WithClusterWorkflowTemplate(name string) (*Context, error) {
 		return nil, err
 	}
 	return ctx.WithTemplateBase(cwftmpl), nil
+}
+
+// addPodMetadata add podMetadata in workflow template level to template
+func (ctx *Context) addPodMetadata(podMetadata *wfv1.Metadata, tmpl *wfv1.Template) {
+	if podMetadata != nil {
+		if tmpl.Metadata.Annotations == nil {
+			tmpl.Metadata.Annotations = make(map[string]string)
+		}
+		for k, v := range podMetadata.Annotations {
+			tmpl.Metadata.Annotations[k] = v
+		}
+		if tmpl.Metadata.Labels == nil {
+			tmpl.Metadata.Labels = make(map[string]string)
+		}
+		for k, v := range podMetadata.Labels {
+			tmpl.Metadata.Labels[k] = v
+		}
+	}
 }

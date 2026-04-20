@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 
 	log "github.com/sirupsen/logrus"
 
@@ -46,6 +47,24 @@ const (
 	TemplateTypePlugin       TemplateType = "Plugin"
 	TemplateTypeUnknown      TemplateType = "Unknown"
 )
+
+// IsValid returns true if t exists in the set of possible template types.
+func (t TemplateType) IsValid() bool {
+	switch t {
+	case TemplateTypeContainer,
+		TemplateTypeContainerSet,
+		TemplateTypeSteps,
+		TemplateTypeScript,
+		TemplateTypeResource,
+		TemplateTypeDAG,
+		TemplateTypeSuspend,
+		TemplateTypeData,
+		TemplateTypeHTTP,
+		TemplateTypePlugin:
+		return true
+	}
+	return false
+}
 
 // NodePhase is a label for the condition of a node at the current time.
 type NodePhase string
@@ -377,10 +396,6 @@ type WorkflowSpec struct {
 	// PriorityClassName to apply to workflow pods.
 	PodPriorityClassName string `json:"podPriorityClassName,omitempty" protobuf:"bytes,23,opt,name=podPriorityClassName"`
 
-	// Priority to apply to workflow pods.
-	// DEPRECATED: Use PodPriorityClassName instead.
-	PodPriority *int32 `json:"podPriority,omitempty" protobuf:"bytes,24,opt,name=podPriority"`
-
 	// +patchStrategy=merge
 	// +patchMergeKey=ip
 	HostAliases []apiv1.HostAlias `json:"hostAliases,omitempty" patchStrategy:"merge" patchMergeKey:"ip" protobuf:"bytes,25,opt,name=hostAliases"`
@@ -494,22 +509,22 @@ func (wfs WorkflowSpec) GetTTLStrategy() *TTLStrategy {
 // GetSemaphoreKeys will return list of semaphore configmap keys which are configured in the workflow
 // Example key format namespace/configmapname (argo/my-config)
 // Return []string
-func (wf *Workflow) GetSemaphoreKeys() []string {
+func (w *Workflow) GetSemaphoreKeys() []string {
 	keyMap := make(map[string]bool)
-	namespace := wf.Namespace
+	namespace := w.Namespace
 	var templates []Template
-	if wf.Spec.WorkflowTemplateRef == nil {
-		templates = wf.Spec.Templates
-		if wf.Spec.Synchronization != nil {
-			for _, configMapRef := range wf.Spec.Synchronization.getSemaphoreConfigMapRefs() {
+	if w.Spec.WorkflowTemplateRef == nil {
+		templates = w.Spec.Templates
+		if w.Spec.Synchronization != nil {
+			for _, configMapRef := range w.Spec.Synchronization.getSemaphoreConfigMapRefs() {
 				key := fmt.Sprintf("%s/%s", namespace, configMapRef.Name)
 				keyMap[key] = true
 			}
 		}
-	} else if wf.Status.StoredWorkflowSpec != nil {
-		templates = wf.Status.StoredWorkflowSpec.Templates
-		if wf.Status.StoredWorkflowSpec.Synchronization != nil {
-			for _, configMapRef := range wf.Status.StoredWorkflowSpec.Synchronization.getSemaphoreConfigMapRefs() {
+	} else if w.Status.StoredWorkflowSpec != nil {
+		templates = w.Status.StoredWorkflowSpec.Templates
+		if w.Status.StoredWorkflowSpec.Synchronization != nil {
+			for _, configMapRef := range w.Status.StoredWorkflowSpec.Synchronization.getSemaphoreConfigMapRefs() {
 				key := fmt.Sprintf("%s/%s", namespace, configMapRef.Name)
 				keyMap[key] = true
 			}
@@ -554,9 +569,12 @@ func (s ShutdownStrategy) ShouldExecute(isOnExitPod bool) bool {
 	}
 }
 
-// +kubebuilder:validation:Type=array
+// swagger:ignore
 type ParallelSteps struct {
-	Steps []WorkflowStep `json:"-" protobuf:"bytes,1,rep,name=steps"`
+	// Note: the `json:"steps"` part exists to workaround kubebuilder limitations.
+	// There isn't actually a "steps" key in the JSON serialization; this is an anonymous list.
+	// See the custom Unmarshaller below and ./hack/manifests/crd.go
+	Steps []WorkflowStep `json:"steps" protobuf:"bytes,1,rep,name=steps"`
 }
 
 // WorkflowStep is an anonymous list inside of ParallelSteps (i.e. it does not have a key), so it needs its own
@@ -600,11 +618,11 @@ func (p ParallelSteps) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.Steps)
 }
 
-func (b ParallelSteps) OpenAPISchemaType() []string {
+func (p ParallelSteps) OpenAPISchemaType() []string {
 	return []string{"array"}
 }
 
-func (b ParallelSteps) OpenAPISchemaFormat() string { return "" }
+func (p ParallelSteps) OpenAPISchemaFormat() string { return "" }
 
 func (wfs *WorkflowSpec) HasPodSpecPatch() bool {
 	return wfs.PodSpecPatch != ""
@@ -663,6 +681,9 @@ type Template struct {
 	HTTP *HTTP `json:"http,omitempty" protobuf:"bytes,42,opt,name=http"`
 
 	// Plugin is a plugin template
+	// Note: the structure of a plugin template is free-form, so we need to have
+	// "x-kubernetes-preserve-unknown-fields: true" in the validation schema.
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Plugin *Plugin `json:"plugin,omitempty" protobuf:"bytes,43,opt,name=plugin"`
 
 	// Volumes is a list of volumes that can be mounted by containers in a template.
@@ -718,9 +739,6 @@ type Template struct {
 	// PriorityClassName to apply to workflow pods.
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,26,opt,name=priorityClassName"`
 
-	// Priority to apply to workflow pods.
-	Priority *int32 `json:"priority,omitempty" protobuf:"bytes,27,opt,name=priority"`
-
 	// ServiceAccountName to apply to workflow pods
 	ServiceAccountName string `json:"serviceAccountName,omitempty" protobuf:"bytes,28,opt,name=serviceAccountName"`
 
@@ -757,6 +775,9 @@ type Template struct {
 	// Timeout allows to set the total node execution timeout duration counting from the node's start time.
 	// This duration also includes time in which the node spends in Pending state. This duration may not be applied to Step or DAG templates.
 	Timeout string `json:"timeout,omitempty" protobuf:"bytes,38,opt,name=timeout"`
+
+	// Annotations is a list of annotations to add to the template at runtime
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,44,opt,name=annotations"`
 }
 
 // SetType will set the template object based on template type.
@@ -823,6 +844,29 @@ func (tmpl *Template) GetOutputs() *Outputs {
 	return nil
 }
 
+func (tmpl *Template) GetAnnotations() map[string]string {
+	if tmpl != nil {
+		return tmpl.Annotations
+	}
+	return map[string]string{}
+}
+
+func (tmpl *Template) SetAnnotations(annotations map[string]string) {
+	tmpl.Annotations = annotations
+}
+
+func (tmpl *Template) GetDisplayName() string {
+	displayName, ok := tmpl.GetAnnotations()[string(TemplateAnnotationDisplayName)]
+	if ok {
+		return displayName
+	}
+	return ""
+}
+
+func (tmpl *Template) SetDisplayName() {
+	tmpl.Annotations[string(TemplateAnnotationDisplayName)] = tmpl.Name
+}
+
 type Artifacts []Artifact
 
 func (a Artifacts) GetArtifactByName(name string) *Artifact {
@@ -866,7 +910,7 @@ type Parameter struct {
 	Default *AnyString `json:"default,omitempty" protobuf:"bytes,2,opt,name=default"`
 
 	// Value is the literal value to use for the parameter.
-	// If specified in the context of an input parameter, the value takes precedence over any passed values
+	// If specified in the context of an input parameter, any passed values take precedence over the specified value
 	Value *AnyString `json:"value,omitempty" protobuf:"bytes,3,opt,name=value"`
 
 	// ValueFrom is the source for the output parameter's value
@@ -1339,14 +1383,13 @@ type ArtifactSearchQuery struct {
 	ArtifactGCStrategies map[ArtifactGCStrategy]bool `json:"artifactGCStrategies,omitempty" protobuf:"bytes,1,rep,name=artifactGCStrategies,castkey=ArtifactGCStrategy"`
 	ArtifactName         string                      `json:"artifactName,omitempty" protobuf:"bytes,2,rep,name=artifactName"`
 	TemplateName         string                      `json:"templateName,omitempty" protobuf:"bytes,3,rep,name=templateName"`
-	NodeId               string                      `json:"nodeId,omitempty" protobuf:"bytes,4,rep,name=nodeId"`
+	NodeId               string                      `json:"nodeId,omitempty" protobuf:"bytes,4,rep,name=nodeId"` //nolint:staticcheck
 	Deleted              *bool                       `json:"deleted,omitempty" protobuf:"varint,5,opt,name=deleted"`
 	NodeTypes            map[NodeType]bool           `json:"nodeTypes,omitempty" protobuf:"bytes,6,opt,name=nodeTypes"`
 }
 
 // ArtGCStatus maintains state related to ArtifactGC
 type ArtGCStatus struct {
-
 	// have Pods been started to perform this strategy? (enables us not to re-process what we've already done)
 	StrategiesProcessed map[ArtifactGCStrategy]bool `json:"strategiesProcessed,omitempty" protobuf:"bytes,1,opt,name=strategiesProcessed"`
 
@@ -1387,6 +1430,7 @@ func (gcStatus *ArtGCStatus) IsArtifactGCPodRecouped(podName string) bool {
 	}
 	return false
 }
+
 func (gcStatus *ArtGCStatus) AllArtifactGCPodsRecouped() bool {
 	if gcStatus.PodsRecouped == nil {
 		return false
@@ -1430,7 +1474,6 @@ func (q *ArtifactSearchQuery) anyArtifactGCStrategy() bool {
 }
 
 func (w *Workflow) SearchArtifacts(q *ArtifactSearchQuery) ArtifactSearchResults {
-
 	var results ArtifactSearchResults
 
 	for _, n := range w.Status.Nodes {
@@ -1479,18 +1522,18 @@ type Outputs struct {
 	// +patchMergeKey=name
 	Artifacts Artifacts `json:"artifacts,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=artifacts"`
 
-	// Result holds the result (stdout) of a script template
+	// Result holds the result (stdout) of a script or container template, or the response body of an HTTP template
 	Result *string `json:"result,omitempty" protobuf:"bytes,3,opt,name=result"`
 
 	// ExitCode holds the exit code of a script template
 	ExitCode *string `json:"exitCode,omitempty" protobuf:"bytes,4,opt,name=exitCode"`
 }
 
-func (o *Outputs) GetArtifacts() Artifacts {
-	if o == nil {
+func (out *Outputs) GetArtifacts() Artifacts {
+	if out == nil {
 		return nil
 	}
-	return o.Artifacts
+	return out.Artifacts
 }
 
 // WorkflowStep is a reference to a template to execute in a series of step
@@ -1502,6 +1545,10 @@ type WorkflowStep struct {
 	Template string `json:"template,omitempty" protobuf:"bytes,2,opt,name=template"`
 
 	// Inline is the template. Template must be empty if this is declared (and vice-versa).
+	// Note: This struct is defined recursively, since the inline template can potentially contain
+	// steps/DAGs that also has an "inline" field. Kubernetes doesn't allow recursive types, so we
+	// need "x-kubernetes-preserve-unknown-fields: true" in the validation schema.
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Inline *Template `json:"inline,omitempty" protobuf:"bytes,13,opt,name=inline"`
 
 	// Arguments hold arguments to the template
@@ -1511,6 +1558,10 @@ type WorkflowStep struct {
 	TemplateRef *TemplateRef `json:"templateRef,omitempty" protobuf:"bytes,4,opt,name=templateRef"`
 
 	// WithItems expands a step into multiple parallel steps from the items in the list
+	// Note: The structure of WithItems is free-form, so we need
+	// "x-kubernetes-preserve-unknown-fields: true" in the validation schema.
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
 	WithItems []Item `json:"withItems,omitempty" protobuf:"bytes,5,rep,name=withItems"`
 
 	// WithParam expands a step into multiple parallel steps from the value in the parameter,
@@ -1538,14 +1589,15 @@ type WorkflowStep struct {
 	Hooks LifecycleHooks `json:"hooks,omitempty" protobuf:"bytes,12,opt,name=hooks"`
 }
 
-func (step *WorkflowStep) GetName() string {
-	return step.Name
+func (s *WorkflowStep) GetName() string {
+	return s.Name
 }
 
-func (step *WorkflowStep) IsDAGTask() bool {
+func (s *WorkflowStep) IsDAGTask() bool {
 	return false
 }
-func (step *WorkflowStep) IsWorkflowStep() bool {
+
+func (s *WorkflowStep) IsWorkflowStep() bool {
 	return true
 }
 
@@ -1591,34 +1643,34 @@ func (lch *LifecycleHook) WithArgs(args Arguments) *LifecycleHook {
 
 var _ TemplateReferenceHolder = &WorkflowStep{}
 
-func (step *WorkflowStep) HasExitHook() bool {
-	return (step.Hooks != nil && step.Hooks.HasExitHook()) || step.OnExit != ""
+func (s *WorkflowStep) HasExitHook() bool {
+	return (s.Hooks != nil && s.Hooks.HasExitHook()) || s.OnExit != ""
 }
 
-func (step *WorkflowStep) GetExitHook(args Arguments) *LifecycleHook {
-	if !step.HasExitHook() {
+func (s *WorkflowStep) GetExitHook(args Arguments) *LifecycleHook {
+	if !s.HasExitHook() {
 		return nil
 	}
-	if step.OnExit != "" {
-		return &LifecycleHook{Template: step.OnExit, Arguments: args}
+	if s.OnExit != "" {
+		return &LifecycleHook{Template: s.OnExit, Arguments: args}
 	}
-	return step.Hooks.GetExitHook().WithArgs(args)
+	return s.Hooks.GetExitHook().WithArgs(args)
 }
 
-func (step *WorkflowStep) GetTemplate() *Template {
-	return step.Inline
+func (s *WorkflowStep) GetTemplate() *Template {
+	return s.Inline
 }
 
-func (step *WorkflowStep) GetTemplateName() string {
-	return step.Template
+func (s *WorkflowStep) GetTemplateName() string {
+	return s.Template
 }
 
-func (step *WorkflowStep) GetTemplateRef() *TemplateRef {
-	return step.TemplateRef
+func (s *WorkflowStep) GetTemplateRef() *TemplateRef {
+	return s.TemplateRef
 }
 
-func (step *WorkflowStep) ShouldExpand() bool {
-	return len(step.WithItems) != 0 || step.WithParam != "" || step.WithSequence != nil
+func (s *WorkflowStep) ShouldExpand() bool {
+	return len(s.WithItems) != 0 || s.WithParam != "" || s.WithSequence != nil
 }
 
 // Sequence expands a workflow step into numeric range
@@ -1672,12 +1724,18 @@ func (s *Synchronization) getSemaphoreConfigMapRefs() []*apiv1.ConfigMapKeySelec
 	return selectors
 }
 
+type SyncDatabaseRef struct {
+	Key string `json:"key" protobuf:"bytes,1,name=key"`
+}
+
 // SemaphoreRef is a reference of Semaphore
 type SemaphoreRef struct {
-	// ConfigMapKeyRef is configmap selector for Semaphore configuration
+	// ConfigMapKeyRef is a configmap selector for Semaphore configuration
 	ConfigMapKeyRef *apiv1.ConfigMapKeySelector `json:"configMapKeyRef,omitempty" protobuf:"bytes,1,opt,name=configMapKeyRef"`
 	// Namespace is the namespace of the configmap, default: [namespace of workflow]
 	Namespace string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
+	// SyncDatabaseRef is a database reference for Semaphore configuration
+	Database *SyncDatabaseRef `json:"database,omitempty" protobuf:"bytes,3,opt,name=database"`
 }
 
 // Mutex holds Mutex configuration
@@ -1686,6 +1744,8 @@ type Mutex struct {
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Namespace is the namespace of the mutex, default: [namespace of workflow]
 	Namespace string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
+	// Database specifies this is database controlled if this is set true
+	Database bool `json:"database,omitempty" protobuf:"bytes,3,opt,name=database"`
 }
 
 // WorkflowTemplateRef is a reference to a WorkflowTemplate resource.
@@ -1722,8 +1782,8 @@ type Arguments struct {
 	Artifacts Artifacts `json:"artifacts,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,2,rep,name=artifacts"`
 }
 
-func (a Arguments) IsEmpty() bool {
-	return len(a.Parameters) == 0 && len(a.Artifacts) == 0
+func (args Arguments) IsEmpty() bool {
+	return len(args.Parameters) == 0 && len(args.Artifacts) == 0
 }
 
 var _ ArgumentsProvider = &Arguments{}
@@ -1738,8 +1798,12 @@ func (n Nodes) FindByName(name string) *NodeStatus {
 	return n.Find(NodeWithName(name))
 }
 
-func (in Nodes) Any(f func(NodeStatus) bool) bool {
-	return in.Find(f) != nil
+func (n Nodes) FindByChild(childID string) *NodeStatus {
+	return n.Find(NodeWithChild(childID))
+}
+
+func (n Nodes) Any(f func(NodeStatus) bool) bool {
+	return n.Find(f) != nil
 }
 
 func (n Nodes) Find(f func(NodeStatus) bool) *NodeStatus {
@@ -1809,12 +1873,19 @@ func (n Nodes) GetName(key string) (string, error) {
 	}
 	return val.Name, nil
 }
+
 func NodeWithName(name string) func(n NodeStatus) bool {
 	return func(n NodeStatus) bool { return n.Name == name }
 }
 
 func NodeWithDisplayName(name string) func(n NodeStatus) bool {
 	return func(n NodeStatus) bool { return n.DisplayName == name }
+}
+
+func NodeWithChild(childID string) func(n NodeStatus) bool {
+	return func(n NodeStatus) bool {
+		return n.HasChild(childID)
+	}
 }
 
 func FailedPodNode(n NodeStatus) bool {
@@ -1826,14 +1897,14 @@ func SucceededPodNode(n NodeStatus) bool {
 }
 
 // Children returns the children of the parent.
-func (s Nodes) Children(parentNodeId string) Nodes {
+func (n Nodes) Children(parentNodeID string) Nodes {
 	childNodes := make(Nodes)
-	parentNode, ok := s[parentNodeId]
+	parentNode, ok := n[parentNodeID]
 	if !ok {
 		return childNodes
 	}
 	for _, childID := range parentNode.Children {
-		if childNode, ok := s[childID]; ok {
+		if childNode, ok := n[childID]; ok {
 			childNodes[childID] = childNode
 		}
 	}
@@ -1842,10 +1913,10 @@ func (s Nodes) Children(parentNodeId string) Nodes {
 
 // NestedChildrenStatus takes in a nodeID and returns all its children, this involves a tree search using DFS.
 // This is needed to mark all children nodes as failed for example.
-func (s Nodes) NestedChildrenStatus(parentNodeId string) ([]NodeStatus, error) {
-	parentNode, ok := s[parentNodeId]
+func (n Nodes) NestedChildrenStatus(parentNodeID string) ([]NodeStatus, error) {
+	parentNode, ok := n[parentNodeID]
 	if !ok {
-		return nil, fmt.Errorf("could not find %s in nodes when searching for nested children", parentNodeId)
+		return nil, fmt.Errorf("could not find %s in nodes when searching for nested children", parentNodeID)
 	}
 
 	children := []NodeStatus{}
@@ -1855,7 +1926,7 @@ func (s Nodes) NestedChildrenStatus(parentNodeId string) ([]NodeStatus, error) {
 		childNode := toexplore[0]
 		toexplore = toexplore[1:]
 		for _, nodeID := range childNode.Children {
-			toexplore = append(toexplore, s[nodeID])
+			toexplore = append(toexplore, n[nodeID])
 		}
 
 		if childNode.Name == parentNode.Name {
@@ -1868,9 +1939,9 @@ func (s Nodes) NestedChildrenStatus(parentNodeId string) ([]NodeStatus, error) {
 }
 
 // Filter returns the subset of the nodes that match the predicate, e.g. only failed nodes
-func (s Nodes) Filter(predicate func(NodeStatus) bool) Nodes {
+func (n Nodes) Filter(predicate func(NodeStatus) bool) Nodes {
 	filteredNodes := make(Nodes)
-	for _, node := range s {
+	for _, node := range n {
 		if predicate(node) {
 			filteredNodes[node.ID] = node
 		}
@@ -1879,9 +1950,9 @@ func (s Nodes) Filter(predicate func(NodeStatus) bool) Nodes {
 }
 
 // Map maps the nodes to new values, e.g. `x.Hostname`
-func (s Nodes) Map(f func(x NodeStatus) interface{}) map[string]interface{} {
+func (n Nodes) Map(f func(x NodeStatus) interface{}) map[string]interface{} {
 	values := make(map[string]interface{})
-	for _, node := range s {
+	for _, node := range n {
 		values[node.ID] = f(node)
 	}
 	return values
@@ -1962,22 +2033,47 @@ type WorkflowStatus struct {
 	TaskResultsCompletionStatus map[string]bool `json:"taskResultsCompletionStatus,omitempty" protobuf:"bytes,20,opt,name=taskResultsCompletionStatus"`
 }
 
-func (ws *WorkflowStatus) MarkTaskResultIncomplete(name string) {
-	if ws.TaskResultsCompletionStatus == nil {
-		ws.TaskResultsCompletionStatus = make(map[string]bool)
+// MarkTaskResultIncomplete sets either the task results completion field
+// or the node.TaskResultSynced field if the workflow does not have a `TaskResultsCompletionStatus`
+func (in *WorkflowStatus) MarkTaskResultIncomplete(name string) {
+	if in.TaskResultsCompletionStatus != nil {
+		in.TaskResultsCompletionStatus[name] = false
+		return
 	}
-	ws.TaskResultsCompletionStatus[name] = false
+	node, err := in.Nodes.Get(name)
+	if err != nil {
+		return
+	}
+	if node.TaskResultSynced != nil {
+		node.TaskResultSynced = ptr.To(bool(false))
+	}
+	in.Nodes.Set(name, *node)
 }
 
-func (ws *WorkflowStatus) MarkTaskResultComplete(name string) {
-	if ws.TaskResultsCompletionStatus == nil {
-		ws.TaskResultsCompletionStatus = make(map[string]bool)
+// MarkTaskResultComplete sets either the task results completion field
+// or the node.TaskResultSynced field if the workflow does not have a `TaskResultsCompletionStatus`
+func (in *WorkflowStatus) MarkTaskResultComplete(name string) {
+	if in.TaskResultsCompletionStatus != nil {
+		in.TaskResultsCompletionStatus[name] = true
 	}
-	ws.TaskResultsCompletionStatus[name] = true
+	node, err := in.Nodes.Get(name)
+	if err != nil {
+		return
+	}
+	if node.TaskResultSynced != nil {
+		node.TaskResultSynced = ptr.To(bool(true))
+	}
+	in.Nodes.Set(name, *node)
 }
 
-func (ws *WorkflowStatus) TaskResultsInProgress() bool {
-	for _, value := range ws.TaskResultsCompletionStatus {
+func (in *WorkflowStatus) TaskResultsInProgress() bool {
+	for _, node := range in.Nodes {
+		if node.TaskResultSynced != nil && !*node.TaskResultSynced {
+			return true
+		}
+	}
+
+	for _, value := range in.TaskResultsCompletionStatus {
 		if !value {
 			return true
 		}
@@ -1985,32 +2081,44 @@ func (ws *WorkflowStatus) TaskResultsInProgress() bool {
 	return false
 }
 
-func (ws *WorkflowStatus) IsTaskResultIncomplete(name string) bool {
-	value, found := ws.TaskResultsCompletionStatus[name]
-	if found {
-		return !value
+func (in *WorkflowStatus) IsTaskResultIncomplete(name string) bool {
+	if in.TaskResultsCompletionStatus != nil {
+		value, found := in.TaskResultsCompletionStatus[name]
+		if found {
+			return !value
+		}
+		return false // workflows from older versions do not have this status, so assume completed if this is missing
+	} else {
+		node, err := in.Nodes.Get(name)
+		if err != nil {
+			return true // what can we even do here?
+		}
+		if node.TaskResultSynced != nil {
+			return !*node.TaskResultSynced
+		} else {
+			return false
+		}
 	}
-	return false // workflows from older versions do not have this status, so assume completed if this is missing
 }
 
-func (ws *WorkflowStatus) IsOffloadNodeStatus() bool {
-	return ws.OffloadNodeStatusVersion != ""
+func (in *WorkflowStatus) IsOffloadNodeStatus() bool {
+	return in.OffloadNodeStatusVersion != ""
 }
 
-func (ws *WorkflowStatus) GetOffloadNodeStatusVersion() string {
-	return ws.OffloadNodeStatusVersion
+func (in *WorkflowStatus) GetOffloadNodeStatusVersion() string {
+	return in.OffloadNodeStatusVersion
 }
 
-func (ws *WorkflowStatus) GetStoredTemplates() []Template {
+func (in *WorkflowStatus) GetStoredTemplates() []Template {
 	var out []Template
-	for _, t := range ws.StoredTemplates {
+	for _, t := range in.StoredTemplates {
 		out = append(out, t)
 	}
 	return out
 }
 
-func (wf *Workflow) GetOffloadNodeStatusVersion() string {
-	return wf.Status.GetOffloadNodeStatusVersion()
+func (w *Workflow) GetOffloadNodeStatusVersion() string {
+	return w.Status.GetOffloadNodeStatusVersion()
 }
 
 type RetryPolicy string
@@ -2033,6 +2141,10 @@ type Backoff struct {
 	// However, when the workflow fails, the pod's deadline is then overridden by maxDuration.
 	// This ensures that the workflow does not exceed the specified maximum duration when retries are involved.
 	MaxDuration string `json:"maxDuration,omitempty" protobuf:"varint,3,opt,name=maxDuration"`
+	// Cap is a limit on revised values of the duration parameter. If a
+	// multiplication by the factor parameter would make the duration
+	// exceed the cap then the duration is set to the cap
+	Cap string `json:"cap,omitempty" protobuf:"varint,4,opt,name=cap"`
 }
 
 // RetryNodeAntiAffinity is a placeholder for future expansion, only empty nodeAntiAffinity is allowed.
@@ -2202,7 +2314,7 @@ const (
 	ConditionTypeSpecError ConditionType = "SpecError"
 	// ConditionTypeMetricsError is an error during metric emission
 	ConditionTypeMetricsError ConditionType = "MetricsError"
-	//ConditionTypeArtifactGCError is an error on artifact garbage collection
+	// ConditionTypeArtifactGCError is an error on artifact garbage collection
 	ConditionTypeArtifactGCError ConditionType = "ArtifactGCError"
 )
 
@@ -2310,6 +2422,18 @@ type NodeStatus struct {
 
 	// SynchronizationStatus is the synchronization status of the node
 	SynchronizationStatus *NodeSynchronizationStatus `json:"synchronizationStatus,omitempty" protobuf:"bytes,25,opt,name=synchronizationStatus"`
+
+	// TaskResultSynced is used to determine if the node's output has been received
+	TaskResultSynced *bool `json:"taskResultSynced,omitempty" protobuf:"bytes,28,opt,name=taskResultSynced"`
+}
+
+// Completed is used to determine if this node can proceed
+func (n *NodeStatus) Completed() bool {
+	synced := true
+	if n.TaskResultSynced != nil {
+		synced = *n.TaskResultSynced
+	}
+	return n.Phase.Completed() && synced
 }
 
 func (n *NodeStatus) GetName() string {
@@ -2325,8 +2449,9 @@ func (n *NodeStatus) IsWorkflowStep() bool {
 }
 
 // Fulfilled returns whether a phase is fulfilled, i.e. it completed execution or was skipped or omitted
-func (phase NodePhase) Fulfilled() bool {
-	return phase.Completed() || phase == NodeSkipped || phase == NodeOmitted
+func (phase NodePhase) Fulfilled(synced *bool) bool {
+	isSynced := synced == nil || *synced
+	return (phase.Completed() && isSynced) || phase == NodeSkipped || phase == NodeOmitted
 }
 
 // Completed returns whether or not a phase completed. Notably, a skipped phase is not considered as having completed
@@ -2339,47 +2464,46 @@ func (phase NodePhase) FailedOrError() bool {
 }
 
 // Fulfilled returns whether or not the workflow has fulfilled its execution
-func (ws WorkflowStatus) Fulfilled() bool {
-	return ws.Phase.Completed()
+func (in WorkflowStatus) Fulfilled() bool {
+	return in.Phase.Completed()
 }
 
 // Successful return whether or not the workflow has succeeded
-func (ws WorkflowStatus) Successful() bool {
-	return ws.Phase == WorkflowSucceeded
+func (in WorkflowStatus) Successful() bool {
+	return in.Phase == WorkflowSucceeded
 }
 
 // Failed return whether or not the workflow has failed
-func (ws WorkflowStatus) Failed() bool {
-	return ws.Phase == WorkflowFailed
+func (in WorkflowStatus) Failed() bool {
+	return in.Phase == WorkflowFailed
 }
 
-func (ws WorkflowStatus) StartTime() *metav1.Time {
-	return &ws.StartedAt
+func (in WorkflowStatus) StartTime() *metav1.Time {
+	return &in.StartedAt
 }
 
-func (ws WorkflowStatus) FinishTime() *metav1.Time {
-	return &ws.FinishedAt
+func (in WorkflowStatus) FinishTime() *metav1.Time {
+	return &in.FinishedAt
 }
 
 // Fulfilled returns whether a node is fulfilled, i.e. it finished execution, was skipped, or was dameoned successfully
 func (n NodeStatus) Fulfilled() bool {
-	return n.Phase.Fulfilled() || n.IsDaemoned() && n.Phase != NodePending
-}
-
-// Completed returns whether a node completed. Notably, a skipped node is not considered as having completed
-func (n NodeStatus) Completed() bool {
-	return n.Phase.Completed()
+	synced := true
+	if n.TaskResultSynced != nil {
+		synced = *n.TaskResultSynced
+	}
+	return n.Phase.Fulfilled(n.TaskResultSynced) && synced || n.IsDaemoned() && n.Phase != NodePending
 }
 
 func (in *WorkflowStatus) AnyActiveSuspendNode() bool {
 	return in.Nodes.Any(func(node NodeStatus) bool { return node.IsActiveSuspendNode() })
 }
 
-func (ws *WorkflowStatus) GetDuration() time.Duration {
-	if ws.FinishedAt.IsZero() {
+func (in *WorkflowStatus) GetDuration() time.Duration {
+	if in.FinishedAt.IsZero() {
 		return 0
 	}
-	return ws.FinishedAt.Sub(ws.StartedAt.Time)
+	return in.FinishedAt.Sub(in.StartedAt.Time)
 }
 
 // Pending returns whether or not the node is in pending state
@@ -2544,7 +2668,7 @@ type S3Bucket struct {
 // S3EncryptionOptions used to determine encryption options during s3 operations
 type S3EncryptionOptions struct {
 	// KMSKeyId tells the driver to encrypt the object using the specified KMS Key.
-	KmsKeyId string `json:"kmsKeyId,omitempty" protobuf:"bytes,1,opt,name=kmsKeyId"`
+	KmsKeyId string `json:"kmsKeyId,omitempty" protobuf:"bytes,1,opt,name=kmsKeyId"` //nolint:staticcheck
 
 	// KmsEncryptionContext is a json blob that contains an encryption context. See https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#encrypt_context for more information
 	KmsEncryptionContext string `json:"kmsEncryptionContext,omitempty" protobuf:"bytes,2,opt,name=kmsEncryptionContext"`
@@ -2734,8 +2858,8 @@ func (h *HDFSArtifact) GetKey() (string, error) {
 	return h.Path, nil
 }
 
-func (g *HDFSArtifact) SetKey(key string) error {
-	g.Path = key
+func (h *HDFSArtifact) SetKey(key string) error {
+	h.Path = key
 	return nil
 }
 
@@ -2872,13 +2996,13 @@ func (h *HTTPArtifact) GetKey() (string, error) {
 	return u.Path, nil
 }
 
-func (g *HTTPArtifact) SetKey(key string) error {
-	u, err := url.Parse(g.URL)
+func (h *HTTPArtifact) SetKey(key string) error {
+	u, err := url.Parse(h.URL)
 	if err != nil {
 		return err
 	}
 	u.Path = key
-	g.URL = u.String()
+	h.URL = u.String()
 	return nil
 }
 
@@ -2984,6 +3108,7 @@ type ScriptTemplate struct {
 	apiv1.Container `json:",inline" protobuf:"bytes,1,opt,name=container"`
 
 	// Source contains the source code of the script to execute
+	// +optional
 	Source string `json:"source" protobuf:"bytes,2,opt,name=source"`
 }
 
@@ -3143,8 +3268,8 @@ func (tmpl *Template) HasOutput() bool {
 	return tmpl.Container != nil || tmpl.ContainerSet.HasContainerNamed("main") || tmpl.Script != nil || tmpl.Data != nil || tmpl.HTTP != nil || tmpl.Plugin != nil
 }
 
-func (t *Template) IsDaemon() bool {
-	return t != nil && t.Daemon != nil && *t.Daemon
+func (tmpl *Template) IsDaemon() bool {
+	return tmpl != nil && tmpl.Daemon != nil && *tmpl.Daemon
 }
 
 // if logs should be saved as an artifact
@@ -3152,12 +3277,12 @@ func (tmpl *Template) SaveLogsAsArtifact() bool {
 	return tmpl != nil && tmpl.ArchiveLocation.IsArchiveLogs()
 }
 
-func (t *Template) GetRetryStrategy() (wait.Backoff, error) {
-	return t.ContainerSet.GetRetryStrategy()
+func (tmpl *Template) GetRetryStrategy() (wait.Backoff, error) {
+	return tmpl.ContainerSet.GetRetryStrategy()
 }
 
-func (t *Template) HasOutputs() bool {
-	return t != nil && t.Outputs.HasOutputs()
+func (tmpl *Template) HasOutputs() bool {
+	return tmpl != nil && tmpl.Outputs.HasOutputs()
 }
 
 // DAGTemplate is a template subtype for directed acyclic graph templates
@@ -3188,6 +3313,9 @@ type DAGTask struct {
 	Template string `json:"template,omitempty" protobuf:"bytes,2,opt,name=template"`
 
 	// Inline is the template. Template must be empty if this is declared (and vice-versa).
+	// Note: As mentioned in the corresponding definition in WorkflowStep, this struct is defined recursively,
+	// so we need "x-kubernetes-preserve-unknown-fields: true" in the validation schema.
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Inline *Template `json:"inline,omitempty" protobuf:"bytes,14,opt,name=inline"`
 
 	// Arguments are the parameter and artifact arguments to the template
@@ -3200,6 +3328,10 @@ type DAGTask struct {
 	Dependencies []string `json:"dependencies,omitempty" protobuf:"bytes,5,rep,name=dependencies"`
 
 	// WithItems expands a task into multiple parallel tasks from the items in the list
+	// Note: The structure of WithItems is free-form, so we need
+	// "x-kubernetes-preserve-unknown-fields: true" in the validation schema.
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
 	WithItems []Item `json:"withItems,omitempty" protobuf:"bytes,6,rep,name=withItems"`
 
 	// WithParam expands a task into multiple parallel tasks from the value in the parameter,
@@ -3386,20 +3518,20 @@ func (a *Artifact) GetArchive() *ArchiveStrategy {
 }
 
 // GetTemplateByName retrieves a defined template by its name
-func (wf *Workflow) GetTemplateByName(name string) *Template {
-	for _, t := range wf.Spec.Templates {
+func (w *Workflow) GetTemplateByName(name string) *Template {
+	for _, t := range w.Spec.Templates {
 		if t.Name == name {
 			return &t
 		}
 	}
-	if wf.Status.StoredWorkflowSpec != nil {
-		for _, t := range wf.Status.StoredWorkflowSpec.Templates {
+	if w.Status.StoredWorkflowSpec != nil {
+		for _, t := range w.Status.StoredWorkflowSpec.Templates {
 			if t.Name == name {
 				return &t
 			}
 		}
 	}
-	for _, t := range wf.Status.StoredTemplates {
+	for _, t := range w.Status.StoredTemplates {
 		if t.Name == name {
 			return &t
 		}
@@ -3407,68 +3539,73 @@ func (wf *Workflow) GetTemplateByName(name string) *Template {
 	return nil
 }
 
-func (wf *Workflow) GetNodeByName(nodeName string) (*NodeStatus, error) {
-	nodeID := wf.NodeID(nodeName)
-	return wf.Status.Nodes.Get(nodeID)
+func (w *Workflow) GetNodeByName(nodeName string) (*NodeStatus, error) {
+	nodeID := w.NodeID(nodeName)
+	return w.Status.Nodes.Get(nodeID)
 }
 
 // GetResourceScope returns the template scope of workflow.
-func (wf *Workflow) GetResourceScope() ResourceScope {
+func (w *Workflow) GetResourceScope() ResourceScope {
 	return ResourceScopeLocal
 }
 
+// GetPodMetadata returns the PodMetadata of a workflow.
+func (w *Workflow) GetPodMetadata() *Metadata {
+	return w.Spec.PodMetadata
+}
+
 // GetWorkflowSpec returns the Spec of a workflow.
-func (wf *Workflow) GetWorkflowSpec() WorkflowSpec {
-	return wf.Spec
+func (w *Workflow) GetWorkflowSpec() WorkflowSpec {
+	return w.Spec
 }
 
 // NodeID creates a deterministic node ID based on a node name
-func (wf *Workflow) NodeID(name string) string {
-	if name == wf.Name {
-		return wf.Name
+func (w *Workflow) NodeID(name string) string {
+	if name == w.Name {
+		return w.Name
 	}
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(name))
-	return fmt.Sprintf("%s-%v", wf.Name, h.Sum32())
+	return fmt.Sprintf("%s-%v", w.Name, h.Sum32())
 }
 
 // GetStoredTemplate retrieves a template from stored templates of the workflow.
-func (wf *Workflow) GetStoredTemplate(scope ResourceScope, resourceName string, caller TemplateReferenceHolder) *Template {
+func (w *Workflow) GetStoredTemplate(scope ResourceScope, resourceName string, caller TemplateReferenceHolder) *Template {
 	tmplID, storageNeeded := resolveTemplateReference(scope, resourceName, caller)
 	if !storageNeeded {
 		// Local templates aren't stored
 		return nil
 	}
-	if tmpl, ok := wf.Status.StoredTemplates[tmplID]; ok {
+	if tmpl, ok := w.Status.StoredTemplates[tmplID]; ok {
 		return tmpl.DeepCopy()
 	}
 	return nil
 }
 
 // SetStoredTemplate stores a new template in stored templates of the workflow.
-func (wf *Workflow) SetStoredTemplate(scope ResourceScope, resourceName string, caller TemplateReferenceHolder, tmpl *Template) (bool, error) {
+func (w *Workflow) SetStoredTemplate(scope ResourceScope, resourceName string, caller TemplateReferenceHolder, tmpl *Template) (bool, error) {
 	tmplID, storageNeeded := resolveTemplateReference(scope, resourceName, caller)
 	if !storageNeeded {
 		// Don't need to store local templates
 		return false, nil
 	}
-	if _, ok := wf.Status.StoredTemplates[tmplID]; !ok {
-		if wf.Status.StoredTemplates == nil {
-			wf.Status.StoredTemplates = map[string]Template{}
+	if _, ok := w.Status.StoredTemplates[tmplID]; !ok {
+		if w.Status.StoredTemplates == nil {
+			w.Status.StoredTemplates = map[string]Template{}
 		}
-		wf.Status.StoredTemplates[tmplID] = *tmpl
+		w.Status.StoredTemplates[tmplID] = *tmpl
 		return true, nil
 	}
 	return false, nil
 }
 
 // SetStoredInlineTemplate stores a inline template in stored templates of the workflow.
-func (wf *Workflow) SetStoredInlineTemplate(scope ResourceScope, resourceName string, tmpl *Template) error {
+func (w *Workflow) SetStoredInlineTemplate(scope ResourceScope, resourceName string, tmpl *Template) error {
 	// Store inline templates in steps.
 	for _, steps := range tmpl.Steps {
 		for _, step := range steps.Steps {
 			if step.GetTemplate() != nil {
-				_, err := wf.SetStoredTemplate(scope, resourceName, &step, step.GetTemplate())
+				_, err := w.SetStoredTemplate(scope, resourceName, &step, step.GetTemplate())
 				if err != nil {
 					return err
 				}
@@ -3479,7 +3616,7 @@ func (wf *Workflow) SetStoredInlineTemplate(scope ResourceScope, resourceName st
 	if tmpl.DAG != nil {
 		for _, task := range tmpl.DAG.Tasks {
 			if task.GetTemplate() != nil {
-				_, err := wf.SetStoredTemplate(scope, resourceName, &task, task.GetTemplate())
+				_, err := w.SetStoredTemplate(scope, resourceName, &task, task.GetTemplate())
 				if err != nil {
 					return err
 				}
@@ -3945,3 +4082,9 @@ type NodeFlag struct {
 	// Retried tracks whether or not this node was retried by retryStrategy
 	Retried bool `json:"retried,omitempty" protobuf:"varint,2,opt,name=retried"`
 }
+
+type TemplateAnnotation string
+
+const (
+	TemplateAnnotationDisplayName TemplateAnnotation = "workflows.argoproj.io/display-name"
+)

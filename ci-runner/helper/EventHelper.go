@@ -114,6 +114,7 @@ type CommonWorkflowRequest struct {
 	AwsRegion                      string                           `json:"awsRegion"`
 	AccessKey                      string                           `json:"accessKey"`
 	SecretKey                      string                           `json:"secretKey"`
+	AssumeRoleArn                  string                           `json:"assumeRoleArn"`
 	CiCacheLocation                string                           `json:"ciCacheLocation"`
 	CiCacheRegion                  string                           `json:"ciCacheRegion"`
 	CiCacheFileName                string                           `json:"ciCacheFileName"`
@@ -204,6 +205,7 @@ type CommonWorkflowRequest struct {
 	AwsInspectorConfig               string                         `json:"awsInspectorConfig,omitempty"`
 	PartSize                         int64                          `json:"partSize,omitempty"`
 	ConcurrencyMultiplier            int                            `json:"concurrencyMultiplier,omitempty"`
+	DockerfileScanEnabled            bool                           `json:"dockerfileScanEnabled,omitempty"`
 }
 
 func (c *CommonWorkflowRequest) IsPreCdStage() bool {

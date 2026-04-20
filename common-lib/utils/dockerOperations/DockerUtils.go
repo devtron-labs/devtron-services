@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/devtron-labs/common-lib/utils/bean"
 	"github.com/docker/docker/client"
 	"github.com/sirupsen/logrus"
@@ -30,13 +31,35 @@ func LoadGcrCredentials(credsJson string) (string, string, error) {
 
 }
 
-func LoadEcrCredentials(ecrRegion, accessKeyEcr, secretAccessKeyEcr string) (string, string, error) {
+func LoadEcrCredentials(ecrRegion, accessKeyEcr, secretAccessKeyEcr, assumeRoleArn string) (string, string, error) {
 	var username, password string
 	awsCfg := &aws.Config{
 		Region:      aws.String(ecrRegion),
 		Credentials: credentials.NewStaticCredentials(accessKeyEcr, secretAccessKeyEcr, ""),
 	}
 	sess := session.Must(session.NewSession(awsCfg))
+
+	// If an assume role ARN is provided, use STS to assume the cross-account role
+	if len(assumeRoleArn) > 0 {
+		stsClient := sts.New(sess)
+		assumeOutput, err := stsClient.AssumeRole(&sts.AssumeRoleInput{
+			RoleArn:         aws.String(assumeRoleArn),
+			RoleSessionName: aws.String("devtron-ecr-cross-account"),
+		})
+		if err != nil {
+			return "", "", fmt.Errorf("failed to assume role %s for ecr: %v", assumeRoleArn, err)
+		}
+		assumedCreds := credentials.NewStaticCredentials(
+			*assumeOutput.Credentials.AccessKeyId,
+			*assumeOutput.Credentials.SecretAccessKey,
+			*assumeOutput.Credentials.SessionToken,
+		)
+		sess = session.Must(session.NewSession(&aws.Config{
+			Region:      aws.String(ecrRegion),
+			Credentials: assumedCreds,
+		}))
+	}
+
 	svc := ecr.New(sess)
 	authData, err := svc.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 	if err != nil {
@@ -59,7 +82,7 @@ func getEncodedRegistryAuthForPrivateRegistry(dockerAuth *bean.DockerAuthConfig)
 	switch dockerAuth.RegistryType {
 	case bean.RegistryTypeEcr:
 		// for ecr we get username and password via region, access and secret access tokens
-		ecrUsername, ecrPassword, err := LoadEcrCredentials(dockerAuth.EcrRegion, dockerAuth.AccessKeyEcr, dockerAuth.SecretAccessKeyEcr)
+		ecrUsername, ecrPassword, err := LoadEcrCredentials(dockerAuth.EcrRegion, dockerAuth.AccessKeyEcr, dockerAuth.SecretAccessKeyEcr, dockerAuth.AssumeRoleArnEcr)
 		if err != nil {
 			logrus.Error("error in getting ecr credentials", "err", err)
 			return "", err

@@ -14,6 +14,7 @@ type Configuration struct {
 	AwsAccessKey              string
 	AwsSecretKey              string
 	AwsRegion                 string
+	AssumeRoleArn             string
 	RegistryConnectionType    string //secure, insecure, secure-with-cert
 	RegistryCertificateString string
 	RegistryCAFilePath        string
