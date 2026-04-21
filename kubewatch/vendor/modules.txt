@@ -580,8 +580,8 @@ github.com/jackc/pgservicefile
 # github.com/jackc/pgtype v1.14.4
 ## explicit; go 1.13
 github.com/jackc/pgtype
-# github.com/jackc/pgx/v5 v5.7.5
-## explicit; go 1.23.0
+# github.com/jackc/pgx/v5 v5.9.0
+## explicit; go 1.25.0
 github.com/jackc/pgx/v5
 github.com/jackc/pgx/v5/internal/iobufpool
 github.com/jackc/pgx/v5/internal/pgio
@@ -704,7 +704,7 @@ github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/reflectwalk v1.0.2
 ## explicit
 github.com/mitchellh/reflectwalk
-# github.com/moby/spdystream v0.5.0
+# github.com/moby/spdystream v0.5.1
 ## explicit; go 1.13
 github.com/moby/spdystream
 github.com/moby/spdystream/spdy
