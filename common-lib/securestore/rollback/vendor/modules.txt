@@ -17,7 +17,7 @@ github.com/devtron-labs/common-lib/securestore
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
 github.com/devtron-labs/common-lib/utils/sql
-# github.com/docker/cli v28.1.1+incompatible
+# github.com/docker/cli v29.2.0+incompatible
 ## explicit
 github.com/docker/cli/cli/config/types
 # github.com/go-pg/pg v6.15.1+incompatible
