@@ -19,6 +19,7 @@ package otel
 import (
 	"context"
 	stdlog "log"
+	"strings"
 
 	"github.com/caarlos0/env"
 	"go.opentelemetry.io/otel"
@@ -61,6 +62,10 @@ func Init(cfg *Config) (func(context.Context) error, error) {
 		return noop, nil
 	}
 
+	// The gRPC dialer expects a bare host:port, not a URL with scheme.
+	// Strip http:// or https:// if the user supplied a full URL.
+	endpoint := strings.TrimPrefix(strings.TrimPrefix(cfg.Endpoint, "https://"), "http://")
+
 	ctx := context.Background()
 
 	res, err := resource.New(ctx,
@@ -72,7 +77,7 @@ func Init(cfg *Config) (func(context.Context) error, error) {
 
 	// --- Trace provider ---
 	traceExp, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(cfg.Endpoint),
+		otlptracegrpc.WithEndpoint(endpoint),
 		otlptracegrpc.WithInsecure(),
 	)
 	if err != nil {
@@ -91,7 +96,7 @@ func Init(cfg *Config) (func(context.Context) error, error) {
 
 	// --- Log provider ---
 	logExp, err := otlploggrpc.New(ctx,
-		otlploggrpc.WithEndpoint(cfg.Endpoint),
+		otlploggrpc.WithEndpoint(endpoint),
 		otlploggrpc.WithInsecure(),
 	)
 	if err != nil {
@@ -106,7 +111,7 @@ func Init(cfg *Config) (func(context.Context) error, error) {
 	LP = lp
 	Enabled = true
 
-	stdlog.Printf("OTel initialized — endpoint=%s service=%s\n", cfg.Endpoint, cfg.ServiceName)
+	stdlog.Printf("OTel initialized — endpoint=%s service=%s\n", endpoint, cfg.ServiceName)
 
 	return func(ctx context.Context) error {
 		_ = tp.Shutdown(ctx)

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/devtron-labs/common-lib/securestore"
 	internalotel "github.com/devtron-labs/git-sensor/internals/otel"
+	"github.com/devtron-labs/git-sensor/internals/tracing"
 	"github.com/devtron-labs/git-sensor/util"
 	"log"
 	"os"
@@ -45,6 +46,8 @@ func main() {
 	if err != nil {
 		log.Println("error initializing otel", "err", err)
 	}
+	// Wire up git command and poll span hooks (no-ops when OTel is disabled).
+	tracing.Register()
 
 	app, err := InitializeApp()
 	if err != nil {

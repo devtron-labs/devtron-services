@@ -25,6 +25,7 @@ import (
 	"github.com/devtron-labs/git-sensor/internals"
 	"github.com/devtron-labs/git-sensor/internals/middleware"
 	"github.com/devtron-labs/git-sensor/internals/sql"
+	intracing "github.com/devtron-labs/git-sensor/internals/tracing"
 	"github.com/devtron-labs/git-sensor/util"
 	"go.uber.org/zap"
 	"os"
@@ -197,6 +198,11 @@ func (impl *GitManagerBaseImpl) runCommandWithCred(cmd *exec.Cmd, gitCtx GitCont
 }
 
 func (impl *GitManagerBaseImpl) runCommand(gitCtx GitContext, cmd *exec.Cmd) (response, errMsg string, err error) {
+	if hook := intracing.CommandHook(); hook != nil {
+		var endSpan func(error)
+		gitCtx.Context, endSpan = hook(gitCtx.Context, cmd.String())
+		defer func() { endSpan(err) }()
+	}
 	cmd.Env = append(cmd.Env, "HOME=/dev/null")
 	startTime := time.Now()
 	// logging context deadline for the command

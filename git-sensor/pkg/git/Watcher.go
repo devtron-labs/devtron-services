@@ -28,6 +28,7 @@ import (
 	"github.com/devtron-labs/git-sensor/internals"
 	"github.com/devtron-labs/git-sensor/internals/middleware"
 	"github.com/devtron-labs/git-sensor/internals/sql"
+	intracing "github.com/devtron-labs/git-sensor/internals/tracing"
 	util2 "github.com/devtron-labs/git-sensor/util"
 	"github.com/gammazero/workerpool"
 	"github.com/google/uuid"
@@ -219,7 +220,7 @@ func (impl *GitWatcherImpl) handleSshKeyCreationAndRetry(gitCtx GitContext, mate
 	return updated, repo, errMsg, err
 }
 
-func (impl *GitWatcherImpl) getGitContext(material *sql.GitMaterial) (gitCtx GitContext, err error) {
+func (impl *GitWatcherImpl) getGitContext(ctx context.Context, material *sql.GitMaterial) (gitCtx GitContext, err error) {
 	var userName, password string
 	gitProvider := material.GitProvider
 	userName, password, err = GetUserNamePassword(gitProvider)
@@ -227,7 +228,7 @@ func (impl *GitWatcherImpl) getGitContext(material *sql.GitMaterial) (gitCtx Git
 		impl.logger.Errorw("error in determining location", "url", material.Url, "err", err)
 		return gitCtx, err
 	}
-	gitCtx = BuildGitContext(context.Background()).
+	gitCtx = BuildGitContext(ctx).
 		WithCredentials(userName, password).
 		WithTLSData(gitProvider.CaCert, gitProvider.TlsKey, gitProvider.TlsCert, material.GitProvider.EnableTLSVerification)
 	return gitCtx, nil
@@ -323,8 +324,14 @@ func (impl *GitWatcherImpl) fetchAndUpdateGitMaterial(gitCtx GitContext, materia
 	return updated, repo, "", nil
 }
 
-func (impl *GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (string, error) {
-	gitCtx, err := impl.getGitContext(material)
+func (impl *GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (retErrMsg string, retErr error) {
+	ctx := context.Background()
+	if hook := intracing.PollHook(); hook != nil {
+		var endSpan func(error)
+		ctx, endSpan = hook(ctx, material.Id)
+		defer func() { endSpan(retErr) }()
+	}
+	gitCtx, err := impl.getGitContext(ctx, material)
 	if err != nil {
 		impl.logger.Errorw("error in determining location", "url", material.Url, "err", err)
 		return "", err

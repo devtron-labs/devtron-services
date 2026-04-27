@@ -136,7 +136,7 @@ func TestAddRepo(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("AddRepo", mock.IsType([]*sql.GitMaterial{})).
+	repositoryManager.On("AddRepo", mock.Anything, mock.IsType([]*sql.GitMaterial{})).
 		Return([]*sql.GitMaterial{}, nil)
 
 	// Initializing gRPC server and client connection
@@ -163,7 +163,7 @@ func TestUpdateRepo(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("UpdateRepo", mock.IsType(&sql.GitMaterial{})).
+	repositoryManager.On("UpdateRepo", mock.Anything, mock.IsType(&sql.GitMaterial{})).
 		Return(&sql.GitMaterial{}, nil)
 
 	// Initializing gRPC server and client connection
@@ -205,7 +205,7 @@ func TestFetchChanges(t *testing.T) {
 		"\"deletion\":10},{\"name\":\"q\",\"addition\":10,\"deletion\":40}]," +
 		"\"webhookData\":{\"id\":1,\"eventActionType\":\"action\",\"data\":{\"a\":\"b\",\"c\":\"d\"}}}]"
 
-	commits := make([]*git.GitCommit, 0)
+	commits := make([]*git.GitCommitBase, 0)
 	err := json.Unmarshal([]byte(gitCommits), &commits)
 
 	if err != nil {
@@ -220,7 +220,7 @@ func TestFetchChanges(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("FetchChanges", int(req.PipelineMaterialId), req.From, req.To, int(req.Count)).
+	repositoryManager.On("FetchChanges", int(req.PipelineMaterialId), req.From, req.To, int(req.Count), mock.Anything).
 		Return(&materialChangeRes, nil)
 
 	// Initializing gRPC server and client connection
@@ -290,7 +290,7 @@ func TestGetCommitMetadata(t *testing.T) {
 		"\"webhookData\":{\"id\":1,\"eventActionType\":\"action\"," +
 		"\"data\":{\"a\":\"b\",\"c\":\"d\"}}}"
 
-	var gitCommit git.GitCommit
+	var gitCommit git.GitCommitBase
 	err := json.Unmarshal([]byte(gitCommitString), &gitCommit)
 
 	if err != nil {
@@ -300,7 +300,7 @@ func TestGetCommitMetadata(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetCommitMetadata", int(req.PipelineMaterialId), req.GitHash).
+	repositoryManager.On("GetCommitMetadata", mock.Anything, int(req.PipelineMaterialId), req.GitHash).
 		Return(&gitCommit, nil)
 
 	// Initializing gRPC server and client connection
@@ -336,7 +336,7 @@ func TestGetCommitMetadataForPipelineMaterial(t *testing.T) {
 		"\"webhookData\":{\"id\":1,\"eventActionType\":\"action\"," +
 		"\"data\":{\"a\":\"b\",\"c\":\"d\"}}}"
 
-	var gitCommit git.GitCommit
+	var gitCommit git.GitCommitBase
 	err := json.Unmarshal([]byte(gitCommitString), &gitCommit)
 
 	if err != nil {
@@ -346,7 +346,7 @@ func TestGetCommitMetadataForPipelineMaterial(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetCommitMetadataForPipelineMaterial", int(req.PipelineMaterialId), req.GitHash).
+	repositoryManager.On("GetCommitMetadataForPipelineMaterial", mock.Anything, int(req.PipelineMaterialId), req.GitHash).
 		Return(&gitCommit, nil)
 
 	// Initializing gRPC server and client connection
@@ -382,7 +382,7 @@ func TestGetCommitInfoForTag(t *testing.T) {
 		"\"webhookData\":{\"id\":1,\"eventActionType\":\"action\"," +
 		"\"data\":{\"a\":\"b\",\"c\":\"d\"}}}"
 
-	var gitCommit git.GitCommit
+	var gitCommit git.GitCommitBase
 	err := json.Unmarshal([]byte(gitCommitString), &gitCommit)
 
 	if err != nil {
@@ -392,7 +392,7 @@ func TestGetCommitInfoForTag(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetCommitInfoForTag", mock.IsType(&git.CommitMetadataRequest{})).
+	repositoryManager.On("GetCommitInfoForTag", mock.Anything, mock.IsType(&git.CommitMetadataRequest{})).
 		Return(&gitCommit, nil)
 
 	// Initializing gRPC server and client connection
@@ -455,8 +455,8 @@ func TestReloadAllMaterial(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("ReloadAllRepo").
-		Return()
+	repositoryManager.On("ReloadAllRepo", mock.Anything, mock.Anything).
+		Return(nil)
 
 	// Initializing gRPC server and client connection
 	conn, err := initServer(t, repositoryManager)
@@ -482,7 +482,7 @@ func TestReloadMaterial(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("ResetRepo", 1).
+	repositoryManager.On("ResetRepo", mock.Anything, 1).
 		Return(nil)
 
 	// Initializing gRPC server and client connection
@@ -517,7 +517,7 @@ func TestGetChangesInRelease(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetReleaseChanges", mock.IsType(&pkg.ReleaseChangesRequest{})).
+	repositoryManager.On("GetReleaseChanges", mock.Anything, mock.IsType(&pkg.ReleaseChangesRequest{})).
 		Return(gitChanges, nil)
 
 	// Initializing gRPC server and client connection
@@ -582,7 +582,7 @@ func TestGetAllWebhookEventConfigForHosta(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetAllWebhookEventConfigForHost", int(req.GitHostId)).
+	repositoryManager.On("GetAllWebhookEventConfigForHost", mock.IsType(&git.WebhookEventConfigRequest{})).
 		Return(webhookEventConfig, nil)
 
 	// Initializing gRPC server and client connection
