@@ -17,10 +17,7 @@
 package pkg
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/devtron-labs/git-sensor/bean"
 	internalotel "github.com/devtron-labs/git-sensor/internals/otel"
@@ -30,20 +27,17 @@ import (
 )
 
 // tracedRepoManager is a decorator that wraps every RepoManager call with an
-// OTel span.  It is wire-injected instead of the plain RepoManagerImpl when
-// OTel is enabled.  Business logic is untouched — all tracing lives here.
+// OTel span.  Span names are derived automatically from the calling method via
+// runtime.Caller — no hardcoded string literals to maintain.
 //
-// Methods that receive a git.GitContext already carry the parent span context
-// (set by the gRPC handler via BuildGitContext(ctx)).  Methods without a
-// GitContext create root spans; they are still visible in SigNoz as standalone
-// operations with duration and error data.
+// Wire-injected instead of the plain RepoManagerImpl when OTel is enabled.
+// Business logic is untouched — all tracing lives here.
 type tracedRepoManager struct {
 	inner RepoManager
 }
 
 // NewTracedRepoManager returns a traced wrapper when OTel is enabled,
-// otherwise it returns inner unchanged.  Wire injects *RepoManagerImpl so
-// the concrete type is resolved without a circular interface dependency.
+// otherwise it returns inner unchanged.
 func NewTracedRepoManager(inner *RepoManagerImpl) RepoManager {
 	if !internalotel.Enabled {
 		return inner
@@ -51,196 +45,165 @@ func NewTracedRepoManager(inner *RepoManagerImpl) RepoManager {
 	return &tracedRepoManager{inner: inner}
 }
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── methods with GitContext ───────────────────────────────────────────────────
 
-func startWithCtx(ctx context.Context, name string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
-	opts := []trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindInternal)}
-	if len(attrs) > 0 {
-		opts = append(opts, trace.WithAttributes(attrs...))
-	}
-	return tracing.Start(ctx, name, opts...)
-}
-
-// ── methods with GitContext (parent span flows through gitCtx.Context) ────────
-
-func (t *tracedRepoManager) GetCommitMetadata(gitCtx git.GitContext, pipelineMaterialId int, gitHash string) (*git.GitCommitBase, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetCommitMetadata",
+func (t *tracedRepoManager) GetCommitMetadata(gitCtx git.GitContext, pipelineMaterialId int, gitHash string) (result *git.GitCommitBase, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("material.id", pipelineMaterialId),
 		attribute.String("git.hash", gitHash))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetCommitMetadata(gitCtx, pipelineMaterialId, gitHash)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetCommitMetadata(gitCtx, pipelineMaterialId, gitHash)
+	return
 }
 
-func (t *tracedRepoManager) GetLatestCommitForBranch(gitCtx git.GitContext, pipelineMaterialId int, branchName string) (*git.GitCommitBase, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetLatestCommitForBranch",
+func (t *tracedRepoManager) GetLatestCommitForBranch(gitCtx git.GitContext, pipelineMaterialId int, branchName string) (result *git.GitCommitBase, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("material.id", pipelineMaterialId),
 		attribute.String("branch", branchName))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetLatestCommitForBranch(gitCtx, pipelineMaterialId, branchName)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetLatestCommitForBranch(gitCtx, pipelineMaterialId, branchName)
+	return
 }
 
-func (t *tracedRepoManager) GetCommitMetadataForPipelineMaterial(gitCtx git.GitContext, pipelineMaterialId int, gitHash string) (*git.GitCommitBase, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetCommitMetadataForPipelineMaterial",
+func (t *tracedRepoManager) GetCommitMetadataForPipelineMaterial(gitCtx git.GitContext, pipelineMaterialId int, gitHash string) (result *git.GitCommitBase, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("material.id", pipelineMaterialId))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetCommitMetadataForPipelineMaterial(gitCtx, pipelineMaterialId, gitHash)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetCommitMetadataForPipelineMaterial(gitCtx, pipelineMaterialId, gitHash)
+	return
 }
 
-func (t *tracedRepoManager) AddRepo(gitCtx git.GitContext, material []*sql.GitMaterial) ([]*sql.GitMaterial, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.AddRepo")
-	defer span.End()
+func (t *tracedRepoManager) AddRepo(gitCtx git.GitContext, material []*sql.GitMaterial) (result []*sql.GitMaterial, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.AddRepo(gitCtx, material)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.AddRepo(gitCtx, material)
+	return
 }
 
-func (t *tracedRepoManager) UpdateRepo(gitCtx git.GitContext, material *sql.GitMaterial) (*sql.GitMaterial, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.UpdateRepo")
-	defer span.End()
+func (t *tracedRepoManager) UpdateRepo(gitCtx git.GitContext, material *sql.GitMaterial) (result *sql.GitMaterial, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.UpdateRepo(gitCtx, material)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.UpdateRepo(gitCtx, material)
+	return
 }
 
-func (t *tracedRepoManager) SavePipelineMaterial(gitCtx git.GitContext, material []*sql.CiPipelineMaterial) ([]*sql.CiPipelineMaterial, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.SavePipelineMaterial")
-	defer span.End()
+func (t *tracedRepoManager) SavePipelineMaterial(gitCtx git.GitContext, material []*sql.CiPipelineMaterial) (result []*sql.CiPipelineMaterial, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.SavePipelineMaterial(gitCtx, material)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.SavePipelineMaterial(gitCtx, material)
+	return
 }
 
-func (t *tracedRepoManager) ReloadAllRepo(gitCtx git.GitContext, req *bean.ReloadAllMaterialQuery) error {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.ReloadAllRepo")
-	defer span.End()
+func (t *tracedRepoManager) ReloadAllRepo(gitCtx git.GitContext, req *bean.ReloadAllMaterialQuery) (err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	err := t.inner.ReloadAllRepo(gitCtx, req)
-	tracing.End(span, err)
-	return err
+	err = t.inner.ReloadAllRepo(gitCtx, req)
+	return
 }
 
-func (t *tracedRepoManager) ResetRepo(gitCtx git.GitContext, materialId int) error {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.ResetRepo",
+func (t *tracedRepoManager) ResetRepo(gitCtx git.GitContext, materialId int) (err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("material.id", materialId))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	err := t.inner.ResetRepo(gitCtx, materialId)
-	tracing.End(span, err)
-	return err
+	err = t.inner.ResetRepo(gitCtx, materialId)
+	return
 }
 
-func (t *tracedRepoManager) GetReleaseChanges(gitCtx git.GitContext, request *ReleaseChangesRequest) (*git.GitChanges, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetReleaseChanges")
-	defer span.End()
+func (t *tracedRepoManager) GetReleaseChanges(gitCtx git.GitContext, request *ReleaseChangesRequest) (result *git.GitChanges, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetReleaseChanges(gitCtx, request)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetReleaseChanges(gitCtx, request)
+	return
 }
 
-func (t *tracedRepoManager) GetCommitInfoForTag(gitCtx git.GitContext, request *git.CommitMetadataRequest) (*git.GitCommitBase, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetCommitInfoForTag")
-	defer span.End()
+func (t *tracedRepoManager) GetCommitInfoForTag(gitCtx git.GitContext, request *git.CommitMetadataRequest) (result *git.GitCommitBase, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetCommitInfoForTag(gitCtx, request)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetCommitInfoForTag(gitCtx, request)
+	return
 }
 
-// ── methods now with GitContext (context threaded from gRPC/REST handler) ─────
-
-func (t *tracedRepoManager) GetHeadForPipelineMaterials(gitCtx git.GitContext, ids []int) ([]*git.CiPipelineMaterialBean, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetHeadForPipelineMaterials")
-	defer span.End()
+func (t *tracedRepoManager) GetHeadForPipelineMaterials(gitCtx git.GitContext, ids []int) (result []*git.CiPipelineMaterialBean, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetHeadForPipelineMaterials(gitCtx, ids)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetHeadForPipelineMaterials(gitCtx, ids)
+	return
 }
 
-func (t *tracedRepoManager) FetchChanges(gitCtx git.GitContext, pipelineMaterialId int, from string, to string, count int, showAll bool) (*git.MaterialChangeResp, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.FetchChanges",
+func (t *tracedRepoManager) FetchChanges(gitCtx git.GitContext, pipelineMaterialId int, from string, to string, count int, showAll bool) (result *git.MaterialChangeResp, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("material.id", pipelineMaterialId))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.FetchChanges(gitCtx, pipelineMaterialId, from, to, count, showAll)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.FetchChanges(gitCtx, pipelineMaterialId, from, to, count, showAll)
+	return
 }
 
-func (t *tracedRepoManager) SaveGitProvider(gitCtx git.GitContext, provider *sql.GitProvider) (*sql.GitProvider, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.SaveGitProvider")
-	defer span.End()
+func (t *tracedRepoManager) SaveGitProvider(gitCtx git.GitContext, provider *sql.GitProvider) (result *sql.GitProvider, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.SaveGitProvider(gitCtx, provider)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.SaveGitProvider(gitCtx, provider)
+	return
 }
 
-func (t *tracedRepoManager) RefreshGitMaterial(gitCtx git.GitContext, req *git.RefreshGitMaterialRequest) (*git.RefreshGitMaterialResponse, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.RefreshGitMaterial")
-	defer span.End()
+func (t *tracedRepoManager) RefreshGitMaterial(gitCtx git.GitContext, req *git.RefreshGitMaterialRequest) (result *git.RefreshGitMaterialResponse, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.RefreshGitMaterial(gitCtx, req)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.RefreshGitMaterial(gitCtx, req)
+	return
 }
 
-func (t *tracedRepoManager) GetWebhookAndCiDataById(gitCtx git.GitContext, id int, ciPipelineMaterialId int) (*git.WebhookAndCiData, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetWebhookAndCiDataById",
+func (t *tracedRepoManager) GetWebhookAndCiDataById(gitCtx git.GitContext, id int, ciPipelineMaterialId int) (result *git.WebhookAndCiData, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("webhook.id", id))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetWebhookAndCiDataById(gitCtx, id, ciPipelineMaterialId)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetWebhookAndCiDataById(gitCtx, id, ciPipelineMaterialId)
+	return
 }
 
-func (t *tracedRepoManager) GetAllWebhookEventConfigForHost(gitCtx git.GitContext, req *git.WebhookEventConfigRequest) ([]*git.WebhookEventConfig, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetAllWebhookEventConfigForHost")
-	defer span.End()
+func (t *tracedRepoManager) GetAllWebhookEventConfigForHost(gitCtx git.GitContext, req *git.WebhookEventConfigRequest) (result []*git.WebhookEventConfig, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetAllWebhookEventConfigForHost(gitCtx, req)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetAllWebhookEventConfigForHost(gitCtx, req)
+	return
 }
 
-func (t *tracedRepoManager) GetWebhookEventConfig(gitCtx git.GitContext, eventId int) (*git.WebhookEventConfig, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetWebhookEventConfig",
+func (t *tracedRepoManager) GetWebhookEventConfig(gitCtx git.GitContext, eventId int) (result *git.WebhookEventConfig, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context,
 		attribute.Int("event.id", eventId))
-	defer span.End()
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetWebhookEventConfig(gitCtx, eventId)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetWebhookEventConfig(gitCtx, eventId)
+	return
 }
 
-func (t *tracedRepoManager) GetWebhookPayloadDataForPipelineMaterialId(gitCtx git.GitContext, request *git.WebhookPayloadDataRequest) (*git.WebhookPayloadDataResponse, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetWebhookPayloadData")
-	defer span.End()
+func (t *tracedRepoManager) GetWebhookPayloadDataForPipelineMaterialId(gitCtx git.GitContext, request *git.WebhookPayloadDataRequest) (result *git.WebhookPayloadDataResponse, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetWebhookPayloadDataForPipelineMaterialId(gitCtx, request)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetWebhookPayloadDataForPipelineMaterialId(gitCtx, request)
+	return
 }
 
-func (t *tracedRepoManager) GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx git.GitContext, request *git.WebhookPayloadFilterDataRequest) (*git.WebhookPayloadFilterDataResponse, error) {
-	ctx, span := startWithCtx(gitCtx.Context, "RepoManager.GetWebhookPayloadFilterData")
-	defer span.End()
+func (t *tracedRepoManager) GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx git.GitContext, request *git.WebhookPayloadFilterDataRequest) (result *git.WebhookPayloadFilterDataResponse, err error) {
+	ctx, span := tracing.StartCaller(gitCtx.Context)
+	defer func() { tracing.End(span, err) }()
 	gitCtx.Context = ctx
-	result, err := t.inner.GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx, request)
-	tracing.End(span, err)
-	return result, err
+	result, err = t.inner.GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx, request)
+	return
 }

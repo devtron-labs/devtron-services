@@ -20,7 +20,6 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
-	internalotel "github.com/devtron-labs/git-sensor/internals/otel"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
 	"reflect"
@@ -72,9 +71,6 @@ func NewDbConnection(cfg *Config, logger *zap.SugaredLogger) (*pg.DB, error) {
 	//--------------
 	if cfg.LogSlowQuery {
 		dbConnection.OnQueryProcessed(utils.GetPGPostQueryProcessor(cfg.PgQueryMonitoringConfig))
-	}
-	if internalotel.Enabled {
-		dbConnection.OnQueryProcessed(OtelQueryHook)
 	}
 	return dbConnection, err
 }

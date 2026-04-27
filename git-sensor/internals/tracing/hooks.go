@@ -18,6 +18,7 @@ package tracing
 
 import (
 	"context"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -50,13 +51,14 @@ func Register() {
 		return
 	}
 
-	// git command spans — one span per git CLI invocation (fetch, log, show, etc.)
+	// git command spans — span name = "git.<subcommand>" (e.g. git.fetch, git.log, git.clone).
+	// The subcommand is extracted from the cmdArgs string at runtime; no hardcoded names.
 	cmdTracer := otel.Tracer(tracerName + "/git")
 	activeCommandHook = func(ctx context.Context, cmdArgs string) (context.Context, func(error)) {
 		if len(cmdArgs) > 300 {
 			cmdArgs = cmdArgs[:300]
 		}
-		ctx, span := cmdTracer.Start(ctx, "git.command",
+		ctx, span := cmdTracer.Start(ctx, gitSubcmd(cmdArgs),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attribute.String("git.args", cmdArgs)),
 		)
@@ -69,10 +71,10 @@ func Register() {
 		}
 	}
 
-	// poll spans — one root span per material poll cycle in the watcher
+	// poll spans — one span per material poll cycle in the background watcher.
 	pollTracer := otel.Tracer(tracerName + "/watcher")
 	activePollHook = func(ctx context.Context, materialId int) (context.Context, func(error)) {
-		ctx, span := pollTracer.Start(ctx, "git.poll",
+		ctx, span := pollTracer.Start(ctx, "watcher.poll",
 			trace.WithAttributes(attribute.Int("material.id", materialId)),
 		)
 		return ctx, func(err error) {
@@ -83,6 +85,23 @@ func Register() {
 			span.End()
 		}
 	}
+}
+
+// gitSubcmd extracts the git subcommand from a full command args string.
+// "/usr/bin/git -c ... fetch origin" → "git.fetch"
+// Falls back to "git.exec" if extraction fails.
+func gitSubcmd(cmdArgs string) string {
+	fields := strings.Fields(cmdArgs)
+	for i, f := range fields {
+		if strings.HasSuffix(f, "git") && i+1 < len(fields) {
+			for _, sub := range fields[i+1:] {
+				if !strings.HasPrefix(sub, "-") {
+					return "git." + sub
+				}
+			}
+		}
+	}
+	return "git.exec"
 }
 
 // CommandHook returns the active git command hook (nil when tracing is off).
