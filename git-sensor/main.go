@@ -17,13 +17,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/devtron-labs/common-lib/securestore"
+	internalotel "github.com/devtron-labs/git-sensor/internals/otel"
 	"github.com/devtron-labs/git-sensor/util"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -32,6 +35,17 @@ func main() {
 		log.Println("error in setting encryption key", "err", err)
 	}
 	log.Println("starting ", "BuildVersion", util.GitCommit, "BuildTime", util.BuildTime)
+
+	// Initialize OTel before wire so the logger picks up the OTel core.
+	otelCfg, err := internalotel.GetConfig()
+	if err != nil {
+		log.Println("error parsing otel config", "err", err)
+	}
+	otelShutdown, err := internalotel.Init(otelCfg)
+	if err != nil {
+		log.Println("error initializing otel", "err", err)
+	}
+
 	app, err := InitializeApp()
 	if err != nil {
 		log.Panic(err)
@@ -45,4 +59,11 @@ func main() {
 	fmt.Printf("caught term sig: %+v", sig)
 	app.Stop()
 	//      gracefulStop end
+
+	// Flush pending OTel telemetry before exit.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err = otelShutdown(shutdownCtx); err != nil {
+		log.Println("error shutting down otel", "err", err)
+	}
 }

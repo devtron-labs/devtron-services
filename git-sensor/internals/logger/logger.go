@@ -18,6 +18,8 @@ package logger
 
 import (
 	"github.com/caarlos0/env"
+	internalotel "github.com/devtron-labs/git-sensor/internals/otel"
+	otelzap "go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -40,5 +42,16 @@ func NewSugaredLogger() *zap.SugaredLogger {
 	if err != nil {
 		panic("failed to create the logger: " + err.Error())
 	}
+
+	// Bridge zap logs to the OTel log provider when OTel is enabled.
+	if internalotel.Enabled && internalotel.LP != nil {
+		otelCore := otelzap.NewCore("git-sensor",
+			otelzap.WithLoggerProvider(internalotel.LP),
+		)
+		log = log.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core {
+			return zapcore.NewTee(c, otelCore)
+		}))
+	}
+
 	return log.Sugar()
 }

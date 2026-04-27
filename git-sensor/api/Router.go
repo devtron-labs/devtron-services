@@ -23,6 +23,7 @@ import (
 	"github.com/devtron-labs/git-sensor/util"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -64,6 +65,7 @@ func (r MuxRouter) Init() {
 		_, _ = writer.Write(b)
 	})
 	r.Router.Use(middlewares.Recovery)
+	r.Router.Use(otelhttp.NewMiddleware("git-sensor"))
 	r.Router.Path("/git-provider").HandlerFunc(r.restHandler.SaveGitProvider).Methods("POST")
 	r.Router.Path("/git-repo").HandlerFunc(r.restHandler.AddRepo).Methods("POST")
 	r.Router.Path("/git-repo").HandlerFunc(r.restHandler.UpdateRepo).Methods("PUT")
