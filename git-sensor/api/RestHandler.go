@@ -109,7 +109,8 @@ func (handler RestHandlerImpl) SaveGitProvider(w http.ResponseWriter, r *http.Re
 		return
 	}
 	handler.logger.Infow("update gitProvider request ", "req", gitProvider)
-	res, err := handler.repositoryManager.SaveGitProvider(gitProvider)
+	gitCtx := git.BuildGitContext(r.Context())
+	res, err := handler.repositoryManager.SaveGitProvider(gitCtx, gitProvider)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusBadRequest)
 	} else {
@@ -266,7 +267,8 @@ func (handler RestHandlerImpl) FetchChanges(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	handler.logger.Infow("fetch git materials ", "req", material)
-	commits, err := handler.repositoryManager.FetchChanges(material.PipelineMaterialId, material.From, material.To, material.Count, material.ShowAll)
+	gitCtx := git.BuildGitContext(r.Context())
+	commits, err := handler.repositoryManager.FetchChanges(gitCtx, material.PipelineMaterialId, material.From, material.To, material.Count, material.ShowAll)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusBadRequest)
 	} else {
@@ -284,7 +286,8 @@ func (handler RestHandlerImpl) GetHeadForPipelineMaterials(w http.ResponseWriter
 		return
 	}
 	handler.logger.Infow("update pipelineMaterial request ", "req", material)
-	commits, err := handler.repositoryManager.GetHeadForPipelineMaterials(material.MaterialIds)
+	gitCtx := git.BuildGitContext(r.Context())
+	commits, err := handler.repositoryManager.GetHeadForPipelineMaterials(gitCtx, material.MaterialIds)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusBadRequest)
 	} else {
@@ -389,7 +392,8 @@ func (handler RestHandlerImpl) RefreshGitMaterial(w http.ResponseWriter, r *http
 		return
 	}
 	handler.logger.Infow("commit detail request", "req", request)
-	resp, err := handler.repositoryManager.RefreshGitMaterial(request)
+	gitCtx := git.BuildGitContext(r.Context())
+	resp, err := handler.repositoryManager.RefreshGitMaterial(gitCtx, request)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusInternalServerError)
 	} else {
@@ -408,7 +412,8 @@ func (handler RestHandlerImpl) GetWebhookData(w http.ResponseWriter, r *http.Req
 		return
 	}
 	handler.logger.Debugw("webhook data request ", "req", request)
-	webhookData, err := handler.repositoryManager.GetWebhookAndCiDataById(request.Id, request.CiPipelineMaterialId)
+	gitCtx := git.BuildGitContext(r.Context())
+	webhookData, err := handler.repositoryManager.GetWebhookAndCiDataById(gitCtx, request.Id, request.CiPipelineMaterialId)
 
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusInternalServerError)
@@ -429,8 +434,9 @@ func (handler RestHandlerImpl) GetAllWebhookEventConfigForHost(w http.ResponseWr
 	}
 	handler.logger.Infow("webhook event config request ", "req", request)
 
+	gitCtx := git.BuildGitContext(r.Context())
 	var webhookEventConfigArr []*git.WebhookEventConfig
-	webhookEventConfigArr, err = handler.repositoryManager.GetAllWebhookEventConfigForHost(request)
+	webhookEventConfigArr, err = handler.repositoryManager.GetAllWebhookEventConfigForHost(gitCtx, request)
 
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusInternalServerError)
@@ -451,7 +457,8 @@ func (handler RestHandlerImpl) GetWebhookEventConfig(w http.ResponseWriter, r *h
 	}
 	handler.logger.Infow("webhook event config request ", "req", request)
 
-	webhookEventConfig, err := handler.repositoryManager.GetWebhookEventConfig(request.EventId)
+	gitCtx := git.BuildGitContext(r.Context())
+	webhookEventConfig, err := handler.repositoryManager.GetWebhookEventConfig(gitCtx, request.EventId)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusInternalServerError)
 	} else {
@@ -472,7 +479,8 @@ func (handler RestHandlerImpl) GetWebhookPayloadDataForPipelineMaterialId(w http
 	}
 	handler.logger.Infow("webhook payload data request ", "req", request)
 
-	data, err := handler.repositoryManager.GetWebhookPayloadDataForPipelineMaterialId(request)
+	gitCtx := git.BuildGitContext(r.Context())
+	data, err := handler.repositoryManager.GetWebhookPayloadDataForPipelineMaterialId(gitCtx, request)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusInternalServerError)
 	} else {
@@ -493,7 +501,8 @@ func (handler RestHandlerImpl) GetWebhookPayloadFilterDataForPipelineMaterialId(
 	}
 	handler.logger.Infow("webhook payload filter data request ", "req", request)
 
-	data, err := handler.repositoryManager.GetWebhookPayloadFilterDataForPipelineMaterialId(request)
+	gitCtx := git.BuildGitContext(r.Context())
+	data, err := handler.repositoryManager.GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx, request)
 	if err != nil {
 		handler.writeJsonResp(w, err, nil, http.StatusInternalServerError)
 	} else {

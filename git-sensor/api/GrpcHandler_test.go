@@ -103,7 +103,7 @@ func TestSaveGitProvider(t *testing.T) {
 
 	// Mock repository manager
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("SaveGitProvider", mock.IsType(&sql.GitProvider{})).
+	repositoryManager.On("SaveGitProvider", mock.Anything, mock.IsType(&sql.GitProvider{})).
 		Return(&sql.GitProvider{}, nil)
 
 	// Initialize gRPC server
@@ -220,7 +220,7 @@ func TestFetchChanges(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("FetchChanges", int(req.PipelineMaterialId), req.From, req.To, int(req.Count), mock.Anything).
+	repositoryManager.On("FetchChanges", mock.Anything, int(req.PipelineMaterialId), req.From, req.To, int(req.Count), mock.Anything).
 		Return(&materialChangeRes, nil)
 
 	// Initializing gRPC server and client connection
@@ -257,7 +257,7 @@ func TestGetHeadForPipelineMaterials(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetHeadForPipelineMaterials", mock.IsType([]int{})).
+	repositoryManager.On("GetHeadForPipelineMaterials", mock.Anything, mock.IsType([]int{})).
 		Return(materials, nil)
 
 	// Initializing gRPC server and client connection
@@ -430,7 +430,7 @@ func TestRefreshGitMaterial(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("RefreshGitMaterial", mock.IsType(&git.RefreshGitMaterialRequest{})).
+	repositoryManager.On("RefreshGitMaterial", mock.Anything, mock.IsType(&git.RefreshGitMaterialRequest{})).
 		Return(refreshGitMaterialResp, nil)
 
 	// Initializing gRPC server and client connection
@@ -551,7 +551,7 @@ func TestGetWebhookData(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetWebhookAndCiDataById", int(req.Id), int(req.CiPipelineMaterialId)).
+	repositoryManager.On("GetWebhookAndCiDataById", mock.Anything, int(req.Id), int(req.CiPipelineMaterialId)).
 		Return(webhookAndCiData, nil)
 
 	// Initializing gRPC server and client connection
@@ -582,7 +582,7 @@ func TestGetAllWebhookEventConfigForHosta(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetAllWebhookEventConfigForHost", mock.IsType(&git.WebhookEventConfigRequest{})).
+	repositoryManager.On("GetAllWebhookEventConfigForHost", mock.Anything, mock.IsType(&git.WebhookEventConfigRequest{})).
 		Return(webhookEventConfig, nil)
 
 	// Initializing gRPC server and client connection
@@ -613,7 +613,7 @@ func TestGetWebhookEventConfig(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetWebhookEventConfig", int(req.EventId)).
+	repositoryManager.On("GetWebhookEventConfig", mock.Anything, int(req.EventId)).
 		Return(webhookEventConfig, nil)
 
 	// Initializing gRPC server and client connection
@@ -644,7 +644,7 @@ func TestGetWebhookPayloadDataForPipelineMaterialId(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetWebhookPayloadDataForPipelineMaterialId", mock.IsType(&git.WebhookPayloadDataRequest{})).
+	repositoryManager.On("GetWebhookPayloadDataForPipelineMaterialId", mock.Anything, mock.IsType(&git.WebhookPayloadDataRequest{})).
 		Return(payloadData, nil)
 
 	// Initializing gRPC server and client connection
@@ -673,7 +673,7 @@ func TestGetWebhookPayloadFilterDataForPipelineMaterialId(t *testing.T) {
 
 	// Mocking
 	repositoryManager := mocks.NewRepoManager(t)
-	repositoryManager.On("GetWebhookPayloadFilterDataForPipelineMaterialId", mock.IsType(&git.WebhookPayloadFilterDataRequest{})).
+	repositoryManager.On("GetWebhookPayloadFilterDataForPipelineMaterialId", mock.Anything, mock.IsType(&git.WebhookPayloadFilterDataRequest{})).
 		Return(payloadRes, nil)
 
 	// Initializing gRPC server and client connection

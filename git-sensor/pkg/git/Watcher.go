@@ -56,7 +56,7 @@ type GitWatcherImpl struct {
 const PANIC = "panic"
 
 type GitWatcher interface {
-	PollAndUpdateGitMaterial(material *sql.GitMaterial) (*sql.GitMaterial, error)
+	PollAndUpdateGitMaterial(ctx context.Context, material *sql.GitMaterial) (*sql.GitMaterial, error)
 }
 
 type PollConfig struct {
@@ -150,7 +150,7 @@ func (impl *GitWatcherImpl) RunOnWorker(materials []*sql.GitMaterial) {
 		materialMsg := &sql.GitMaterial{Id: material.Id, Url: material.Url}
 		wp.Submit(func() {
 			defer handlePanic()
-			_, err := impl.pollAndUpdateGitMaterial(materialMsg)
+			_, err := impl.pollAndUpdateGitMaterial(context.Background(), materialMsg)
 			if err != nil {
 				impl.logger.Errorw("error in polling git material", "material", materialMsg, "err", err)
 			}
@@ -159,12 +159,12 @@ func (impl *GitWatcherImpl) RunOnWorker(materials []*sql.GitMaterial) {
 	wp.StopWait()
 }
 
-func (impl *GitWatcherImpl) PollAndUpdateGitMaterial(material *sql.GitMaterial) (*sql.GitMaterial, error) {
+func (impl *GitWatcherImpl) PollAndUpdateGitMaterial(ctx context.Context, material *sql.GitMaterial) (*sql.GitMaterial, error) {
 	// tmp expose remove in future
-	return impl.pollAndUpdateGitMaterial(material)
+	return impl.pollAndUpdateGitMaterial(ctx, material)
 }
 
-func (impl *GitWatcherImpl) pollAndUpdateGitMaterial(materialReq *sql.GitMaterial) (*sql.GitMaterial, error) {
+func (impl *GitWatcherImpl) pollAndUpdateGitMaterial(ctx context.Context, materialReq *sql.GitMaterial) (*sql.GitMaterial, error) {
 	repoLock := impl.locker.LeaseLocker(materialReq.Id)
 	repoLock.Mutex.Lock()
 	defer func() {
@@ -176,7 +176,7 @@ func (impl *GitWatcherImpl) pollAndUpdateGitMaterial(materialReq *sql.GitMateria
 		impl.logger.Errorw("error in fetching material ", "material", materialReq, "err", err)
 		return nil, err
 	}
-	errMsg, err := impl.pollGitMaterialAndNotify(material)
+	errMsg, err := impl.pollGitMaterialAndNotify(ctx, material)
 	material.LastFetchTime = time.Now()
 	material.FetchStatus = err == nil
 	if err != nil {
@@ -324,8 +324,7 @@ func (impl *GitWatcherImpl) fetchAndUpdateGitMaterial(gitCtx GitContext, materia
 	return updated, repo, "", nil
 }
 
-func (impl *GitWatcherImpl) pollGitMaterialAndNotify(material *sql.GitMaterial) (retErrMsg string, retErr error) {
-	ctx := context.Background()
+func (impl *GitWatcherImpl) pollGitMaterialAndNotify(ctx context.Context, material *sql.GitMaterial) (retErrMsg string, retErr error) {
 	if hook := intracing.PollHook(); hook != nil {
 		var endSpan func(error)
 		ctx, endSpan = hook(ctx, material.Id)

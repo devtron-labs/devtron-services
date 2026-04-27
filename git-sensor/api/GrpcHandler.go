@@ -89,7 +89,8 @@ func (impl *GrpcHandlerImpl) SaveGitProvider(ctx context.Context, req *pb.GitPro
 		EnableTLSVerification: req.EnableTLSVerification,
 	}
 
-	_, err := impl.repositoryManager.SaveGitProvider(gitProvider)
+	gitCtx := git.BuildGitContext(ctx)
+	_, err := impl.repositoryManager.SaveGitProvider(gitCtx, gitProvider)
 	if err != nil {
 		impl.logger.Errorw("error while saving git provider",
 			"authMode", gitProvider.AuthMode,
@@ -213,7 +214,8 @@ func (impl *GrpcHandlerImpl) SavePipelineMaterial(ctx context.Context, req *pb.S
 func (impl *GrpcHandlerImpl) FetchChanges(ctx context.Context, req *pb.FetchScmChangesRequest) (
 	*pb.MaterialChangeResponse, error) {
 
-	res, err := impl.repositoryManager.FetchChanges(int(req.PipelineMaterialId), req.From, req.To, int(req.Count), req.ShowAll)
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.FetchChanges(gitCtx, int(req.PipelineMaterialId), req.From, req.To, int(req.Count), req.ShowAll)
 	if err != nil {
 		impl.logger.Errorw("error while fetching scm changes",
 			"pipelineMaterialId", req.PipelineMaterialId,
@@ -265,7 +267,8 @@ func (impl *GrpcHandlerImpl) GetHeadForPipelineMaterials(ctx context.Context, re
 	}
 
 	// Fetch
-	res, err := impl.repositoryManager.GetHeadForPipelineMaterials(materialIds)
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.GetHeadForPipelineMaterials(gitCtx, materialIds)
 	if err != nil {
 		impl.logger.Errorw("error while fetching head for pipeline materials",
 			"err", err)
@@ -415,7 +418,8 @@ func (impl *GrpcHandlerImpl) RefreshGitMaterial(ctx context.Context, req *pb.Ref
 		GitMaterialId: int(req.GitMaterialId),
 	}
 
-	res, err := impl.repositoryManager.RefreshGitMaterial(mappedRequest)
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.RefreshGitMaterial(gitCtx, mappedRequest)
 	if err != nil {
 		impl.logger.Errorw("error while refreshing git material",
 			"gitMaterialId", req.GitMaterialId,
@@ -509,7 +513,8 @@ func (impl *GrpcHandlerImpl) GetChangesInRelease(ctx context.Context, req *pb.Re
 func (impl *GrpcHandlerImpl) GetWebhookData(ctx context.Context, req *pb.WebhookDataRequest) (
 	*pb.WebhookAndCiData, error) {
 
-	res, err := impl.repositoryManager.GetWebhookAndCiDataById(int(req.Id), int(req.CiPipelineMaterialId))
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.GetWebhookAndCiDataById(gitCtx, int(req.Id), int(req.CiPipelineMaterialId))
 	if err != nil {
 		impl.logger.Errorw("error while fetching webhook and ci data",
 			"ciPipelineMaterialId", req.CiPipelineMaterialId,
@@ -544,7 +549,8 @@ func (impl *GrpcHandlerImpl) GetAllWebhookEventConfigForHost(ctx context.Context
 		GitHostName: req.GitHostName,
 		EventId:     int(req.EventId),
 	}
-	res, err = impl.repositoryManager.GetAllWebhookEventConfigForHost(reqModel)
+	gitCtx := git.BuildGitContext(ctx)
+	res, err = impl.repositoryManager.GetAllWebhookEventConfigForHost(gitCtx, reqModel)
 	if err != nil {
 		impl.logger.Errorw("error while fetching webhook event config",
 			"gitHostId", req.GitHostId,
@@ -572,7 +578,8 @@ func (impl *GrpcHandlerImpl) GetAllWebhookEventConfigForHost(ctx context.Context
 func (impl *GrpcHandlerImpl) GetWebhookEventConfig(ctx context.Context, req *pb.WebhookEventConfigRequest) (
 	*pb.WebhookEventConfig, error) {
 
-	res, err := impl.repositoryManager.GetWebhookEventConfig(int(req.EventId))
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.GetWebhookEventConfig(gitCtx, int(req.EventId))
 	if err != nil {
 		impl.logger.Errorw("error while fetching webhook event config",
 			"eventId", req.EventId,
@@ -596,7 +603,8 @@ func (impl *GrpcHandlerImpl) GetWebhookPayloadDataForPipelineMaterialId(ctx cont
 		EventTimeSortOrder:   req.EventTimeSortOrder,
 	}
 
-	res, err := impl.repositoryManager.GetWebhookPayloadDataForPipelineMaterialId(mappedReq)
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.GetWebhookPayloadDataForPipelineMaterialId(gitCtx, mappedReq)
 	if err != nil {
 		impl.logger.Errorw("error while fetching webhook payload data for pipeline material id",
 			"ciPipelineMaterialId", mappedReq.CiPipelineMaterialId,
@@ -643,7 +651,8 @@ func (impl *GrpcHandlerImpl) GetWebhookPayloadFilterDataForPipelineMaterialId(ct
 		CiPipelineMaterialId: int(req.CiPipelineMaterialId),
 	}
 
-	res, err := impl.repositoryManager.GetWebhookPayloadFilterDataForPipelineMaterialId(mappedReq)
+	gitCtx := git.BuildGitContext(ctx)
+	res, err := impl.repositoryManager.GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx, mappedReq)
 	if err != nil {
 		impl.logger.Errorw("error while fetching webhook payload data for pipeline material id with filter",
 			"ciPipelineMaterialId", mappedReq.CiPipelineMaterialId,

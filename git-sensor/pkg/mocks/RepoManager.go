@@ -43,25 +43,25 @@ func (_m *RepoManager) AddRepo(gitCtx git.GitContext, material []*sql.GitMateria
 	return r0, r1
 }
 
-// FetchChanges provides a mock function with given fields: pipelineMaterialId, from, to, count, showAll
-func (_m *RepoManager) FetchChanges(pipelineMaterialId int, from string, to string, count int, showAll bool) (*git.MaterialChangeResp, error) {
-	ret := _m.Called(pipelineMaterialId, from, to, count, showAll)
+// FetchChanges provides a mock function with given fields: gitCtx, pipelineMaterialId, from, to, count, showAll
+func (_m *RepoManager) FetchChanges(gitCtx git.GitContext, pipelineMaterialId int, from string, to string, count int, showAll bool) (*git.MaterialChangeResp, error) {
+	ret := _m.Called(gitCtx, pipelineMaterialId, from, to, count, showAll)
 
 	var r0 *git.MaterialChangeResp
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, string, string, int, bool) (*git.MaterialChangeResp, error)); ok {
-		return rf(pipelineMaterialId, from, to, count, showAll)
+	if rf, ok := ret.Get(0).(func(git.GitContext, int, string, string, int, bool) (*git.MaterialChangeResp, error)); ok {
+		return rf(gitCtx, pipelineMaterialId, from, to, count, showAll)
 	}
-	if rf, ok := ret.Get(0).(func(int, string, string, int, bool) *git.MaterialChangeResp); ok {
-		r0 = rf(pipelineMaterialId, from, to, count, showAll)
+	if rf, ok := ret.Get(0).(func(git.GitContext, int, string, string, int, bool) *git.MaterialChangeResp); ok {
+		r0 = rf(gitCtx, pipelineMaterialId, from, to, count, showAll)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*git.MaterialChangeResp)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int, string, string, int, bool) error); ok {
-		r1 = rf(pipelineMaterialId, from, to, count, showAll)
+	if rf, ok := ret.Get(1).(func(git.GitContext, int, string, string, int, bool) error); ok {
+		r1 = rf(gitCtx, pipelineMaterialId, from, to, count, showAll)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -69,25 +69,25 @@ func (_m *RepoManager) FetchChanges(pipelineMaterialId int, from string, to stri
 	return r0, r1
 }
 
-// GetAllWebhookEventConfigForHost provides a mock function with given fields: req
-func (_m *RepoManager) GetAllWebhookEventConfigForHost(req *git.WebhookEventConfigRequest) ([]*git.WebhookEventConfig, error) {
-	ret := _m.Called(req)
+// GetAllWebhookEventConfigForHost provides a mock function with given fields: gitCtx, req
+func (_m *RepoManager) GetAllWebhookEventConfigForHost(gitCtx git.GitContext, req *git.WebhookEventConfigRequest) ([]*git.WebhookEventConfig, error) {
+	ret := _m.Called(gitCtx, req)
 
 	var r0 []*git.WebhookEventConfig
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*git.WebhookEventConfigRequest) ([]*git.WebhookEventConfig, error)); ok {
-		return rf(req)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.WebhookEventConfigRequest) ([]*git.WebhookEventConfig, error)); ok {
+		return rf(gitCtx, req)
 	}
-	if rf, ok := ret.Get(0).(func(*git.WebhookEventConfigRequest) []*git.WebhookEventConfig); ok {
-		r0 = rf(req)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.WebhookEventConfigRequest) []*git.WebhookEventConfig); ok {
+		r0 = rf(gitCtx, req)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*git.WebhookEventConfig)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*git.WebhookEventConfigRequest) error); ok {
-		r1 = rf(req)
+	if rf, ok := ret.Get(1).(func(git.GitContext, *git.WebhookEventConfigRequest) error); ok {
+		r1 = rf(gitCtx, req)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -173,25 +173,25 @@ func (_m *RepoManager) GetCommitMetadataForPipelineMaterial(gitCtx git.GitContex
 	return r0, r1
 }
 
-// GetHeadForPipelineMaterials provides a mock function with given fields: ids
-func (_m *RepoManager) GetHeadForPipelineMaterials(ids []int) ([]*git.CiPipelineMaterialBean, error) {
-	ret := _m.Called(ids)
+// GetHeadForPipelineMaterials provides a mock function with given fields: gitCtx, ids
+func (_m *RepoManager) GetHeadForPipelineMaterials(gitCtx git.GitContext, ids []int) ([]*git.CiPipelineMaterialBean, error) {
+	ret := _m.Called(gitCtx, ids)
 
 	var r0 []*git.CiPipelineMaterialBean
 	var r1 error
-	if rf, ok := ret.Get(0).(func([]int) ([]*git.CiPipelineMaterialBean, error)); ok {
-		return rf(ids)
+	if rf, ok := ret.Get(0).(func(git.GitContext, []int) ([]*git.CiPipelineMaterialBean, error)); ok {
+		return rf(gitCtx, ids)
 	}
-	if rf, ok := ret.Get(0).(func([]int) []*git.CiPipelineMaterialBean); ok {
-		r0 = rf(ids)
+	if rf, ok := ret.Get(0).(func(git.GitContext, []int) []*git.CiPipelineMaterialBean); ok {
+		r0 = rf(gitCtx, ids)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*git.CiPipelineMaterialBean)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func([]int) error); ok {
-		r1 = rf(ids)
+	if rf, ok := ret.Get(1).(func(git.GitContext, []int) error); ok {
+		r1 = rf(gitCtx, ids)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -251,25 +251,25 @@ func (_m *RepoManager) GetReleaseChanges(gitCtx git.GitContext, request *pkg.Rel
 	return r0, r1
 }
 
-// GetWebhookAndCiDataById provides a mock function with given fields: id, ciPipelineMaterialId
-func (_m *RepoManager) GetWebhookAndCiDataById(id int, ciPipelineMaterialId int) (*git.WebhookAndCiData, error) {
-	ret := _m.Called(id, ciPipelineMaterialId)
+// GetWebhookAndCiDataById provides a mock function with given fields: gitCtx, id, ciPipelineMaterialId
+func (_m *RepoManager) GetWebhookAndCiDataById(gitCtx git.GitContext, id int, ciPipelineMaterialId int) (*git.WebhookAndCiData, error) {
+	ret := _m.Called(gitCtx, id, ciPipelineMaterialId)
 
 	var r0 *git.WebhookAndCiData
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, int) (*git.WebhookAndCiData, error)); ok {
-		return rf(id, ciPipelineMaterialId)
+	if rf, ok := ret.Get(0).(func(git.GitContext, int, int) (*git.WebhookAndCiData, error)); ok {
+		return rf(gitCtx, id, ciPipelineMaterialId)
 	}
-	if rf, ok := ret.Get(0).(func(int, int) *git.WebhookAndCiData); ok {
-		r0 = rf(id, ciPipelineMaterialId)
+	if rf, ok := ret.Get(0).(func(git.GitContext, int, int) *git.WebhookAndCiData); ok {
+		r0 = rf(gitCtx, id, ciPipelineMaterialId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*git.WebhookAndCiData)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int, int) error); ok {
-		r1 = rf(id, ciPipelineMaterialId)
+	if rf, ok := ret.Get(1).(func(git.GitContext, int, int) error); ok {
+		r1 = rf(gitCtx, id, ciPipelineMaterialId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -277,25 +277,25 @@ func (_m *RepoManager) GetWebhookAndCiDataById(id int, ciPipelineMaterialId int)
 	return r0, r1
 }
 
-// GetWebhookEventConfig provides a mock function with given fields: eventId
-func (_m *RepoManager) GetWebhookEventConfig(eventId int) (*git.WebhookEventConfig, error) {
-	ret := _m.Called(eventId)
+// GetWebhookEventConfig provides a mock function with given fields: gitCtx, eventId
+func (_m *RepoManager) GetWebhookEventConfig(gitCtx git.GitContext, eventId int) (*git.WebhookEventConfig, error) {
+	ret := _m.Called(gitCtx, eventId)
 
 	var r0 *git.WebhookEventConfig
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int) (*git.WebhookEventConfig, error)); ok {
-		return rf(eventId)
+	if rf, ok := ret.Get(0).(func(git.GitContext, int) (*git.WebhookEventConfig, error)); ok {
+		return rf(gitCtx, eventId)
 	}
-	if rf, ok := ret.Get(0).(func(int) *git.WebhookEventConfig); ok {
-		r0 = rf(eventId)
+	if rf, ok := ret.Get(0).(func(git.GitContext, int) *git.WebhookEventConfig); ok {
+		r0 = rf(gitCtx, eventId)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*git.WebhookEventConfig)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(int) error); ok {
-		r1 = rf(eventId)
+	if rf, ok := ret.Get(1).(func(git.GitContext, int) error); ok {
+		r1 = rf(gitCtx, eventId)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -303,25 +303,25 @@ func (_m *RepoManager) GetWebhookEventConfig(eventId int) (*git.WebhookEventConf
 	return r0, r1
 }
 
-// GetWebhookPayloadDataForPipelineMaterialId provides a mock function with given fields: request
-func (_m *RepoManager) GetWebhookPayloadDataForPipelineMaterialId(request *git.WebhookPayloadDataRequest) (*git.WebhookPayloadDataResponse, error) {
-	ret := _m.Called(request)
+// GetWebhookPayloadDataForPipelineMaterialId provides a mock function with given fields: gitCtx, request
+func (_m *RepoManager) GetWebhookPayloadDataForPipelineMaterialId(gitCtx git.GitContext, request *git.WebhookPayloadDataRequest) (*git.WebhookPayloadDataResponse, error) {
+	ret := _m.Called(gitCtx, request)
 
 	var r0 *git.WebhookPayloadDataResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*git.WebhookPayloadDataRequest) (*git.WebhookPayloadDataResponse, error)); ok {
-		return rf(request)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.WebhookPayloadDataRequest) (*git.WebhookPayloadDataResponse, error)); ok {
+		return rf(gitCtx, request)
 	}
-	if rf, ok := ret.Get(0).(func(*git.WebhookPayloadDataRequest) *git.WebhookPayloadDataResponse); ok {
-		r0 = rf(request)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.WebhookPayloadDataRequest) *git.WebhookPayloadDataResponse); ok {
+		r0 = rf(gitCtx, request)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*git.WebhookPayloadDataResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*git.WebhookPayloadDataRequest) error); ok {
-		r1 = rf(request)
+	if rf, ok := ret.Get(1).(func(git.GitContext, *git.WebhookPayloadDataRequest) error); ok {
+		r1 = rf(gitCtx, request)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -329,25 +329,25 @@ func (_m *RepoManager) GetWebhookPayloadDataForPipelineMaterialId(request *git.W
 	return r0, r1
 }
 
-// GetWebhookPayloadFilterDataForPipelineMaterialId provides a mock function with given fields: request
-func (_m *RepoManager) GetWebhookPayloadFilterDataForPipelineMaterialId(request *git.WebhookPayloadFilterDataRequest) (*git.WebhookPayloadFilterDataResponse, error) {
-	ret := _m.Called(request)
+// GetWebhookPayloadFilterDataForPipelineMaterialId provides a mock function with given fields: gitCtx, request
+func (_m *RepoManager) GetWebhookPayloadFilterDataForPipelineMaterialId(gitCtx git.GitContext, request *git.WebhookPayloadFilterDataRequest) (*git.WebhookPayloadFilterDataResponse, error) {
+	ret := _m.Called(gitCtx, request)
 
 	var r0 *git.WebhookPayloadFilterDataResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*git.WebhookPayloadFilterDataRequest) (*git.WebhookPayloadFilterDataResponse, error)); ok {
-		return rf(request)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.WebhookPayloadFilterDataRequest) (*git.WebhookPayloadFilterDataResponse, error)); ok {
+		return rf(gitCtx, request)
 	}
-	if rf, ok := ret.Get(0).(func(*git.WebhookPayloadFilterDataRequest) *git.WebhookPayloadFilterDataResponse); ok {
-		r0 = rf(request)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.WebhookPayloadFilterDataRequest) *git.WebhookPayloadFilterDataResponse); ok {
+		r0 = rf(gitCtx, request)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*git.WebhookPayloadFilterDataResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*git.WebhookPayloadFilterDataRequest) error); ok {
-		r1 = rf(request)
+	if rf, ok := ret.Get(1).(func(git.GitContext, *git.WebhookPayloadFilterDataRequest) error); ok {
+		r1 = rf(gitCtx, request)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -355,25 +355,25 @@ func (_m *RepoManager) GetWebhookPayloadFilterDataForPipelineMaterialId(request 
 	return r0, r1
 }
 
-// RefreshGitMaterial provides a mock function with given fields: req
-func (_m *RepoManager) RefreshGitMaterial(req *git.RefreshGitMaterialRequest) (*git.RefreshGitMaterialResponse, error) {
-	ret := _m.Called(req)
+// RefreshGitMaterial provides a mock function with given fields: gitCtx, req
+func (_m *RepoManager) RefreshGitMaterial(gitCtx git.GitContext, req *git.RefreshGitMaterialRequest) (*git.RefreshGitMaterialResponse, error) {
+	ret := _m.Called(gitCtx, req)
 
 	var r0 *git.RefreshGitMaterialResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*git.RefreshGitMaterialRequest) (*git.RefreshGitMaterialResponse, error)); ok {
-		return rf(req)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.RefreshGitMaterialRequest) (*git.RefreshGitMaterialResponse, error)); ok {
+		return rf(gitCtx, req)
 	}
-	if rf, ok := ret.Get(0).(func(*git.RefreshGitMaterialRequest) *git.RefreshGitMaterialResponse); ok {
-		r0 = rf(req)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *git.RefreshGitMaterialRequest) *git.RefreshGitMaterialResponse); ok {
+		r0 = rf(gitCtx, req)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*git.RefreshGitMaterialResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*git.RefreshGitMaterialRequest) error); ok {
-		r1 = rf(req)
+	if rf, ok := ret.Get(1).(func(git.GitContext, *git.RefreshGitMaterialRequest) error); ok {
+		r1 = rf(gitCtx, req)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -409,25 +409,25 @@ func (_m *RepoManager) ResetRepo(gitCtx git.GitContext, materialId int) error {
 	return r0
 }
 
-// SaveGitProvider provides a mock function with given fields: provider
-func (_m *RepoManager) SaveGitProvider(provider *sql.GitProvider) (*sql.GitProvider, error) {
-	ret := _m.Called(provider)
+// SaveGitProvider provides a mock function with given fields: gitCtx, provider
+func (_m *RepoManager) SaveGitProvider(gitCtx git.GitContext, provider *sql.GitProvider) (*sql.GitProvider, error) {
+	ret := _m.Called(gitCtx, provider)
 
 	var r0 *sql.GitProvider
 	var r1 error
-	if rf, ok := ret.Get(0).(func(*sql.GitProvider) (*sql.GitProvider, error)); ok {
-		return rf(provider)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *sql.GitProvider) (*sql.GitProvider, error)); ok {
+		return rf(gitCtx, provider)
 	}
-	if rf, ok := ret.Get(0).(func(*sql.GitProvider) *sql.GitProvider); ok {
-		r0 = rf(provider)
+	if rf, ok := ret.Get(0).(func(git.GitContext, *sql.GitProvider) *sql.GitProvider); ok {
+		r0 = rf(gitCtx, provider)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*sql.GitProvider)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(*sql.GitProvider) error); ok {
-		r1 = rf(provider)
+	if rf, ok := ret.Get(1).(func(git.GitContext, *sql.GitProvider) error); ok {
+		r1 = rf(gitCtx, provider)
 	} else {
 		r1 = ret.Error(1)
 	}
