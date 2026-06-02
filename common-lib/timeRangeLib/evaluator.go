@@ -32,6 +32,12 @@ func (evaluator BaseTimeRangeExpressionEvaluator) getDurationForHourMinute() tim
 
 func (evaluator BaseTimeRangeExpressionEvaluator) getDurationBetweenWeekdays() time.Duration {
 	days := calculateDaysBetweenWeekdays(int(evaluator.TimeRange.WeekdayFrom), int(evaluator.TimeRange.WeekdayTo))
+	// When weekdayFrom == weekdayTo, days is 0. If the to-time is not after the from-time the window
+	// would collapse to a zero/negative duration, which stalls the next-window search (infinite loop).
+	// Treat such a same-weekday range as spanning the full week instead.
+	if days == 0 && isToBeforeFrom(evaluator.TimeRange.HourMinuteFrom, evaluator.TimeRange.HourMinuteTo) {
+		days = daysInWeek
+	}
 	fromDateTime := constructDateTime(evaluator.TimeRange.HourMinuteFrom, 0)
 	toDateTime := constructDateTime(evaluator.TimeRange.HourMinuteTo, days)
 	return toDateTime.Sub(fromDateTime)

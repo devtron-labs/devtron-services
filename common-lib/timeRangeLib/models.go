@@ -55,6 +55,8 @@ type TimeRange struct {
 // random values for  for understanding HH:MM format
 const hourMinuteFormat = "15:04"
 
+const daysInWeek = 7
+
 type Frequency string
 
 const (
