@@ -30,6 +30,7 @@ const (
 	KUBEWATCH_STREAM                                   string = "KUBEWATCH"
 	GIT_SENSOR_STREAM                                  string = "GIT-SENSOR"
 	IMAGE_SCANNER_STREAM                               string = "IMAGE-SCANNER"
+	AUDIT_STREAM                                       string = "AUDIT"
 	BULK_APPSTORE_DEPLOY_TOPIC                         string = "APP-STORE.BULK-DEPLOY"
 	BULK_APPSTORE_DEPLOY_GROUP                         string = "APP-STORE-BULK-DEPLOY-GROUP-1"
 	BULK_APPSTORE_DEPLOY_DURABLE                       string = "APP-STORE-BULK-DEPLOY-DURABLE-1"
@@ -139,6 +140,9 @@ const (
 	STORAGE_VELERO_POST_INSTALLATION_TOPIC             string = "STORAGE_VELERO_POST_INSTALLATION_TOPIC"
 	STORAGE_VELERO_POST_INSTALLATION_GROUP             string = "STORAGE_VELERO_POST_INSTALLATION_GROUP"
 	STORAGE_VELERO_POST_INSTALLATION_DURABLE           string = "STORAGE_VELERO_POST_INSTALLATION_DURABLE"
+	AUDIT_LOG_EVENT_TOPIC                              string = "AUDIT-LOG-EVENT"
+	AUDIT_LOG_EVENT_GROUP                              string = "AUDIT-LOG-EVENT-GROUP-1"
+	AUDIT_LOG_EVENT_DURABLE                            string = "AUDIT-LOG-EVENT-DURABLE-1"
 )
 
 type NatsTopic struct {
@@ -199,6 +203,7 @@ var natsTopicMapping = map[string]NatsTopic{
 	STORAGE_MODULE_TOPIC:                             {topicName: STORAGE_MODULE_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: STORAGE_MODULE_GROUP, consumerName: STORAGE_MODULE_DURABLE},
 	STORAGE_VELERO_INSTALL_TOPIC:                     {topicName: STORAGE_VELERO_INSTALL_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: STORAGE_VELERO_INSTALL_GROUP, consumerName: STORAGE_VELERO_INSTALL_DURABLE},
 	STORAGE_VELERO_POST_INSTALLATION_TOPIC:           {topicName: STORAGE_VELERO_POST_INSTALLATION_TOPIC, streamName: ORCHESTRATOR_STREAM, queueName: STORAGE_VELERO_POST_INSTALLATION_GROUP, consumerName: STORAGE_VELERO_POST_INSTALLATION_DURABLE},
+	AUDIT_LOG_EVENT_TOPIC:                            {topicName: AUDIT_LOG_EVENT_TOPIC, streamName: AUDIT_STREAM, queueName: AUDIT_LOG_EVENT_GROUP, consumerName: AUDIT_LOG_EVENT_DURABLE},
 }
 
 var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
@@ -208,6 +213,7 @@ var NatsStreamWiseConfigMapping = map[string]NatsStreamConfig{
 	GIT_SENSOR_STREAM:    {},
 	IMAGE_SCANNER_STREAM: {},
 	DEVTRON_TEST_STREAM:  {},
+	AUDIT_STREAM:         {},
 }
 
 var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
@@ -246,6 +252,7 @@ var NatsConsumerWiseConfigMapping = map[string]NatsConsumerConfig{
 	STORAGE_MODULE_DURABLE:                             {},
 	STORAGE_VELERO_INSTALL_DURABLE:                     {},
 	STORAGE_VELERO_POST_INSTALLATION_DURABLE:           {},
+	AUDIT_LOG_EVENT_DURABLE:                            {},
 }
 
 // getConsumerConfigMap will fetch the consumer wise config from the json string
