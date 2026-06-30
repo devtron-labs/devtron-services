@@ -42,16 +42,32 @@ type AuditResource string
 func (r AuditResource) ToString() string { return string(r) }
 
 const (
-	ResourceApplication AuditResource = "application"
-	ResourceJob         AuditResource = "job"
-	ResourceEnvironment AuditResource = "environment"
-	ResourceCluster     AuditResource = "cluster"
-	ResourceCdPipeline  AuditResource = "cd_pipeline"
-	ResourceCiPipeline  AuditResource = "ci_pipeline"
-	ResourceConfigMap   AuditResource = "config_map"
-	ResourceSecret      AuditResource = "secret"
-	ResourceUser        AuditResource = "user"
-	ResourceTeam        AuditResource = "team"
+	ResourceApplication        AuditResource = "application"
+	ResourceHelmApp            AuditResource = "helm_app"
+	ResourceJob                AuditResource = "job"
+	ResourceEnvironment        AuditResource = "environment"
+	ResourceCluster            AuditResource = "cluster"
+	ResourceCdPipeline         AuditResource = "cd_pipeline"
+	ResourceCiPipeline         AuditResource = "ci_pipeline"
+	ResourceWorkflow           AuditResource = "workflow"
+	ResourceDeploymentTemplate AuditResource = "deployment_template"
+	ResourceConfigMap          AuditResource = "config_map"
+	ResourceSecret             AuditResource = "secret"
+	ResourceGitMaterial        AuditResource = "git_material"
+	ResourceUser               AuditResource = "user"
+	ResourcePermissionGroup    AuditResource = "permission_group"
+	ResourceUserGroup          AuditResource = "user_group"
+	ResourceApiToken           AuditResource = "api_token"
+	ResourceTeam               AuditResource = "team"
+	// global configuration resources
+	ResourceGitOpsConfig   AuditResource = "gitops_config"
+	ResourceDockerRegistry AuditResource = "docker_registry"
+	ResourceGitProvider    AuditResource = "git_provider"
+	ResourceGitHost        AuditResource = "git_host"
+	ResourceChartRepo      AuditResource = "chart_repo"
+	ResourceSSOConfig      AuditResource = "sso_config"
+	ResourceNotification   AuditResource = "notification_config"
+	ResourceAuthorization  AuditResource = "authorization_config"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
@@ -61,11 +77,19 @@ type AuditAction string
 func (a AuditAction) ToString() string { return string(a) }
 
 const (
-	ActionCreate  AuditAction = "create"
-	ActionUpdate  AuditAction = "update"
-	ActionDelete  AuditAction = "delete"
-	ActionTrigger AuditAction = "trigger"
-	ActionGet     AuditAction = "get"
+	ActionCreate      AuditAction = "create"
+	ActionUpdate      AuditAction = "update"
+	ActionDelete      AuditAction = "delete"
+	ActionTrigger     AuditAction = "trigger"
+	ActionDeploy      AuditAction = "deploy"
+	ActionHibernate   AuditAction = "hibernate"
+	ActionUnHibernate AuditAction = "unhibernate"
+	ActionRollback    AuditAction = "rollback"
+	ActionSync        AuditAction = "sync"
+	ActionApprove     AuditAction = "approve"
+	ActionClone       AuditAction = "clone"
+	ActionAssign      AuditAction = "assign"
+	ActionGet         AuditAction = "get"
 )
 
 // Enrichment entity keys used in AuditLogEvent.EnrichmentContext. These name
