@@ -52,8 +52,10 @@ type AuditLogEvent struct {
 	Time              string                      `json:"time"`
 	Resource          ResourceRef                 `json:"resource"`
 	Module            string                      `json:"module"`
-	Type              string                      `json:"type"`   // action verb, e.g. "create"
-	Action            string                      `json:"action"` // human sentence, e.g. "Created application 'dashboard'"
+	Type              string                      `json:"type"`      // action verb, e.g. "create"
+	Action            string                      `json:"action"`    // human sentence, e.g. "Created application 'dashboard'"
+	UpdatedBy         string                      `json:"updatedBy"` // acting user (email) who performed the action
+	ClientIp          string                      `json:"clientIp"`  // client IP the request originated from
 	Payload           map[string]interface{}      `json:"payload,omitempty"`
 	EnrichmentContext map[string]EnrichmentEntity `json:"enrichmentContext,omitempty"`
 }
@@ -76,6 +78,14 @@ func NewAuditLogEvent(apiPath string, eventTime time.Time, module AuditModule, r
 // WithResourceName sets the human-facing name of the affected resource.
 func (e *AuditLogEvent) WithResourceName(name string) *AuditLogEvent {
 	e.Resource.Name = name
+	return e
+}
+
+// WithActor records the acting user (email) and originating client IP. The
+// acting user is always available and is the "updated by" of the audited action.
+func (e *AuditLogEvent) WithActor(updatedBy, clientIp string) *AuditLogEvent {
+	e.UpdatedBy = updatedBy
+	e.ClientIp = clientIp
 	return e
 }
 
