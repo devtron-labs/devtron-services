@@ -52,10 +52,13 @@ type AuditLogEvent struct {
 	Time              string                      `json:"time"`
 	Resource          ResourceRef                 `json:"resource"`
 	Module            string                      `json:"module"`
-	Type              string                      `json:"type"`      // action verb, e.g. "create"
-	Action            string                      `json:"action"`    // human sentence, e.g. "Created application 'dashboard'"
-	UpdatedBy         string                      `json:"updatedBy"` // acting user (email) who performed the action
-	ClientIp          string                      `json:"clientIp"`  // client IP the request originated from
+	Type              string                      `json:"type"`            // action verb, e.g. "create"
+	Action            string                      `json:"action"`          // human sentence, e.g. "Created application 'dashboard'"
+	UpdatedBy         string                      `json:"updatedBy"`       // acting user (email) who performed the action
+	ClientIp          string                      `json:"clientIp"`        // client IP the request originated from
+	RequestMethod     string                      `json:"requestMethod"`   // HTTP method of the audited request
+	ApiResponseCode   int                         `json:"apiResponseCode"` // HTTP status code the request returned
+	ResponseTime      time.Duration               `json:"responseTime"`    // request handling duration (nanoseconds)
 	Payload           map[string]interface{}      `json:"payload,omitempty"`
 	EnrichmentContext map[string]EnrichmentEntity `json:"enrichmentContext,omitempty"`
 }
@@ -86,6 +89,15 @@ func (e *AuditLogEvent) WithResourceName(name string) *AuditLogEvent {
 func (e *AuditLogEvent) WithActor(updatedBy, clientIp string) *AuditLogEvent {
 	e.UpdatedBy = updatedBy
 	e.ClientIp = clientIp
+	return e
+}
+
+// WithRequest records the request's HTTP method, response status code and
+// handling duration.
+func (e *AuditLogEvent) WithRequest(method string, apiResponseCode int, responseTime time.Duration) *AuditLogEvent {
+	e.RequestMethod = method
+	e.ApiResponseCode = apiResponseCode
+	e.ResponseTime = responseTime
 	return e
 }
 
