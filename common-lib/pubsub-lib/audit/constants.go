@@ -54,6 +54,7 @@ const (
 	ResourceConfigMap          AuditResource = "config_map"
 	ResourceSecret             AuditResource = "secret"
 	ResourceGitMaterial        AuditResource = "git_material"
+	ResourcePod                AuditResource = "pod"
 	ResourceUser               AuditResource = "user"
 	ResourcePermissionGroup    AuditResource = "permission_group"
 	ResourceUserGroup          AuditResource = "user_group"
@@ -90,6 +91,7 @@ const (
 	ActionClone       AuditAction = "clone"
 	ActionAssign      AuditAction = "assign"
 	ActionGet         AuditAction = "get"
+	ActionExec        AuditAction = "exec"
 )
 
 // Enrichment entity keys used in AuditLogEvent.EnrichmentContext. These name
