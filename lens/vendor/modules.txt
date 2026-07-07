@@ -7,7 +7,7 @@ github.com/caarlos0/env
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415113300-e49850611af6
+# github.com/devtron-labs/common-lib v0.19.1 => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260707131338-7cbce898d5fc
 ## explicit; go 1.25.0
 github.com/devtron-labs/common-lib/constants
 github.com/devtron-labs/common-lib/fetchAllEnv
@@ -17,6 +17,7 @@ github.com/devtron-labs/common-lib/pubsub-lib/metrics
 github.com/devtron-labs/common-lib/pubsub-lib/model
 github.com/devtron-labs/common-lib/utils
 github.com/devtron-labs/common-lib/utils/bean
+github.com/devtron-labs/common-lib/utils/sql
 # github.com/devtron-labs/protos v0.0.3-0.20240912111807-605886d90b8d
 ## explicit; go 1.17
 github.com/devtron-labs/protos/gitSensor
@@ -308,4 +309,4 @@ google.golang.org/protobuf/types/known/timestamppb
 # mellium.im/sasl v0.3.2
 ## explicit; go 1.20
 mellium.im/sasl
-# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260415113300-e49850611af6
+# github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260707131338-7cbce898d5fc
