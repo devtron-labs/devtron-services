@@ -26,13 +26,15 @@ type AuditModule string
 
 func (m AuditModule) ToString() string { return string(m) }
 
+// Values are human-readable and surfaced directly on the UI, so they use spaces
+// rather than underscores.
 const (
-	ModuleAppManagement             AuditModule = "application_management"
-	ModuleInfrastructureManagement  AuditModule = "infrastructure_management"
-	ModuleCostVisibility            AuditModule = "cost_visibility"
-	ModuleSoftwareReleaseManagement AuditModule = "software_release_management"
-	ModuleGlobalConfiguration       AuditModule = "global_configuration"
-	ModuleUserManagement            AuditModule = "user_management"
+	ModuleAppManagement             AuditModule = "Application Management"
+	ModuleInfrastructureManagement  AuditModule = "Infrastructure Management"
+	ModuleCostVisibility            AuditModule = "Cost Visibility"
+	ModuleSoftwareReleaseManagement AuditModule = "Software Release Management"
+	ModuleGlobalConfiguration       AuditModule = "Global Configuration"
+	ModuleUserManagement            AuditModule = "User Management"
 )
 
 // AuditResource is the kind of entity an audited action operates on.
@@ -41,34 +43,37 @@ type AuditResource string
 
 func (r AuditResource) ToString() string { return string(r) }
 
+// Values are human-readable and surfaced directly on the UI, so they use spaces
+// rather than underscores.
 const (
-	ResourceApplication        AuditResource = "application"
-	ResourceHelmApp            AuditResource = "helm_app"
-	ResourceJob                AuditResource = "job"
-	ResourceEnvironment        AuditResource = "environment"
-	ResourceCluster            AuditResource = "cluster"
-	ResourceCdPipeline         AuditResource = "cd_pipeline"
-	ResourceCiPipeline         AuditResource = "ci_pipeline"
-	ResourceWorkflow           AuditResource = "workflow"
-	ResourceDeploymentTemplate AuditResource = "deployment_template"
-	ResourceConfigMap          AuditResource = "config_map"
-	ResourceSecret             AuditResource = "secret"
-	ResourceGitMaterial        AuditResource = "git_material"
-	ResourcePod                AuditResource = "pod"
-	ResourceUser               AuditResource = "user"
-	ResourcePermissionGroup    AuditResource = "permission_group"
-	ResourceUserGroup          AuditResource = "user_group"
-	ResourceApiToken           AuditResource = "api_token"
-	ResourceTeam               AuditResource = "team"
+	ResourceApplication        AuditResource = "Application"
+	ResourceHelmApp            AuditResource = "Helm App"
+	ResourceJob                AuditResource = "Job"
+	ResourceEnvironment        AuditResource = "Environment"
+	ResourceCluster            AuditResource = "Cluster"
+	ResourceCdPipeline         AuditResource = "Cd Pipeline"
+	ResourceCiPipeline         AuditResource = "Ci Pipeline"
+	ResourceBuildConfig        AuditResource = "Build Config"
+	ResourceWorkflow           AuditResource = "Workflow"
+	ResourceDeploymentTemplate AuditResource = "Deployment Template"
+	ResourceConfigMap          AuditResource = "Config Map"
+	ResourceSecret             AuditResource = "Secret"
+	ResourceGitMaterial        AuditResource = "Git Material"
+	ResourcePod                AuditResource = "Pod"
+	ResourceUser               AuditResource = "User"
+	ResourcePermissionGroup    AuditResource = "Permission Group"
+	ResourceUserGroup          AuditResource = "User Group"
+	ResourceApiToken           AuditResource = "Api Token"
+	ResourceTeam               AuditResource = "Team"
 	// global configuration resources
-	ResourceGitOpsConfig   AuditResource = "gitops_config"
-	ResourceDockerRegistry AuditResource = "docker_registry"
-	ResourceGitProvider    AuditResource = "git_provider"
-	ResourceGitHost        AuditResource = "git_host"
-	ResourceChartRepo      AuditResource = "chart_repo"
-	ResourceSSOConfig      AuditResource = "sso_config"
-	ResourceNotification   AuditResource = "notification_config"
-	ResourceAuthorization  AuditResource = "authorization_config"
+	ResourceGitOpsConfig   AuditResource = "Gitops Config"
+	ResourceDockerRegistry AuditResource = "Docker Registry"
+	ResourceGitProvider    AuditResource = "Git Provider"
+	ResourceGitHost        AuditResource = "Git Host"
+	ResourceChartRepo      AuditResource = "Chart Repo"
+	ResourceSSOConfig      AuditResource = "Sso Config"
+	ResourceNotification   AuditResource = "Notification Config"
+	ResourceAuthorization  AuditResource = "Authorization Config"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
@@ -78,29 +83,30 @@ type AuditAction string
 func (a AuditAction) ToString() string { return string(a) }
 
 const (
-	ActionCreate      AuditAction = "create"
-	ActionUpdate      AuditAction = "update"
-	ActionDelete      AuditAction = "delete"
-	ActionTrigger     AuditAction = "trigger"
-	ActionDeploy      AuditAction = "deploy"
-	ActionHibernate   AuditAction = "hibernate"
-	ActionUnHibernate AuditAction = "unhibernate"
-	ActionRollback    AuditAction = "rollback"
-	ActionSync        AuditAction = "sync"
-	ActionApprove     AuditAction = "approve"
-	ActionClone       AuditAction = "clone"
-	ActionAssign      AuditAction = "assign"
-	ActionGet         AuditAction = "get"
-	ActionExec        AuditAction = "exec"
+	ActionCreate      AuditAction = "Create"
+	ActionUpdate      AuditAction = "Update"
+	ActionDelete      AuditAction = "Delete"
+	ActionTrigger     AuditAction = "Trigger"
+	ActionDeploy      AuditAction = "Deploy"
+	ActionHibernate   AuditAction = "Hibernate"
+	ActionUnHibernate AuditAction = "Unhibernate"
+	ActionRollback    AuditAction = "Rollback"
+	ActionSync        AuditAction = "Sync"
+	ActionApprove     AuditAction = "Approve"
+	ActionClone       AuditAction = "Clone"
+	ActionAssign      AuditAction = "Assign"
+	ActionGet         AuditAction = "Get"
+	ActionExec        AuditAction = "Exec"
 )
 
 // Enrichment entity keys used in AuditLogEvent.EnrichmentContext. These name
 // the entity whose identifier the audit-log service resolves into a full
 // record (e.g. "app" -> app_id -> application name/team/etc).
 const (
-	EntityApp         = "app"
-	EntityUser        = "user"
-	EntityEnvironment = "environment"
-	EntityCluster     = "cluster"
-	EntityTeam        = "team"
+	EntityApp         = "App"
+	EntityUser        = "User"
+	EntityEnvironment = "Environment"
+	EntityCluster     = "Cluster"
+	EntityTeam        = "Team"
+	EntityPipeline    = "Pipeline"
 )

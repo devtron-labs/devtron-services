@@ -59,7 +59,7 @@ type AuditLogEvent struct {
 	RequestMethod     string                      `json:"requestMethod"`   // HTTP method of the audited request
 	ApiResponseCode   int                         `json:"apiResponseCode"` // HTTP status code the request returned
 	ResponseTime      time.Duration               `json:"responseTime"`    // request handling duration (nanoseconds)
-	Payload           map[string]interface{}      `json:"payload,omitempty"`
+	Payload           map[string]interface{}      `json:"payload"`         // the actual request body of the audited call, always present
 	EnrichmentContext map[string]EnrichmentEntity `json:"enrichmentContext,omitempty"`
 }
 
