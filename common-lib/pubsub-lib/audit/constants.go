@@ -64,7 +64,7 @@ const (
 	ResourcePermissionGroup    AuditResource = "Permission Group"
 	ResourceUserGroup          AuditResource = "User Group"
 	ResourceApiToken           AuditResource = "Api Token"
-	ResourceTeam               AuditResource = "Team"
+	ResourceTeam               AuditResource = "Project" // "team" is the internal name; the product/UI calls it a Project
 	// global configuration resources
 	ResourceGitOpsConfig   AuditResource = "Gitops Config"
 	ResourceDockerRegistry AuditResource = "Docker Registry"
@@ -74,6 +74,15 @@ const (
 	ResourceSSOConfig      AuditResource = "Sso Config"
 	ResourceNotification   AuditResource = "Notification Config"
 	ResourceAuthorization  AuditResource = "Authorization Config"
+	// infrastructure management resources (resource browser)
+	ResourceK8sResource AuditResource = "Kubernetes Resource"
+	ResourceNode        AuditResource = "Node"
+	// application management resources
+	ResourceDeploymentWindowProfile AuditResource = "Deployment Window Profile"
+	// security & release-gating resources
+	ResourceVulnerabilityPolicy     AuditResource = "Vulnerability Policy"
+	ResourceArtifactPromotionPolicy AuditResource = "Artifact Promotion Policy"
+	ResourceImageApproval           AuditResource = "Image Approval"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
@@ -97,6 +106,7 @@ const (
 	ActionAssign      AuditAction = "Assign"
 	ActionGet         AuditAction = "Get"
 	ActionExec        AuditAction = "Exec"
+	ActionApply       AuditAction = "Apply"
 )
 
 // Enrichment entity keys used in AuditLogEvent.EnrichmentContext. These name
