@@ -101,6 +101,13 @@ func (e *AuditLogEvent) WithRequest(method string, apiResponseCode int, response
 	return e
 }
 
+// IsApiSuccess reports whether the audited request completed successfully (HTTP 2xx).
+// Only successful actions are published to NATS — failed or denied requests
+// (4xx/5xx) are not audited.
+func (e *AuditLogEvent) IsApiSuccess() bool {
+	return e.ApiResponseCode >= 200 && e.ApiResponseCode < 300
+}
+
 // WithAction sets the human-readable action sentence.
 func (e *AuditLogEvent) WithAction(action string) *AuditLogEvent {
 	e.Action = action
