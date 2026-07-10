@@ -83,6 +83,20 @@ const (
 	ResourceVulnerabilityPolicy     AuditResource = "Vulnerability Policy"
 	ResourceArtifactPromotionPolicy AuditResource = "Artifact Promotion Policy"
 	ResourceImageApproval           AuditResource = "Image Approval"
+	// additional global-configuration resources
+	ResourceCustomChart       AuditResource = "Custom Chart"
+	ResourceChartGroup        AuditResource = "Chart Group"
+	ResourceBuildInfraProfile AuditResource = "Build Infra Profile"
+	ResourceClusterCategory   AuditResource = "Cluster Category"
+	ResourceHostUrl           AuditResource = "Host Url"
+	ResourceScopedVariable    AuditResource = "Scoped Variable"
+	ResourceGlobalTag         AuditResource = "Global Tag"
+	// enterprise (protect / policy) resources
+	ResourceLockConfiguration     AuditResource = "Lock Configuration"
+	ResourceConfigDraft           AuditResource = "Config Draft"
+	ResourceFilterCondition       AuditResource = "Filter Condition"
+	ResourcePullImageDigestPolicy AuditResource = "Pull Image Digest Policy"
+	ResourcePlugin                AuditResource = "Plugin"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
