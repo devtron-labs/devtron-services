@@ -29,12 +29,12 @@ func (m AuditModule) ToString() string { return string(m) }
 // Values are human-readable and surfaced directly on the UI, so they use spaces
 // rather than underscores.
 const (
-	ModuleAppManagement             AuditModule = "Application Management"
-	ModuleInfrastructureManagement  AuditModule = "Infrastructure Management"
-	ModuleCostVisibility            AuditModule = "Cost Visibility"
-	ModuleSoftwareReleaseManagement AuditModule = "Software Release Management"
-	ModuleGlobalConfiguration       AuditModule = "Global Configuration"
-	ModuleUserManagement            AuditModule = "User Management"
+	ModuleAppManagement            AuditModule = "Application Management"
+	ModuleInfrastructureManagement AuditModule = "Infrastructure Management"
+	ModuleCostVisibility           AuditModule = "Cost Visibility"
+	ModuleSoftwareDistributionHub  AuditModule = "Software Distribution Hub"
+	ModuleGlobalConfiguration      AuditModule = "Global Configuration"
+	ModuleUserManagement           AuditModule = "User Management"
 )
 
 // AuditResource is the kind of entity an audited action operates on.
