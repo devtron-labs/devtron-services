@@ -18,6 +18,10 @@
 // MODULE / RESOURCE / ACTION vocabulary used to tag routes and the NATS
 // message struct published by the orchestrator and consumed by the
 // audit-log service.
+
+//go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditModule
+//go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditResource
+//go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditAction
 package audit
 
 // AuditModule is the top-level functional area an audited action belongs to.
