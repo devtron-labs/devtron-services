@@ -56,7 +56,7 @@ const (
 	ResourceBuildConfig        AuditResource = "Build Config"
 	ResourceWorkflow           AuditResource = "Workflow"
 	ResourceDeploymentTemplate AuditResource = "Deployment Template"
-	ResourceConfigMap          AuditResource = "Config Map"
+	ResourceConfigMap          AuditResource = "ConfigMap"
 	ResourceSecret             AuditResource = "Secret"
 	ResourceGitMaterial        AuditResource = "Git Material"
 	ResourcePod                AuditResource = "Pod"
