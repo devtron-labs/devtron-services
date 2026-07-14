@@ -97,6 +97,8 @@ const (
 	ResourceFilterCondition       AuditResource = "Filter Condition"
 	ResourcePullImageDigestPolicy AuditResource = "Pull Image Digest Policy"
 	ResourcePlugin                AuditResource = "Plugin"
+	// cluster terminal pod
+	ResourceClusterTerminal AuditResource = "Cluster Terminal"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
@@ -133,4 +135,5 @@ const (
 	EntityCluster     = "Cluster"
 	EntityTeam        = "Team"
 	EntityPipeline    = "Pipeline"
+	EntityAppWorkflow = "App Workflow"
 )
