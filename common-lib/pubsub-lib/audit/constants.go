@@ -103,6 +103,8 @@ const (
 	ResourcePlugin                AuditResource = "Plugin"
 	// cluster terminal pod
 	ResourceClusterTerminal AuditResource = "Cluster Terminal"
+	// resource watcher
+	ResourceWatcher AuditResource = "Resource Watcher"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
