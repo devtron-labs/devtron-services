@@ -1180,7 +1180,7 @@ func FormulateRetryWorkflow(ctx context.Context, wf *wfv1.Workflow, restartSucce
 		if node.FailedOrError() && isExecutionNodeType(node.Type) {
 			// Check its parent if current node is retry node
 			if node.NodeFlag != nil && node.NodeFlag.Retried {
-				node = *wf.Status.Nodes.FindByChild(nodeID)
+				node = *wf.Status.Nodes.FindRetryNodeByChild(nodeID)
 			}
 			if !isDescendantNodeSucceeded(wf, node, deleteNodesMap) {
 				failed[nodeID] = true
@@ -1234,6 +1234,27 @@ func FormulateRetryWorkflow(ctx context.Context, wf *wfv1.Workflow, restartSucce
 		}
 		toReset = setUnion(toReset, pathToReset)
 		toDelete = setUnion(toDelete, pathToDelete)
+	}
+
+	// Delete children of TaskGroup/StepGroup nodes being reset when parameters are overridden,
+	// so the controller can re-expand them with the new values. Fixes #15802.
+	if len(parameters) > 0 {
+		for nodeID := range toReset {
+			if toDelete[nodeID] {
+				continue
+			}
+			n, ok := wf.Status.Nodes[nodeID]
+			if !ok {
+				continue
+			}
+			if n.Type == wfv1.NodeTypeTaskGroup || n.Type == wfv1.NodeTypeStepGroup {
+				if dagNode, okNode := nodesMap[nodeID]; okNode {
+					for childID := range getChildren(dagNode) {
+						toDelete[childID] = true
+					}
+				}
+			}
+		}
 	}
 
 	for nodeID := range toReset {
