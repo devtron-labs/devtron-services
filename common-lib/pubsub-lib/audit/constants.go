@@ -105,6 +105,8 @@ const (
 	ResourceClusterTerminal AuditResource = "Cluster Terminal"
 	// resource watcher
 	ResourceWatcher AuditResource = "Resource Watcher"
+	// external link
+	ResourceExternalLink AuditResource = "External Link"
 )
 
 // AuditAction is the verb performed on the resource. It populates the
