@@ -96,11 +96,12 @@ const (
 	ResourceScopedVariable    AuditResource = "Scoped Variable"
 	ResourceGlobalTag         AuditResource = "Global Tag"
 	// enterprise (protect / policy) resources
-	ResourceLockConfiguration     AuditResource = "Lock Configuration"
-	ResourceConfigDraft           AuditResource = "Config Draft"
-	ResourceFilterCondition       AuditResource = "Filter Condition"
-	ResourcePullImageDigestPolicy AuditResource = "Pull Image Digest Policy"
-	ResourcePlugin                AuditResource = "Plugin"
+	ResourceLockConfiguration           AuditResource = "Lock Configuration"
+	ResourceLockConfigurationAssignment AuditResource = "Lock Configuration Assignment"
+	ResourceConfigDraft                 AuditResource = "Config Draft"
+	ResourceFilterCondition             AuditResource = "Filter Condition"
+	ResourcePullImageDigestPolicy       AuditResource = "Pull Image Digest Policy"
+	ResourcePlugin                      AuditResource = "Plugin"
 	// cluster terminal pod
 	ResourceClusterTerminal AuditResource = "Cluster Terminal"
 	// resource watcher

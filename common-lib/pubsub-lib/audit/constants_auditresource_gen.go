@@ -44,10 +44,14 @@ var _AllAuditResource = []AuditResource{
 	ResourceScopedVariable,
 	ResourceGlobalTag,
 	ResourceLockConfiguration,
+	ResourceLockConfigurationAssignment,
 	ResourceConfigDraft,
 	ResourceFilterCondition,
 	ResourcePullImageDigestPolicy,
 	ResourcePlugin,
+	ResourceClusterTerminal,
+	ResourceWatcher,
+	ResourceExternalLink,
 }
 
 var _AuditResourceMap = map[AuditResource]struct{}{
@@ -92,10 +96,14 @@ var _AuditResourceMap = map[AuditResource]struct{}{
 	ResourceScopedVariable: {},
 	ResourceGlobalTag: {},
 	ResourceLockConfiguration: {},
+	ResourceLockConfigurationAssignment: {},
 	ResourceConfigDraft: {},
 	ResourceFilterCondition: {},
 	ResourcePullImageDigestPolicy: {},
 	ResourcePlugin: {},
+	ResourceClusterTerminal: {},
+	ResourceWatcher: {},
+	ResourceExternalLink: {},
 }
 
 func AuditResourceValues() []AuditResource {
