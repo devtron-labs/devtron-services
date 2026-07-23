@@ -15,6 +15,10 @@ const (
 	aws = `aws_?`
 )
 
+// credentialAssignmentRegex matches a value assigned to a credential-named key, capturing the
+// key+separator+quote as `pre` so it can be kept while only the value is masked.
+var credentialAssignmentRegex = regexp.MustCompile(`(?i)(?P<pre>(password|passwd|pwd|secret|credential|token|api[_-]?key)["']?\s*(:|=>|=)\s*["']?)[^"',}\s]{3,}`)
+
 // create rule struct
 type Rule struct {
 	ID              string
@@ -666,13 +670,5 @@ var BuiltinRules = []Rule{
 		Regex:           regexp.MustCompile(`(?i)(\.(dockerconfigjson|dockercfg):\s*\|*\s*(?P<secret>(ey|ew)+[A-Za-z0-9\/\+=]+))`),
 		SecretGroupName: "secret",
 		Keywords:        []string{"dockerc"},
-	},
-	{
-		ID:              "generic-credential-assignment",
-		Title:           "Generic credential assignment",
-		Severity:        "HIGH",
-		Regex:           regexp.MustCompile(`(?i)(password|passwd|pwd|secret|credential|token|api[_-]?key)["']?\s*(:|=>|=)\s*["']?(?P<secret>[^"',}\s]{3,})`),
-		SecretGroupName: "secret",
-		Keywords:        []string{"password", "passwd", "pwd", "secret", "credential", "token", "key"},
 	},
 }

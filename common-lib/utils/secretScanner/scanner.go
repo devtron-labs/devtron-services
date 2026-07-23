@@ -22,6 +22,12 @@ func MaskSecretsOnString(input string) string {
 	return maskedInput
 }
 
+// MaskCredentialKeyValues masks values assigned to credential-named keys, keeping the surrounding
+// structure intact so the result stays parseable (e.g. valid JSON).
+func MaskCredentialKeyValues(input string) string {
+	return credentialAssignmentRegex.ReplaceAllString(input, "${pre}******")
+}
+
 // MaskSecretsOnStream processes an input stream, masking secrets according to built-in rules.
 func MaskSecretsOnStream(input io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
