@@ -667,4 +667,12 @@ var BuiltinRules = []Rule{
 		SecretGroupName: "secret",
 		Keywords:        []string{"dockerc"},
 	},
+	{
+		ID:              "generic-credential-assignment",
+		Title:           "Generic credential assignment",
+		Severity:        "HIGH",
+		Regex:           regexp.MustCompile(`(?i)(password|passwd|pwd|secret|credential|token|api[_-]?key)["']?\s*(:|=>|=)\s*["']?(?P<secret>[^"',}\s]{3,})`),
+		SecretGroupName: "secret",
+		Keywords:        []string{"password", "passwd", "pwd", "secret", "credential", "token", "key"},
+	},
 }
