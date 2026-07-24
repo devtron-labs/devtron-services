@@ -102,7 +102,6 @@ const (
 	ResourceFilterCondition             AuditResource = "Filter Condition"
 	ResourcePullImageDigestPolicy       AuditResource = "Pull Image Digest Policy"
 	ResourcePlugin                      AuditResource = "Plugin"
-	ResourceApprovalPolicy        AuditResource = "Approval Policy"
 	// cluster terminal pod
 	ResourceClusterTerminal AuditResource = "Cluster Terminal"
 	// resource watcher
