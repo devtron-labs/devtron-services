@@ -239,7 +239,11 @@ require (
 	sigs.k8s.io/yaml v1.5.0 // indirect
 )
 
-replace (
-	github.com/cyphar/filepath-securejoin v0.4.1 => github.com/cyphar/filepath-securejoin v0.3.6 // indirect
-	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260726214221-62507d0fd31f
-)
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260726214221-62507d0fd31f
+
+// argo-cd/v2 v2.14.x calls securejoin.MkdirAll(root, path, int(mode)) in
+// util/io/files/secure_mkdir_linux.go. That signature only exists in v0.3.x:
+// v0.4.0 changed the mode arg to os.FileMode, and v0.6.0 removed the top-level
+// wrapper entirely (moved to pathrs-lite). Keep this unversioned so a bump of
+// the require above cannot silently break the linux build.
+replace github.com/cyphar/filepath-securejoin => github.com/cyphar/filepath-securejoin v0.3.6
