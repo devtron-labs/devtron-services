@@ -22,6 +22,7 @@
 //go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditModule
 //go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditResource
 //go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditAction
+//go:generate go run github.com/devtron-labs/common-lib/tools/strenum -type=AuditInfoType
 package audit
 
 // AuditModule is the top-level functional area an audited action belongs to.
@@ -132,6 +133,17 @@ const (
 	ActionGet         AuditAction = "Get"
 	ActionExec        AuditAction = "Exec"
 	ActionApply       AuditAction = "Apply"
+)
+
+// AuditInfoType names a kind of typed extra info carried in
+// AuditLogEvent.AdditionalInfo. Values are human-readable.
+type AuditInfoType string
+
+func (t AuditInfoType) ToString() string { return string(t) }
+
+const (
+	// AuditInfoConfigDiff carries config before/after history-version coordinates.
+	AuditInfoConfigDiff AuditInfoType = "Config Diff"
 )
 
 // Enrichment entity keys used in AuditLogEvent.EnrichmentContext. These name
