@@ -22,11 +22,12 @@ import "github.com/caarlos0/env"
 type HelmReleaseConfig struct {
 	EnableHelmReleaseCache                      bool   `env:"ENABLE_HELM_RELEASE_CACHE" envDefault:"true" description:"Enable helm releases list cache" deprecated:"false" example:"true"`
 	MaxCountForHelmRelease                      int    `env:"MAX_COUNT_FOR_HELM_RELEASE" envDefault:"20" description:"Max count for helm release history list" deprecated:"false" example:"20"`
-	ManifestFetchBatchSize                      int    `env:"MANIFEST_FETCH_BATCH_SIZE" envDefault:"2" description:"Manifest fetch parallelism batch size (applied only for parent objects)" deprecated:"false" example:"2"`
+	ManifestFetchBatchSize                      int    `env:"MANIFEST_FETCH_BATCH_SIZE" envDefault:"10" description:"Manifest fetch parallelism batch size (applied for parent objects)" deprecated:"false" example:"10"`
 	RunHelmInstallInAsyncMode                   bool   `env:"RUN_HELM_INSTALL_IN_ASYNC_MODE" envDefault:"false" description:"Run helm install/ upgrade in async mode" deprecated:"false" example:"false"`
 	ChartWorkingDirectory                       string `env:"CHART_WORKING_DIRECTORY" envDefault:"/home/devtron/devtroncd/charts/" description:"Helm charts working directory" deprecated:"false" example:"/home/devtron/devtroncd/charts/"`
-	BuildNodesBatchSize                         int    `env:"BUILD_NODES_BATCH_SIZE" envDefault:"2" description:"Resource tree build nodes parallelism batch size (applied only for depth-1 child objects of a parent object)" deprecated:"false" example:"2"`
-	FeatChildChildObjectListingPaginationEnable bool   `env:"FEAT_CHILD_OBJECT_LISTING_PAGINATION" envDefault:"true" description:"use pagination in listing all the dependent child objects. use 'CHILD_OBJECT_LISTING_PAGE_SIZE' to set the page size." deprecated:"false" example:"true"`
+	BuildNodesBatchSize                         int    `env:"BUILD_NODES_BATCH_SIZE" envDefault:"10" description:"Resource tree build nodes parallelism batch size; controls depth-1 worker pool size and the shared semaphore size for all deeper levels" deprecated:"false" example:"10"`
+	FeatChildChildObjectListingPaginationEnable  bool   `env:"FEAT_CHILD_OBJECT_LISTING_PAGINATION" envDefault:"true" description:"use pagination in listing all the dependent child objects. use 'CHILD_OBJECT_LISTING_PAGE_SIZE' to set the page size." deprecated:"false" example:"true"`
+	FeatAllDepthChildNodeBuildParallelism        bool   `env:"FEAT_ALL_DEPTH_CHILD_NODE_BUILD_PARALLELISM" envDefault:"false" description:"enable semaphore-bounded parallelism for child node building at all recursion depths (depth-2+); when disabled only depth-1 parallelism via worker pool is active" deprecated:"false" example:"false"`
 }
 
 func GetHelmReleaseConfig() (*HelmReleaseConfig, error) {
