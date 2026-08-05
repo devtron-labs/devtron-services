@@ -4,7 +4,7 @@ go 1.25.0
 
 replace (
 	github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260707131338-7cbce898d5fc
-	helm.sh/helm/v3 v3.20.1 => github.com/devtron-labs/helm/v3 v3.20.1-d
+	helm.sh/helm/v3 v3.20.2 => github.com/devtron-labs/helm/v3 v3.20.2-d
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
-	helm.sh/helm/v3 v3.20.1
+	helm.sh/helm/v3 v3.20.2
 )
 
 require (
