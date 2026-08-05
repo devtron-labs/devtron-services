@@ -61,6 +61,7 @@ type AuditLogEvent struct {
 	ResponseTime      time.Duration               `json:"responseTime"`    // request handling duration (nanoseconds)
 	Payload           map[string]interface{}      `json:"payload"`         // the actual request body of the audited call, always present
 	EnrichmentContext map[string]EnrichmentEntity `json:"enrichmentContext,omitempty"`
+	Role              string                      `json:"role,omitempty"` // display name of the acting user's role scoped to the resource acted upon (e.g. "Super Admin", "Manager")
 }
 
 // NewAuditLogEvent constructs an event with the structural metadata parsed
@@ -111,6 +112,13 @@ func (e *AuditLogEvent) IsApiSuccess() bool {
 // WithAction sets the human-readable action sentence.
 func (e *AuditLogEvent) WithAction(action string) *AuditLogEvent {
 	e.Action = action
+	return e
+}
+
+// WithRole sets the display name of the acting user's role scoped to the resource
+// acted upon (e.g. "Super Admin", "Manager").
+func (e *AuditLogEvent) WithRole(role string) *AuditLogEvent {
+	e.Role = role
 	return e
 }
 
