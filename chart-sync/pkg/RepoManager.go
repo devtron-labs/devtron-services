@@ -3,6 +3,9 @@ package pkg
 import (
 	"bytes"
 	"fmt"
+	"path"
+	"strings"
+
 	"github.com/devtron-labs/chart-sync/internals/sql"
 	"github.com/devtron-labs/chart-sync/util"
 	registry2 "github.com/devtron-labs/common-lib/helmLib/registry"
@@ -13,8 +16,6 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
-	"path"
-	"strings"
 )
 
 const (
@@ -159,7 +160,7 @@ func (impl *HelmRepoManagerImpl) OCIRepoValuesJson(client *registry.Client, regi
 func (impl *HelmRepoManagerImpl) FetchOCIChartTagsList(settings *registry2.Settings, ociRepoURL string) ([]string, error) {
 	// Retrieve list of repository tags
 	client := settings.RegistryClient
-	tags, err := client.Tags(strings.TrimPrefix(ociRepoURL, fmt.Sprintf("%s://", registry.OCIScheme)))
+	tags, err := client.FetchAllTags(strings.TrimPrefix(ociRepoURL, fmt.Sprintf("%s://", registry.OCIScheme)))
 	if err != nil || len(tags) == 0 {
 		if err != nil {
 			err = fmt.Errorf("unable to locate any tags in provided repository: %s", ociRepoURL)

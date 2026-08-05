@@ -43,6 +43,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260707131338-7cbce898d5fc h1:vUG3Va+7UGT36MPJL1l/VckJUVj36YG6aX6HimNGluY=
 github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260707131338-7cbce898d5fc/go.mod h1:pehekzNkt2KRGZ3VC1b274Qq3iPBh27vGTby88T6KtI=
+github.com/devtron-labs/helm/v3 v3.20.1-d h1:JivzPYcg1A8O510LT85cbNsP6ilvP3lm/hJ+gImrGdA=
+github.com/devtron-labs/helm/v3 v3.20.1-d/go.mod h1:EW3fxwf1Es4tbKqZKgQi3BSHd41OsRNWiU87bLFyy9g=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/distribution/distribution/v3 v3.0.0 h1:q4R8wemdRQDClzoNNStftB2ZAfqOiN6UX90KJc4HjyM=
@@ -431,8 +433,6 @@ gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-helm.sh/helm/v3 v3.20.1 h1:T8PodUaH1UwNvE+imUA2mIKjJItY8g7CVvLVP5g4NzI=
-helm.sh/helm/v3 v3.20.1/go.mod h1:Fl1kBaWCpkUrM6IYXPjQ3bdZQfFrogKArqptvueZ6Ww=
 k8s.io/api v0.35.1 h1:0PO/1FhlK/EQNVK5+txc4FuhQibV25VLSdLMmGpDE/Q=
 k8s.io/api v0.35.1/go.mod h1:28uR9xlXWml9eT0uaGo6y71xK86JBELShLy4wR1XtxM=
 k8s.io/apiextensions-apiserver v0.35.1 h1:p5vvALkknlOcAqARwjS20kJffgzHqwyQRM8vHLwgU7w=
