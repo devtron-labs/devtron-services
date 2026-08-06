@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"strings"
 
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
@@ -15,20 +16,37 @@ func (c *Client) FetchAllTags(ref string) ([]string, error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
 	repository, err := remote.NewRepository(parsedReference.String())
 	if err != nil {
 		return nil, err
 	}
 	repository.PlainHTTP = c.plainHTTP
 	repository.Client = c.authorizer
-	var registryTags []string
-	err = repository.Tags(ctx, "", func(tags []string) error {
-		registryTags = append(registryTags, tags...)
+	tags, err := fetchTags(context.Background(), repository)
+	if err == nil {
+		return tags, nil
+	}
+
+	if repository.PlainHTTP || !strings.Contains(err.Error(), "server gave HTTP response") {
+		return nil, err
+	}
+
+	repository.PlainHTTP = true
+	return fetchTags(context.Background(), repository)
+
+}
+
+func fetchTags(ctx context.Context, repository *remote.Repository) ([]string, error) {
+	var tags []string
+
+	err := repository.Tags(ctx, "", func(batch []string) error {
+		tags = append(tags, batch...)
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
-	return registryTags, nil
+
+	return tags, nil
 }
