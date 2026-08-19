@@ -33,6 +33,8 @@
  | PG_PASSWORD | string | |  |  | false |
  | PG_PORT | string |5432 |  |  | false |
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
+ | PG_SSL_MODE | string | |  |  | false |
+ | PG_SSL_ROOT_CERT | string | |  |  | false |
  | PG_USER | string | |  |  | false |
  | POLL_DURATION | int |2 |  |  | false |
  | POLL_WORKER | int |5 |  |  | false |
