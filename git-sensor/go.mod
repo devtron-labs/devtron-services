@@ -9,7 +9,7 @@ require (
 	github.com/devtron-labs/common-lib v0.0.0
 	github.com/devtron-labs/protos v0.0.3-0.20250323220609-ecf8a0f7305e
 	github.com/gammazero/workerpool v1.1.3
-	github.com/go-git/go-git/v5 v5.19.1
+	github.com/go-git/go-git/v5 v5.19.2
 	github.com/go-pg/pg v6.15.1+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
@@ -23,9 +23,9 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.9.3
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.45.0
-	google.golang.org/grpc v1.79.3
-	google.golang.org/protobuf v1.36.10
+	golang.org/x/sys v0.46.0
+	google.golang.org/grpc v1.82.1
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 )
 
@@ -70,10 +70,10 @@ require (
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	mellium.im/sasl v0.3.2 // indirect
