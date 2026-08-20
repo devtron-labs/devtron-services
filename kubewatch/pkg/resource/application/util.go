@@ -17,8 +17,8 @@
 package application
 
 import (
-	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
 	synccommon "github.com/argoproj/argo-cd/gitops-engine/pkg/sync/common"
+	"github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
 	"go.uber.org/zap"
 )
 
