@@ -5,13 +5,13 @@ go 1.25.0
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/devtron-labs/protos v0.0.3-0.20240912111807-605886d90b8d
-	github.com/go-pg/pg/v10 v10.14.0
+	github.com/go-pg/pg/v10 v10.15.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.22.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0
 	go.uber.org/zap v1.27.0
-	google.golang.org/grpc v1.79.3
+	google.golang.org/grpc v1.82.1
 )
 
 require (
@@ -47,8 +47,8 @@ require (
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 )
 
