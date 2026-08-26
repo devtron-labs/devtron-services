@@ -489,9 +489,6 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 				dockerBuild = dockerBuildxBuild + " "
 			}
 		}
-		// if len(dockerBuildConfig.ExtraBuildFlags) > 0 && !useBuildx {
-		// 	return "", fmt.Errorf("extra build flags require buildx (UseBuildx=true); the classic docker build backend does not support them")
-		// }
 		dockerBuildFlags := getDockerBuildFlagsMap(dockerBuildConfig)
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
