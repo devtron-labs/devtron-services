@@ -20,6 +20,7 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/devtron-labs/common-lib/utils"
 	"github.com/devtron-labs/common-lib/utils/bean"
+	commonSql "github.com/devtron-labs/common-lib/utils/sql"
 	"github.com/devtron-labs/kubewatch/pkg/config"
 	"github.com/go-pg/pg"
 	"go.uber.org/zap"
@@ -33,6 +34,8 @@ type Config struct {
 	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
 	Database        string `env:"PG_DATABASE" envDefault:"orchestrator"`
 	ApplicationName string `env:"APP" envDefault:"kubewatch"`
+	SslMode         string `env:"PG_SSL_MODE" envDefault:""`
+	SslRootCert     string `env:"PG_SSL_ROOT_CERT" envDefault:""`
 	bean.PgQueryMonitoringConfig
 }
 
@@ -56,17 +59,23 @@ func NewDbConnection(appConfig *config.AppConfig, cfg *Config, logger *zap.Sugar
 		logger.Debugw("skipping db connection", "appConfig", appConfig)
 		return nil, nil
 	}
+	tlsConfig, err := commonSql.BuildTLSConfig(cfg.SslMode, cfg.SslRootCert, cfg.Addr)
+	if err != nil {
+		logger.Errorw("error in building tls config for db connection", "err", err)
+		return nil, err
+	}
 	options := pg.Options{
 		Addr:            cfg.Addr + ":" + cfg.Port,
 		User:            cfg.User,
 		Password:        cfg.Password,
 		Database:        cfg.Database,
 		ApplicationName: cfg.ApplicationName,
+		TLSConfig:       tlsConfig,
 	}
 	dbConnection := pg.Connect(&options)
 	//check db connection
 	var test string
-	_, err := dbConnection.QueryOne(&test, `SELECT 1`)
+	_, err = dbConnection.QueryOne(&test, `SELECT 1`)
 
 	if err != nil {
 		logger.Errorw("error in connecting db ", "db", obfuscateSecretTags(cfg), "err", err)

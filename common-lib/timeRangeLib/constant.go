@@ -28,7 +28,7 @@ const (
 	WeekDaysNotPresent                   ErrorMessage = "weekdays, must be present for Weekly frequency"
 	WeekDayFromOrToNotPresent            ErrorMessage = "weekdayFrom, must be present for WeeklyRange frequency"
 	DayFromOrToNotPresent                ErrorMessage = "dayFrom, dayTo, must be present for Monthly frequency"
-	ToBeforeFrom                         ErrorMessage = "Invalid value of hourMinuteFrom or hourMinuteTo  for same day ,hourMinuteFrom >hourMinuteTo"
+	ToBeforeFrom                         ErrorMessage = "Invalid value of hourMinuteFrom or hourMinuteTo  for same day ,hourMinuteFrom > hourMinuteTo"
 	BothLessThanZeroAndFromGreaterThanTo ErrorMessage = "invalid value of DayFrom or DayTo,DayFrom and DayTo is less than zero and  dayFrom > dayTo"
 	DayFromOrToNotValid                  ErrorMessage = "invalid value of dayFrom or dayTo"
 	InvalidHourMinuteForWeeklyAndDaily   ErrorMessage = "HourMinuteFrom should be less than HourMinuteTo in daily or weekly Frequency"

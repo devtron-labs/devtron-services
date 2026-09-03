@@ -86,6 +86,11 @@ func (tr TimeRange) ValidateTimeRange() error {
 		if (tr.WeekdayFrom < 0 || tr.WeekdayFrom > 6) || (tr.WeekdayTo < 0 || tr.WeekdayTo > 6) {
 			return errors.New(string(WeekDayOutsideRange))
 		}
+		// Same weekday with a non-positive intra-day span collapses the window to zero/negative
+		// duration, which stalls the next-window search. Reject it (mirrors the Monthly check).
+		if tr.WeekdayFrom == tr.WeekdayTo && isToBeforeFrom(tr.HourMinuteFrom, tr.HourMinuteTo) {
+			return errors.New(string(ToBeforeFrom))
+		}
 	case Monthly:
 		if tr.DayFrom == 0 || tr.DayTo == 0 {
 			return errors.New(string(DayFromOrToNotPresent))

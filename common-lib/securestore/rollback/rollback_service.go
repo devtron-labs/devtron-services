@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/devtron-labs/common-lib/securestore"
+	"github.com/devtron-labs/common-lib/utils/sql"
 	"strings"
 	"time"
 
@@ -290,6 +291,8 @@ type config struct {
 	Password        string `env:"PG_PASSWORD" envDefault:"" secretData:"-"`
 	Database        string `env:"PG_DATABASE" envDefault:"orchestrator"`
 	ApplicationName string `env:"APP" envDefault:"orchestrator"`
+	SslMode         string `env:"PG_SSL_MODE" envDefault:""`
+	SslRootCert     string `env:"PG_SSL_ROOT_CERT" envDefault:""`
 	LocalDev        bool   `env:"RUNTIME_CONFIG_LOCAL_DEV" envDefault:"false"`
 }
 
@@ -307,12 +310,18 @@ func newDbConnection() (*pg.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	tlsConfig, err := sql.BuildTLSConfig(cfg.SslMode, cfg.SslRootCert, cfg.Addr)
+	if err != nil {
+		log.Errorf("error in building tls config for database %s: %v", cfg.Database, err)
+		return nil, err
+	}
 	options := pg.Options{
 		Addr:            cfg.Addr + ":" + cfg.Port,
 		User:            cfg.User,
 		Password:        cfg.Password,
 		Database:        cfg.Database,
 		ApplicationName: cfg.ApplicationName,
+		TLSConfig:       tlsConfig,
 	}
 	dbConnection := pg.Connect(&options)
 	//check db connection
