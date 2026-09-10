@@ -493,6 +493,9 @@ func (impl *DockerHelperImpl) BuildArtifact(ciRequest *CommonWorkflowRequest) (s
 		for key, value := range dockerBuildFlags {
 			dockerBuild = dockerBuild + " " + key + value
 		}
+		for _, flag := range dockerBuildConfig.ExtraBuildFlags {
+			dockerBuild = dockerBuild + " " + flag
+		}
 		if !ciRequest.EnableBuildContext || dockerBuildConfig.BuildContext == "" {
 			dockerBuildConfig.BuildContext = ROOT_PATH
 		}
