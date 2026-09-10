@@ -74,6 +74,9 @@ type DockerBuildConfig struct {
 	BuildxProvenanceMode   string              `json:"buildxProvenanceMode"`
 	BuildxK8sDriverOptions []map[string]string `json:"buildxK8SDriverOptions"`
 
+	// ExtraBuildFlags is an opaque list of already-formatted docker build flags
+	ExtraBuildFlags []string `json:"extraBuildFlags,omitempty"`
+
 	//ent only
 	BuildxDriverImage string `json:"buildxDriverImage"`
 }
