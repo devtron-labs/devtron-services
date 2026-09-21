@@ -44,6 +44,12 @@ type EnrichmentEntity struct {
 	Identifier string `json:"identifier"`
 }
 
+// AdditionalInfoEntry is a typed extra-info bag; publish may emit an empty marker that enrichment fills.
+type AdditionalInfoEntry struct {
+	Type AuditInfoType          `json:"type"`
+	Data map[string]interface{} `json:"data,omitempty"`
+}
+
 // AuditLogEvent is the canonical NATS payload published on AUDIT_LOG_TOPIC.
 // It is shared between the publisher (orchestrator) and the consumer
 // (audit-log service) so both agree on the contract.
@@ -61,6 +67,8 @@ type AuditLogEvent struct {
 	ResponseTime      time.Duration               `json:"responseTime"`    // request handling duration (nanoseconds)
 	Payload           map[string]interface{}      `json:"payload"`         // the actual request body of the audited call, always present
 	EnrichmentContext map[string]EnrichmentEntity `json:"enrichmentContext,omitempty"`
+	Role              string                      `json:"role,omitempty"`           // display name of the acting user's role scoped to the resource acted upon (e.g. "Super Admin", "Manager")
+	AdditionalInfo    []AdditionalInfoEntry       `json:"additionalInfo,omitempty"` // typed extra info (e.g. config diff coordinates), filled at enrich time
 }
 
 // NewAuditLogEvent constructs an event with the structural metadata parsed
@@ -114,6 +122,13 @@ func (e *AuditLogEvent) WithAction(action string) *AuditLogEvent {
 	return e
 }
 
+// WithRole sets the display name of the acting user's role scoped to the resource
+// acted upon (e.g. "Super Admin", "Manager").
+func (e *AuditLogEvent) WithRole(role string) *AuditLogEvent {
+	e.Role = role
+	return e
+}
+
 // WithPayloadField adds a single key/value to the payload bag.
 func (e *AuditLogEvent) WithPayloadField(key string, value interface{}) *AuditLogEvent {
 	if e.Payload == nil {
@@ -134,6 +149,12 @@ func (e *AuditLogEvent) WithEnrichment(entity, identifier string) *AuditLogEvent
 		e.EnrichmentContext = make(map[string]EnrichmentEntity)
 	}
 	e.EnrichmentContext[entity] = EnrichmentEntity{Identifier: identifier}
+	return e
+}
+
+// WithAdditionalInfo appends a typed extra-info entry (publish stamps an empty marker; enrichment fills it).
+func (e *AuditLogEvent) WithAdditionalInfo(infoType AuditInfoType, data map[string]interface{}) *AuditLogEvent {
+	e.AdditionalInfo = append(e.AdditionalInfo, AdditionalInfoEntry{Type: infoType, Data: data})
 	return e
 }
 
