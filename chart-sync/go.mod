@@ -2,7 +2,7 @@ module github.com/devtron-labs/chart-sync
 
 go 1.25.0
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260726214221-62507d0fd31f
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260922074638-8091a5510a87
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible

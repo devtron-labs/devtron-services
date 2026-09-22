@@ -2,7 +2,7 @@ module github.com/devtron-labs/ci-runner
 
 go 1.25.0
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260726214221-62507d0fd31f
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260922074638-8091a5510a87
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -12,7 +12,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/joho/godotenv v1.5.1
 	github.com/otiai10/copy v1.14.1
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.33.3
 	k8s.io/apimachinery v0.33.3
