@@ -18,9 +18,9 @@ package application
 
 import (
 	"encoding/json"
-	applicationBean "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
-	applicationInformer "github.com/argoproj/argo-cd/v2/pkg/client/informers/externalversions/application/v1alpha1"
+	applicationBean "github.com/argoproj/argo-cd/v3/pkg/apis/application/v1alpha1"
+	"github.com/argoproj/argo-cd/v3/pkg/client/clientset/versioned"
+	applicationInformer "github.com/argoproj/argo-cd/v3/pkg/client/informers/externalversions/application/v1alpha1"
 	pubsub "github.com/devtron-labs/common-lib/pubsub-lib"
 	informerBean "github.com/devtron-labs/kubewatch/pkg/informer/bean"
 	"go.uber.org/zap"

@@ -30,6 +30,8 @@
  | PG_PASSWORD | string | |  |  | false |
  | PG_PORT | string |5432 |  |  | false |
  | PG_QUERY_DUR_THRESHOLD | int64 |5000 |  |  | false |
+ | PG_SSL_MODE | string | |  |  | false |
+ | PG_SSL_ROOT_CERT | string | |  |  | false |
  | PG_USER | string | |  |  | false |
  | PROJECT_ID | string |projects/devtron-project-id |  |  | false |
  | RUNTIME_CONFIG_LOCAL_DEV | bool |false |  |  | false |
