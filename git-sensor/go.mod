@@ -2,7 +2,7 @@ module github.com/devtron-labs/git-sensor
 
 go 1.25.0
 
-replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20260923111547-63187c49cf1a
+replace github.com/devtron-labs/common-lib => github.com/devtron-labs/devtron-services/common-lib v0.0.0-20261029075643-66e4bdaba22f
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
