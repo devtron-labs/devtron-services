@@ -1,6 +1,2 @@
 #ALL
-* @devtron-labs/be-codeowners @devtron-labs/devops-codeowners
-
-
-#Github Specific
-.github/ @devtron-labs/be-codeowners @devtron-labs/devops-codeowners
+* @devtron-labs/be-codeowners
