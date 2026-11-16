@@ -1,6 +1,6 @@
 #ALL
-* @vivek-devtron
+* @devtron-labs/be-codeowners @devtron-labs/devops-codeowners
 
 
 #Github Specific
-.github/ @vivek-devtron
+.github/ @devtron-labs/be-codeowners @devtron-labs/devops-codeowners
